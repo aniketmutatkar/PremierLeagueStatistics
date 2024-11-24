@@ -15,25 +15,26 @@ def cleanData(rawdata):
         rawdata[i] = rawdata[i].fillna(0)
 
     # Rename DataFrames
-    SquadStandardStats = rawdata[0]
-    OpponentStandardStats = rawdata[1]
-    PlayerStandardStats = rawdata[2]
+    SquadStats = rawdata[0]
+    OpponentStats = rawdata[1]
+    PlayerStats = rawdata[2]
 
     # Format Columns in Player Standard Stats DataFrame
-    PlayerStandardStats['Age'] = PlayerStandardStats['Age'].str[:2]
-    PlayerStandardStats['Nation'] = PlayerStandardStats['Nation'].str.split(' ').str.get(1)
-    PlayerStandardStats = PlayerStandardStats.drop(columns=['Rk', 'Matches'])
+    PlayerStats['Age'] = PlayerStats['Age'].str[:2]
+    PlayerStats['Nation'] = PlayerStats['Nation'].str.split(' ').str.get(1)
+    PlayerStats = PlayerStats.drop(columns=['Rk', 'Matches'])
 
     # Drop all the rows that have NaN in the row
-    PlayerStandardStats.dropna(inplace=True)
+    PlayerStats.dropna(inplace=True)
 
     # Convert all the Data types of the numeric columns from object to numeric
-    for col in SquadStandardStats.columns[1:]:
-        SquadStandardStats[col] = pd.to_numeric(SquadStandardStats[col], errors='coerce')
-    for col in OpponentStandardStats.columns[1:]:
-        OpponentStandardStats[col] = pd.to_numeric(OpponentStandardStats[col], errors='coerce')
-    for col in PlayerStandardStats.columns[4:]:
-        PlayerStandardStats[col] = pd.to_numeric(PlayerStandardStats[col], errors='coerce')
+    for col in SquadStats.columns[1:]:
+        SquadStats[col] = pd.to_numeric(SquadStats[col], errors='coerce')
+    for col in OpponentStats.columns[1:]:
+        OpponentStats[col] = pd.to_numeric(OpponentStats[col], errors='coerce')
+    for col in PlayerStats.columns[4:]:
+        PlayerStats[col] = pd.to_numeric(PlayerStats[col], errors='coerce')
 
+    return [SquadStats, OpponentStats, PlayerStats]
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
