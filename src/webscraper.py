@@ -54,7 +54,7 @@ def scrapeData(url):
         logging.error(f"Value error while processing data: {e}")
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
-        
+
     return dfs if 'dfs' in locals() else []
 
 if __name__ == "__main__":
@@ -65,3 +65,4 @@ if __name__ == "__main__":
         print(f"Extracted {len(data)} tables.")
     else:
         print("No data extracted.")
+        
