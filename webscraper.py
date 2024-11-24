@@ -9,8 +9,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def scrapeData(url):
     try:
+         # Set the User-Agent header
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+        }
+        
         # Make a request to the website and parse HTML content
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()  # Raise an error for bad responses
         soup = BeautifulSoup(response.text, 'html.parser')
         
@@ -50,7 +55,7 @@ def scrapeData(url):
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
 
-    return dfs
+    return dfs if 'dfs' in locals() else []
 
 if __name__ == "__main__":
     url = 'https://fbref.com/en/comps/9/stats/Premier-League-Stats'  # Standard Stats
