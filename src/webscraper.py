@@ -9,15 +9,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def scrapeData(url):
     try:
-         # Set the User-Agent header
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-        }
-        
         # Make a request to the website and parse HTML content
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise an error for bad responses
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # response = requests.get(url)
+        # response.raise_for_status()  # Raise an error for bad responses
+        
+        # TESTING: Open and read the contents of the HTML file
+        with open(url, 'r') as file:
+            html = file.read()
+        
+        soup = BeautifulSoup(html, 'html.parser')
         
         # Initialize an empty list to store DataFrames
         dfs = []
@@ -58,11 +58,13 @@ def scrapeData(url):
     return dfs if 'dfs' in locals() else []
 
 if __name__ == "__main__":
-    url = 'https://fbref.com/en/comps/9/stats/Premier-League-Stats'  # Standard Stats
+    # TESTING: Use txt file with website html
+    url = 'data/test_html.txt'
+
+    # url = 'https://fbref.com/en/comps/9/stats/Premier-League-Stats'  # Standard Stats
     data = scrapeData(url)
     
     if data:
         print(f"Extracted {len(data)} tables.")
     else:
         print("No data extracted.")
-        
