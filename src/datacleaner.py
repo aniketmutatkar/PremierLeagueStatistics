@@ -54,7 +54,9 @@ def cleanData(rawdata):
     return [SquadStats, OpponentStats, PlayerStats]
 
 if __name__ == '__main__':
-    url = 'https://fbref.com/en/comps/9/stats/Premier-League-Stats'  # Standard Stats
+    # TESTING: Use txt file with website html
+    url = 'data/test_html.txt'
+    # url = 'https://fbref.com/en/comps/9/stats/Premier-League-Stats'  # Standard Stats
     logging.info(f"Scraping data from {url}.")
     
     rawdata = scrapeData(url)
