@@ -1,5 +1,6 @@
 import pandas as pd
 import logging
+from datetime import datetime
 from webscraper import scrapeData  # TESTING
 
 # Configure logging
@@ -7,6 +8,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def cleanData(rawdata):
     logging.info("Starting data cleaning process.")
+    current_date = datetime.now().date()  # Get the current date
     
     for i, df in enumerate(rawdata):
         logging.debug(f"Cleaning DataFrame {i+1}/{len(rawdata)}.")
@@ -23,6 +25,9 @@ def cleanData(rawdata):
         
         rawdata[i].columns = new_columns
         rawdata[i] = rawdata[i].fillna(0)
+
+        # Add a column with the current date
+        rawdata[i]['Current Date'] = current_date
 
     # Rename DataFrames
     SquadStats = rawdata[0]
