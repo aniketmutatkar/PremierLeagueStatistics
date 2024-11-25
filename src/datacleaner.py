@@ -1,7 +1,7 @@
 import pandas as pd
 import logging
 from datetime import datetime
-from webscraper import scrapeData  # TESTING
+from webscraper import scrapeData  # FOR TESTING
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

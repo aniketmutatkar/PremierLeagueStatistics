@@ -27,14 +27,14 @@ def scrapeData(url):
         }
         
         # Make a request to the website and parse HTML content
-        # response = requests.get(url, headers=headers)
-        # response.raise_for_status()  # Raise an error for bad responses
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Raise an error for bad responses
         
         # TESTING: Open and read the contents of the HTML file
-        with open(url, 'r') as file:
-            html = file.read()
+        # with open(url, 'r') as file:
+        #    html = file.read()
         
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(response.text, 'html.parser')
         
         # Initialize an empty list to store DataFrames
         dfs = []
