@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def cleanData(rawdata):
     logging.info("Starting data cleaning process.")
-    current_date = datetime.now().date()  # Get the current date
+    current_date = datetime.now().strftime('%Y-%m-%d')  # Format date as string
     
     for i, df in enumerate(rawdata):
         logging.debug(f"Cleaning DataFrame {i+1}/{len(rawdata)}.")
@@ -47,11 +47,11 @@ def cleanData(rawdata):
     logging.info(f"Dropped {initial_player_count - final_player_count} rows with NaN values from PlayerStats.")
 
     # Convert all the Data types of the numeric columns from object to numeric
-    for col in SquadStats.columns[1:]:
+    for col in SquadStats.columns[1:-1]:
         SquadStats[col] = pd.to_numeric(SquadStats[col], errors='coerce')
-    for col in OpponentStats.columns[1:]:
+    for col in OpponentStats.columns[1:-1]:
         OpponentStats[col] = pd.to_numeric(OpponentStats[col], errors='coerce')
-    for col in PlayerStats.columns[4:]:
+    for col in PlayerStats.columns[4:-1]:
         PlayerStats[col] = pd.to_numeric(PlayerStats[col], errors='coerce')
 
     logging.info("Data cleaning process completed successfully.")
