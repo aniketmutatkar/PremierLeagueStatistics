@@ -2,15 +2,32 @@ import requests
 from bs4 import BeautifulSoup, Comment
 import pandas as pd
 import logging
+import random
 from io import StringIO  # Import StringIO for wrapping HTML
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def scrapeData(url):
+    # List of user agents to rotate through and randomly select a user agent from the list
+    user_agents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15',
+    'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.3',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.',
+    ]
+    user_agent = random.choice(user_agents)
+
     try:
+        headers = {
+        'User-Agent': user_agent,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive'
+        }
+        
         # Make a request to the website and parse HTML content
-        # response = requests.get(url)
+        # response = requests.get(url, headers=headers)
         # response.raise_for_status()  # Raise an error for bad responses
         
         # TESTING: Open and read the contents of the HTML file
