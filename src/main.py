@@ -14,11 +14,6 @@ rate_limiter = RateLimiter(max_calls=1, period=10)
 def main():
     # Define an array of URLs for scraping
     urls = [
-        #'data/Standard_html.txt',  # For testing with local HTML file
-        #'data/Shooting_html.txt',  # For testing with local HTML file
-        #'data/Passing_html.txt'    # For testing with local HTML file
-
-        # Uncomment the following lines for live scraping
         'https://fbref.com/en/comps/9/stats/Premier-League-Stats',
         'https://fbref.com/en/comps/9/keepers/Premier-League-Stats',
         'https://fbref.com/en/comps/9/keepersadv/Premier-League-Stats',
