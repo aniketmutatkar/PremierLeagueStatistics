@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Define a rate limiter: 1 request per 60 second
-rate_limiter = RateLimiter(max_calls=1, period=60)
+rate_limiter = RateLimiter(max_calls=1, period=10)
 
 def main():
     # Define an array of URLs for scraping
