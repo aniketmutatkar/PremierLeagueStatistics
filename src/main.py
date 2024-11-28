@@ -8,8 +8,8 @@ from database import createConnection, insertData
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Define a rate limiter: 1 request per 10 second
-rate_limiter = RateLimiter(max_calls=1, period=10)
+# Define a rate limiter: 1 request per 60 second
+rate_limiter = RateLimiter(max_calls=1, period=60)
 
 def main():
     # Define an array of URLs for scraping

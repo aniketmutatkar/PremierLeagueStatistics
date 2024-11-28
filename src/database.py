@@ -2,8 +2,6 @@ import sqlite3
 from sqlite3 import Error
 import pandas as pd
 import logging
-from datacleaner import cleanData
-from webscraper import scrapeData
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

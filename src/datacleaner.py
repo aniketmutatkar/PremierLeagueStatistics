@@ -1,7 +1,6 @@
 import pandas as pd
 import logging
 from datetime import datetime
-from webscraper import scrapeData  # FOR TESTING
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -10,6 +9,9 @@ def cleanData(rawdata):
     logging.info("Starting data cleaning process.")
     current_date = datetime.now().strftime('%Y-%m-%d')  # Format date as string
     
+    if len(rawdata) < 3:
+        raise ValueError("Expected at least three DataFrames")
+
     for i, df in enumerate(rawdata):
         logging.debug(f"Cleaning DataFrame {i+1}/{len(rawdata)}.")
         rawdata[i].columns = [' '.join(col).strip() for col in rawdata[i].columns]
@@ -35,9 +37,14 @@ def cleanData(rawdata):
     PlayerStats = rawdata[2]
 
     # Format Columns in Player Standard Stats DataFrame
-    PlayerStats['Age'] = PlayerStats['Age'].str[:2]
-    PlayerStats['Nation'] = PlayerStats['Nation'].str.split(' ').str.get(1)
-    PlayerStats = PlayerStats.drop(columns=['Rk', 'Matches'])
+    if 'Age' in PlayerStats.columns:
+        PlayerStats['Age'] = PlayerStats['Age'].str[:2]
+    if 'Nation' in PlayerStats.columns:
+        PlayerStats['Nation'] = PlayerStats['Nation'].str.split(' ').str.get(1)
+    if 'Rk' in PlayerStats.columns:
+        PlayerStats = PlayerStats.drop(columns=['Rk'], errors='ignore')
+    if 'Matches' in PlayerStats.columns:
+        PlayerStats = PlayerStats.drop(columns=['Matches'], errors='ignore')
 
     # Drop all the rows that have NaN in the row
     initial_player_count = len(PlayerStats)
@@ -57,23 +64,3 @@ def cleanData(rawdata):
     logging.info("Data cleaning process completed successfully.")
     
     return [SquadStats, OpponentStats, PlayerStats]
-
-if __name__ == '__main__':
-    # TESTING: Use txt file with website html
-    url = 'data/test_html.txt'
-    # url = 'https://fbref.com/en/comps/9/stats/Premier-League-Stats'  # Standard Stats
-    logging.info(f"Scraping data from {url}.")
-    
-    rawdata = scrapeData(url)
-    
-    if rawdata:
-        logging.info(f"Extracted {len(rawdata)} raw tables.")
-    else:
-        logging.warning("No data extracted.")
-
-    cleanedData = cleanData(rawdata)
-    
-    if cleanedData:
-        logging.info(f"Extracted {len(cleanedData)} clean tables.")
-    else:
-        logging.warning("No clean data extracted.")

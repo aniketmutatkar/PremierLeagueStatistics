@@ -1,0 +1,31 @@
+# Players and Games
+- Pl -- # of Players: Number of Players used in Games
+
+## Playing Time
+- 90s -- 90s Played: 90s played, Minutes played divided by 90
+
+## Passes
+- Att -- Passes Attempted: Passes Attempted
+  Includes live ball passes (including crosses) as well as corner kicks, throw-ins, free kicks and goal kicks.
+
+## Pass Types
+- Live -- Live-ball Passes: Live-ball Passes
+- Dead -- Dead-ball Passes: Dead-ball Passes
+  Includes free kicks, corner kicks, kick offs, throw-ins and goal kicks
+- FK -- Passes from Free Kicks: Passes attempted from free kicks
+- TB -- Through Balls: Completed pass sent between back defenders into open space
+- Sw -- Switches: Passes that travel more than 40 yards of the width of the pitch
+- Crs -- Crosses: Crosses
+- TI -- Throw-ins Taken: Throw-ins Taken
+- CK -- Corner Kicks: Corner Kicks
+
+## Corner Kick Types
+- In -- Inswinging Corner Kicks: Inswinging Corner Kicks
+- Out -- Outswinging Corner Kicks: Outswinging Corner Kicks
+- Str -- Straight Corner Kicks: Straight Corner Kicks
+
+## Outcomes
+- Cmp -- Passes Completed: Passes Completed
+  Includes live ball passes (including crosses) as well as corner kicks, throw-ins, free kicks and goal kicks.
+- Off -- Passes Offside: Offsides
+- Blocks -- Passes Blocked: Blocked by the opponent who was standing in the path
