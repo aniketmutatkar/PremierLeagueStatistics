@@ -24,3 +24,19 @@ def insertData(conn, df, table_name):
         logger.info(f"Table '{table_name}' created and populated successfully.")
     except Error as e:
         logger.error(f"Error inserting data into table '{table_name}': {e}")
+
+def read_data(conn, query):
+    """Execute a SQL query and return the result as a pandas DataFrame."""
+    try:
+        # Execute the query and fetch the results into a DataFrame
+        df = pd.read_sql_query(query, conn)
+        
+        # Log the successful query execution
+        logger.info(f"Query executed successfully. Returned {len(df)} rows.")
+        
+        return df
+    except Error as e:
+        # Log any errors that occur during query execution
+        logger.error(f"Error executing query: {e}")
+        return None
+

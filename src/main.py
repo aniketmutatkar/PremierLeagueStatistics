@@ -1,5 +1,5 @@
 import logging
-from ratelimiter import RateLimiter
+import time
 from datacleaner import cleanData
 from webscraper import scrapeData
 from database import createConnection, insertData
@@ -8,8 +8,8 @@ from database import createConnection, insertData
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Define a rate limiter: 1 request per 60 second
-rate_limiter = RateLimiter(max_calls=1, period=10)
+# Define the delay between requests (in seconds)
+DELAY_BETWEEN_REQUESTS = 10 
 
 def main():
     # Define an array of URLs for scraping
@@ -44,9 +44,7 @@ def main():
     for i, url in enumerate(urls):
         logger.info(f"Scraping data from {url}.")
         
-        with rate_limiter:  # Rate limit applied here
-            # Step 1: Scrape Data
-            raw_data = scrapeData(url)
+        raw_data = scrapeData(url)
         
         if raw_data:
             logger.info(f"Extracted {len(raw_data)} raw tables from {url}.")
@@ -81,6 +79,11 @@ def main():
             connection.close()
         else:
             logger.error("Failed to create database connection.")
+
+        # Add delay before the next request
+        if i < len(urls) - 1:  # Don't delay after the last request
+            logger.info(f"Waiting for {DELAY_BETWEEN_REQUESTS} seconds before the next request...")
+            time.sleep(DELAY_BETWEEN_REQUESTS)
 
 if __name__ == "__main__":
     main()
