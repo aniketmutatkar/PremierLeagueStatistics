@@ -1,0 +1,67 @@
+# Database Configuration
+database:
+  type: "duckdb"
+  path: "data/premierleague.duckdb"
+  
+  # Connection settings
+  connection:
+    read_only: false
+    memory_limit: "1GB"
+    threads: 4
+    
+  # Table settings
+  tables:
+    # Squad stats tables (11 tables)
+    squad_tables:
+      - "squad_standard"
+      - "squad_keepers" 
+      - "squad_keepersadv"
+      - "squad_shooting"
+      - "squad_passing"
+      - "squad_passingtypes"
+      - "squad_goalshotcreation"
+      - "squad_defense"
+      - "squad_possession"
+      - "squad_playingtime"
+      - "squad_misc"
+    
+    # Opponent stats tables (11 tables)
+    opponent_tables:
+      - "opponent_standard"
+      - "opponent_keepers"
+      - "opponent_keepersadv" 
+      - "opponent_shooting"
+      - "opponent_passing"
+      - "opponent_passingtypes"
+      - "opponent_goalshotcreation"
+      - "opponent_defense"
+      - "opponent_possession"
+      - "opponent_playingtime"
+      - "opponent_misc"
+    
+    # Player stats tables (11 tables)
+    player_tables:
+      - "player_standard"
+      - "player_keepers"
+      - "player_keepersadv"
+      - "player_shooting"
+      - "player_passing"
+      - "player_passingtypes"
+      - "player_goalshotcreation"
+      - "player_defense"
+      - "player_possession"
+      - "player_playingtime"
+      - "player_misc"
+    
+    # Infrastructure tables
+    infrastructure_tables:
+      - "fixtures"
+      - "gameweeks"
+      - "teams"
+      - "data_scraping_log"
+
+  # Historical data settings
+  historical:
+    track_gameweeks: true
+    incremental_updates: true
+    retain_all_versions: true

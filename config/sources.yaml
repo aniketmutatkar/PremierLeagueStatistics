@@ -1,0 +1,115 @@
+# Data Sources Configuration - Premier League FBRef URLs
+base_url: "https://fbref.com/en/comps/9"
+
+# Stats URLs and their corresponding table mappings
+# Each URL produces 3 tables: [squad, opponent, player]
+stats_sources:
+  standard:
+    url: "https://fbref.com/en/comps/9/stats/Premier-League-Stats"
+    tables:
+      - "squad_standard"
+      - "opponent_standard" 
+      - "player_standard"
+    description: "Basic stats including goals, assists, cards"
+    
+  keepers:
+    url: "https://fbref.com/en/comps/9/keepers/Premier-League-Stats"
+    tables:
+      - "squad_keepers"
+      - "opponent_keepers"
+      - "player_keepers"
+    description: "Goalkeeper basic stats"
+    
+  keepersadv:
+    url: "https://fbref.com/en/comps/9/keepersadv/Premier-League-Stats"
+    tables:
+      - "squad_keepersadv"
+      - "opponent_keepersadv"
+      - "player_keepersadv"
+    description: "Advanced goalkeeper metrics"
+    
+  shooting:
+    url: "https://fbref.com/en/comps/9/shooting/Premier-League-Stats"
+    tables:
+      - "squad_shooting"
+      - "opponent_shooting"
+      - "player_shooting"
+    description: "Shooting statistics and xG"
+    
+  passing:
+    url: "https://fbref.com/en/comps/9/passing/Premier-League-Stats"
+    tables:
+      - "squad_passing"
+      - "opponent_passing"
+      - "player_passing"
+    description: "Passing statistics and progressive passes"
+    
+  passingtypes:
+    url: "https://fbref.com/en/comps/9/passing_types/Premier-League-Stats"
+    tables:
+      - "squad_passingtypes"
+      - "opponent_passingtypes"
+      - "player_passingtypes"
+    description: "Pass types including crosses, corners"
+    
+  goalshotcreation:
+    url: "https://fbref.com/en/comps/9/gca/Premier-League-Stats"
+    tables:
+      - "squad_goalshotcreation"
+      - "opponent_goalshotcreation"
+      - "player_goalshotcreation"
+    description: "Goal and shot creating actions"
+    
+  defense:
+    url: "https://fbref.com/en/comps/9/defense/Premier-League-Stats"
+    tables:
+      - "squad_defense"
+      - "opponent_defense"
+      - "player_defense"
+    description: "Defensive actions and tackles"
+    
+  possession:
+    url: "https://fbref.com/en/comps/9/possession/Premier-League-Stats"
+    tables:
+      - "squad_possession"
+      - "opponent_possession"
+      - "player_possession"
+    description: "Possession, touches, and carries"
+    
+  playingtime:
+    url: "https://fbref.com/en/comps/9/playingtime/Premier-League-Stats"
+    tables:
+      - "squad_playingtime"
+      - "opponent_playingtime"
+      - "player_playingtime"
+    description: "Minutes played and team success"
+    
+  misc:
+    url: "https://fbref.com/en/comps/9/misc/Premier-League-Stats"
+    tables:
+      - "squad_misc"
+      - "opponent_misc"
+      - "player_misc"
+    description: "Cards, fouls, aerial duels"
+
+# Fixture and results data
+fixtures_sources:
+  current_season:
+    url: "https://fbref.com/en/comps/9/schedule/Premier-League-Fixtures"
+    table: "fixtures"
+    description: "Current season fixtures and results"
+    
+  historical_seasons:
+    # Will be populated with URLs for historical seasons
+    base_pattern: "https://fbref.com/en/comps/9/{season}/schedule/"
+    seasons:
+      - "2023-2024"
+      - "2022-2023" 
+      - "2021-2022"
+      - "2020-2021"
+      - "2019-2020"
+
+# Team information
+teams_source:
+  url: "https://fbref.com/en/comps/9/Premier-League-Stats"
+  description: "Extract team names and basic info"
