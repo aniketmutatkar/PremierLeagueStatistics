@@ -1,0 +1,52 @@
+# Players and Games
+- Pl -- # of Players: Number of Players used in Games
+
+## Playing Time
+- 90s -- 90s Played: 90s played, Minutes played divided by 90
+
+## Goals
+- GA -- Goals Against: Goals Against
+- PKA -- Penalty Kicks Allowed: Penalty Kicks Allowed
+- FK -- Free Kick Goals Against: Free Kick Goals Against
+- CK -- Corner Kick Goals Against: Corner Kick Goals Against
+- OG -- Own Goals Scored Against Goalkeeper: Own Goals Scored Against Goalkeeper
+
+## Expected
+- PSxG -- Post-Shot Expected Goals: Post-Shot Expected Goals
+  PSxG is expected goals based on how likely the goalkeeper is to save the shot
+  xG totals include penalty kicks, but do not include penalty shootouts (unless otherwise noted).
+- PSxG/SoT -- Post-Shot Expected Goals per Shot on Target: Not including penalty kicks
+  PSxG is expected goals based on how likely the goalkeeper is to save the shot
+  Higher numbers indicate that shots on target faced are more difficult to stop and more likely to score
+- PSxG+/- -- PSxG-GA: Post-Shot Expected Goals minus Goals Allowed
+  Positive numbers suggest better luck or an above average ability to stop shots
+  Note: Does not include own goals
+- /90 -- PSxG-GA/90: Post-Shot Expected Goals minus Goals Allowed per 90 minutes
+  Positive numbers suggest better luck or an above average ability to stop shots
+  Note: Does not include own goals
+
+## Launched
+- Cmp -- Passes Completed (Launched): Passes Completed, Passes longer than 40 yards
+- Att -- Passes Attempted (Launched): Passes Attempted, Passes longer than 40 yards
+- Cmp% -- Pass Completion Percentage (Launched): Pass Completion Percentage, Passes longer than 40 yards
+
+## Passes
+- Att (GK) -- Passes Attempted (GK): Passes Attempted (GK), Not including goal kicks
+- Thr -- Throws Attempted: Throws Attempted
+- Launch% -- Launch %: Percentage of Passes that were Launched, Not including goal kicks, Passes longer than 40 yards
+- AvgLen -- Average Pass Length: Average length of passes, in yards, Not including goal kicks
+
+## Goal Kicks
+- Att -- Goal Kicks: Goal Kicks Attempted
+- Launch% -- Launch% (Goal Kicks): Percentage of Goal Kicks that were Launched, Passes longer than 40 yards
+- AvgLen -- Avg. Length of Goal Kicks: Average length of goal kicks, in yards
+
+## Crosses
+- Opp -- Crosses Faced: Opponent's attempted crosses into penalty area
+- Stp -- Crosses Stopped: Number of crosses into penalty area which were successfully stopped by the goalkeeper
+- Stp% -- Crosses Stopped %: Percentage of crosses into penalty area which were successfully stopped by the goalkeeper
+
+## Sweeper
+- #OPA -- Def. Actions Outside Pen. Area: # of defensive actions outside of penalty area
+- #OPA/90 -- Defensive actions outside of penalty area per 90 minutes
+- AvgDist -- Avg. Distance of Def. Actions: Average distance from goal (in yards) of all defensive actions

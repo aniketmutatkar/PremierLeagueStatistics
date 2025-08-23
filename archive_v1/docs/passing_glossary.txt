@@ -1,0 +1,66 @@
+# Players and Games
+- Pl -- # of Players: Number of Players used in Games
+
+## Playing Time
+- 90s -- 90s Played: 90s played, Minutes played divided by 90
+
+## Total
+- Cmp -- Passes Completed: Passes Completed
+  Includes live ball passes (including crosses) as well as corner kicks, throw-ins, free kicks and goal kicks.
+- Att -- Passes Attempted: Passes Attempted
+  Includes live ball passes (including crosses) as well as corner kicks, throw-ins, free kicks and goal kicks.
+- Cmp% -- Pass Completion %: Pass Completion Percentage
+  Minimum 30 minutes played per squad game to qualify as a leader
+  Includes live ball passes (including crosses) as well as corner kicks, throw-ins, free kicks and goal kicks.
+- TotDist -- Total Passing Distance: Total distance, in yards, that completed passes have traveled in any direction
+- PrgDist -- Progressive Passing Distance: Progressive Distance
+  Total distance, in yards, that completed passes have traveled towards the opponent's goal. Note: Passes away from opponent's goal are counted as zero progressive yards.
+
+## Short
+- Cmp -- Passes Completed (Short): Passes Completed
+  Passes between 5 and 15 yards
+- Att -- Passes Attempted (Short): Passes Attempted
+  Passes between 5 and 15 yards
+- Cmp% -- Pass Completion % (Short): Pass Completion Percentage
+  Passes between 5 and 15 yards
+  Minimum 30 minutes played per squad game to qualify as a leader
+
+## Medium
+- Cmp -- Passes Completed (Medium): Passes Completed
+  Passes between 15 and 30 yards
+- Att -- Passes Attempted (Medium): Passes Attempted
+  Passes between 15 and 30 yards
+- Cmp% -- Pass Completion % (Medium): Pass Completion Percentage
+  Passes between 15 and 30 yards
+  Minimum 30 minutes played per squad game to qualify as a leader
+
+## Long
+- Cmp -- Passes Completed (Long): Passes Completed
+  Passes longer than 30 yards
+- Att -- Passes Attempted (Long): Passes Attempted
+  Passes longer than 30 yards
+- Cmp% -- Pass Completion % (Long): Pass Completion Percentage
+  Passes longer than 30 yards
+  Minimum 30 minutes played per squad game to qualify as a leader
+
+## Assists and Expected Assists
+- Ast -- Assists: Assists
+- xAG -- xAG: Exp. Assisted Goals: Expected Assisted Goals
+  xG which follows a pass that assists a shot
+
+## Expected 
+- xA -- xA: Expected Assists: Expected Assists
+  The likelihood each completed pass becomes a goal assist given the pass type, phase of play, location and distance.
+  
+- A-xAG -- Assists - xAG: Assists minus Expected Goals Assisted
+
+## Key Passing Metrics 
+- KP -- Key Passes: Passes that directly lead to a shot (assisted shots)
+- 1/3 -- Passes into Final Third: Completed passes that enter the 1/3 of the pitch closest to the goal 
+  Not including set pieces 
+- PPA -- Passes into Penalty Area: Completed passes into the 18-yard box 
+   Not including set pieces 
+- CrsPA -- Crosses into Penalty Area: Completed crosses into the 18-yard box 
+   Not including set pieces 
+- PrgP -- Progressive Passes: Progressive Passes 
+   Completed passes that move the ball towards the opponent's goal line at least 10 yards from its furthest point in the last six passes, or any completed pass into the penalty area. Excludes passes from the defending 40% of the pitch.

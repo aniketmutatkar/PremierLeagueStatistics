@@ -1,0 +1,26 @@
+# Players and Games
+- Pl -- # of Players: Number of Players used in Games
+
+## Playing Time
+- 90s -- 90s Played: 90s played, Minutes played divided by 90
+
+## Performance
+- CrdY -- Yellow Cards: Yellow Cards
+- CrdR -- Red Cards: Red Cards
+- 2CrdY -- Second Yellow Card: Second Yellow Card
+- Fls -- Fouls Committed: Fouls Committed
+- Fld -- Fouls Drawn: Fouls Drawn
+- Off -- Offsides: Offsides
+- Crs -- Crosses: Crosses
+- Int -- Interceptions: Interceptions
+- TklW -- Tackles Won: Tackles in which the tackler's team won possession of the ball
+- PKwon -- Penalty Kicks Won: Penalty Kicks Won
+- PKcon -- Penalty Kicks Conceded: Penalty Kicks Conceded
+- OG -- Own Goals: Own Goals
+- Recov -- Ball Recoveries: Number of loose balls recovered
+
+## Aerial Duels
+- Won -- Aerials Won: Aerials Won
+- Lost -- Aerials Lost: Aerials Lost
+- Won% -- % of Aerials Won: Percentage of aerials won
+  Minimum .97 aerial duels per squad game to qualify as a leader
