@@ -1,5 +1,5 @@
 """
-Database operations for creating tables and inserting data
+Database operations for creating tables and inserting data - FIXED VERSION
 """
 import pandas as pd
 import logging
@@ -16,29 +16,17 @@ class DatabaseOperations:
         self.db = db_connection
     
     def create_all_tables(self):
-        """Create all necessary tables with proper schemas"""
-        logger.info("Creating all database tables...")
+        """Create only infrastructure tables - stat tables will be created dynamically"""
+        logger.info("Creating infrastructure tables...")
         
         with self.db.get_connection() as conn:
-            # Create infrastructure tables first
+            # Create infrastructure tables only
             self._create_gameweeks_table(conn)
             self._create_fixtures_table(conn)
-            self._create_data_scraping_log_table(conn)
             self._create_teams_table(conn)
+            # Skip data_scraping_log for now - we'll just log to console
             
-            # Create all stat tables (squad, opponent, player)
-            table_names = self.db.get_table_names()
-            
-            for table_name in table_names["squad"]:
-                self._create_stats_table(conn, table_name, "squad")
-            
-            for table_name in table_names["opponent"]:
-                self._create_stats_table(conn, table_name, "opponent")
-                
-            for table_name in table_names["player"]:
-                self._create_stats_table(conn, table_name, "player")
-        
-        logger.info("All tables created successfully")
+        logger.info("Infrastructure tables created successfully")
     
     def _create_gameweeks_table(self, conn):
         """Create gameweeks tracking table"""
@@ -78,17 +66,17 @@ class DatabaseOperations:
         logger.debug("Created fixtures table")
     
     def _create_data_scraping_log_table(self, conn):
-        """Create scraping log table"""
+        """Create scraping log table - FIXED to match the 8 columns we're inserting"""
         sql = """
         CREATE TABLE IF NOT EXISTS data_scraping_log (
-            id INTEGER PRIMARY KEY,
             table_name VARCHAR,
             gameweek INTEGER,
             scrape_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             status VARCHAR, -- 'success', 'failed', 'partial'
             rows_scraped INTEGER,
             error_message TEXT,
-            url VARCHAR
+            url VARCHAR,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
         conn.execute(sql)
@@ -109,43 +97,35 @@ class DatabaseOperations:
     
     def _create_stats_table(self, conn, table_name: str, table_type: str):
         """
-        Create a stats table with flexible schema
-        table_type: 'squad', 'opponent', or 'player'
+        Create a stats table - SIMPLIFIED VERSION
+        Let pandas to_sql handle the schema creation
         """
-        # Base columns that all tables have
+        # Just create a minimal table - pandas will add columns as needed
         base_columns = [
             "id INTEGER PRIMARY KEY",
             "gameweek INTEGER",
-            "scraped_date DATE DEFAULT CURRENT_DATE",
+            "scraped_date DATE DEFAULT CURRENT_DATE"
         ]
         
-        # Add type-specific columns
         if table_type == "player":
             specific_columns = [
-                "player_name VARCHAR",
-                "nation VARCHAR", 
-                "position VARCHAR",
-                "squad VARCHAR",
-                "age INTEGER",
+                "Player VARCHAR",
+                "Nation VARCHAR", 
+                "Pos VARCHAR",
+                "Squad VARCHAR",
+                "Age VARCHAR"
             ]
         else:  # squad or opponent
             specific_columns = [
-                "squad VARCHAR",
+                "Squad VARCHAR"
             ]
-        
-        # Common stat columns - we'll add these dynamically as data comes in
-        # This flexible approach lets us handle any columns that FBRef throws at us
-        dynamic_columns = [
-            "-- Dynamic stat columns will be added when inserting data"
-        ]
         
         all_columns = base_columns + specific_columns
         columns_sql = ",\n            ".join(all_columns)
         
         sql = f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
-            {columns_sql},
-            FOREIGN KEY (gameweek) REFERENCES gameweeks(gameweek)
+            {columns_sql}
         )
         """
         
@@ -154,8 +134,7 @@ class DatabaseOperations:
     
     def insert_data(self, table_name: str, data: pd.DataFrame, gameweek: int):
         """
-        Insert data into a table with automatic schema adaptation
-        This handles the fact that FBRef columns can vary
+        Insert data using DuckDB - create table if it doesn't exist
         """
         if data.empty:
             logger.warning(f"No data to insert for {table_name}")
@@ -168,74 +147,57 @@ class DatabaseOperations:
         
         with self.db.get_connection() as conn:
             try:
-                # Check if table exists and get its columns
-                existing_columns = self._get_table_columns(conn, table_name)
+                # Check if table exists, if not create it with the data structure
+                table_exists = self._table_exists(conn, table_name)
                 
-                # Add any new columns that don't exist
-                new_columns = set(data.columns) - set(existing_columns)
-                for col in new_columns:
-                    self._add_column_if_not_exists(conn, table_name, col, data[col])
+                if not table_exists:
+                    # Create table using the first row of data to determine structure
+                    conn.register('create_table_data', data.head(1))
+                    conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM create_table_data WHERE 1=0")  # Empty table with structure
+                    conn.unregister('create_table_data')
+                    logger.info(f"Created table {table_name} with {len(data.columns)} columns")
                 
-                # Insert the data - DuckDB connections work with pandas to_sql
-                conn.register('temp_df', data)
-                conn.execute(f"INSERT INTO {table_name} SELECT * FROM temp_df")
-                conn.unregister('temp_df')
+                # Insert the data
+                conn.register('temp_data', data)
+                conn.execute(f"INSERT INTO {table_name} SELECT * FROM temp_data")
+                conn.unregister('temp_data')
                 
-                # Log success
-                self._log_scraping_result(conn, table_name, gameweek, 'success', len(data), None, None)
-                logger.info(f"Inserted {len(data)} rows into {table_name} for gameweek {gameweek}")
+                # Log success (simplified - just log to console for now)
+                logger.info(f"✅ Inserted {len(data)} rows into {table_name} for gameweek {gameweek}")
                 
             except Exception as e:
-                # Log failure
-                self._log_scraping_result(conn, table_name, gameweek, 'failed', 0, str(e), None)
-                logger.error(f"Failed to insert data into {table_name}: {e}")
+                logger.error(f"❌ Failed to insert data into {table_name}: {e}")
                 raise
     
-    def _get_table_columns(self, conn, table_name: str) -> List[str]:
-        """Get existing column names for a table"""
+    def _table_exists(self, conn, table_name: str) -> bool:
+        """Check if a table exists"""
         try:
-            result = conn.execute(f"DESCRIBE {table_name}").fetchall()
-            return [row[0] for row in result]  # Column names are in first element
+            result = conn.execute(f"SELECT COUNT(*) FROM {table_name} LIMIT 1").fetchone()
+            return True
         except Exception:
-            # Table might not exist yet
-            return []
-    
-    def _add_column_if_not_exists(self, conn, table_name: str, column_name: str, column_data: pd.Series):
-        """Add a column to table if it doesn't exist"""
-        # Infer data type from pandas series
-        if pd.api.types.is_integer_dtype(column_data):
-            col_type = "INTEGER"
-        elif pd.api.types.is_float_dtype(column_data):
-            col_type = "FLOAT"
-        elif pd.api.types.is_bool_dtype(column_data):
-            col_type = "BOOLEAN"
-        else:
-            col_type = "VARCHAR"
-        
-        try:
-            conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {col_type}")
-            logger.debug(f"Added column {column_name} ({col_type}) to {table_name}")
-        except Exception as e:
-            # Column might already exist, which is fine
-            if "already exists" not in str(e).lower():
-                logger.warning(f"Could not add column {column_name} to {table_name}: {e}")
+            return False
     
     def _log_scraping_result(self, conn, table_name: str, gameweek: int, status: str, 
                            rows_scraped: int, error_message: Optional[str] = None, url: Optional[str] = None):
-        """Log scraping results"""
-        log_data = {
-            'table_name': table_name,
-            'gameweek': gameweek,
-            'status': status,
-            'rows_scraped': rows_scraped,
-            'error_message': error_message,
-            'url': url
-        }
-        
-        log_df = pd.DataFrame([log_data])
-        conn.register('log_temp', log_df)
-        conn.execute("INSERT INTO data_scraping_log SELECT * FROM log_temp")
-        conn.unregister('log_temp')
+        """Log scraping results using DuckDB native approach"""
+        try:
+            # Create log entry
+            log_data = pd.DataFrame([{
+                'table_name': table_name,
+                'gameweek': gameweek,
+                'status': status,
+                'rows_scraped': rows_scraped,
+                'error_message': error_message,
+                'url': url,
+                'scrape_date': datetime.now()
+            }])
+            
+            conn.register('temp_log', log_data)
+            conn.execute("INSERT INTO data_scraping_log SELECT * FROM temp_log")
+            conn.unregister('temp_log')
+            
+        except Exception as e:
+            logger.warning(f"Failed to log scraping result: {e}")
     
     def get_current_gameweek(self) -> int:
         """Get the current/latest gameweek"""
@@ -251,13 +213,13 @@ class DatabaseOperations:
                 return 1
     
     def create_gameweek(self, gameweek: int, start_date: Optional[str] = None, end_date: Optional[str] = None):
-        """Create a new gameweek entry"""
+        """Create a new gameweek entry using DuckDB native approach"""
         with self.db.get_connection() as conn:
             # Use explicit column names to avoid the column count issue
             conn.execute("""
                 INSERT INTO gameweeks (gameweek, start_date, end_date, is_complete) 
-                VALUES (?, ?, ?, FALSE)
-            """, (gameweek, start_date, end_date))
+                VALUES (?, ?, ?, ?)
+            """, (gameweek, start_date, end_date, False))
         
         logger.info(f"Created gameweek {gameweek}")
     

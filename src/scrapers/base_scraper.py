@@ -11,6 +11,7 @@ from io import StringIO
 from pathlib import Path
 from typing import List, Union
 import yaml
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -62,26 +63,48 @@ class BaseScraper:
         return tables
     
     def _fetch_url(self, url: str) -> str:
-        """Fetch URL using your exact logic from webscraper.py"""
-        try:
-            # Your user agent rotation logic
-            user_agents = self.config['scraping']['http']['user_agents']
-            user_agent = random.choice(user_agents)
-            
-            headers = self.config['scraping']['http']['headers'].copy()
-            headers['User-Agent'] = user_agent
-            
-            # Make request
-            timeout = self.config['scraping']['http']['timeout']
-            response = requests.get(url, headers=headers, timeout=timeout)
-            response.raise_for_status()
-            
-            return response.text
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Request failed: {e}")
-            raise
-    
+        """Fetch URL using your exact logic from webscraper.py with rate limiting"""
+        # Apply rate limiting delay before request
+        delay = self.config['scraping']['delays']['between_requests']
+        logger.info(f"Applying {delay}s delay before request...")
+        time.sleep(delay)
+        
+        max_attempts = self.config['scraping']['retries']['max_attempts']
+        backoff_factor = self.config['scraping']['retries']['backoff_factor']
+        
+        for attempt in range(max_attempts):
+            try:
+                # Your user agent rotation logic
+                user_agents = self.config['scraping']['http']['user_agents']
+                user_agent = random.choice(user_agents)
+                
+                headers = self.config['scraping']['http']['headers'].copy()
+                headers['User-Agent'] = user_agent
+                
+                # Make request
+                timeout = self.config['scraping']['http']['timeout']
+                logger.info(f"Fetching {url} (attempt {attempt + 1}/{max_attempts})")
+                response = requests.get(url, headers=headers, timeout=timeout)
+                response.raise_for_status()
+                
+                logger.info(f"Successfully fetched {url}")
+                return response.text
+                
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"Request attempt {attempt + 1} failed: {e}")
+                
+                if attempt < max_attempts - 1:  # Not the last attempt
+                    error_delay = self.config['scraping']['delays']['on_error']
+                    wait_time = error_delay * (backoff_factor ** attempt)
+                    logger.info(f"Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"All {max_attempts} attempts failed for {url}")
+                    raise e  # Re-raise the last exception
+        
+        # This line should never be reached, but satisfies type checker
+        raise RuntimeError(f"Unexpected error: failed to fetch {url}")
+
     def _extract_tables_from_html(self, html_content: str) -> List[pd.DataFrame]:
         """
         Extract tables using your EXACT logic from webscraper.py

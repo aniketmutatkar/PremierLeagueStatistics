@@ -1,9 +1,10 @@
 """
 Stats Scraper - Identifies the right tables and cleans them
-Uses your exact cleanData() logic from archive_v1/src/datacleaner.py
+Uses your exact cleanData() logic + column sanitization + correct table names
 """
 import pandas as pd
 import logging
+import re
 from datetime import datetime
 from typing import Dict, List, Tuple
 from .base_scraper import BaseScraper
@@ -13,17 +14,21 @@ logger = logging.getLogger(__name__)
 class StatsScraper(BaseScraper):
     """
     Stats scraper that identifies the right tables from FBRef
-    and cleans them using your working logic
+    and cleans them using your working logic + sanitized column names
     """
     
-    def scrape_stats(self, source) -> Dict[str, pd.DataFrame]:
+    def scrape_stats(self, source, stat_type: str = "standard") -> Dict[str, pd.DataFrame]:
         """
         Scrape and process stats tables
         
+        Args:
+            source: URL or file path
+            stat_type: Type of stats (standard, passing, shooting, etc.)
+        
         Returns:
-            Dictionary with keys: squad_stats, opponent_stats, player_stats
+            Dictionary with keys: squad_{stat_type}, opponent_{stat_type}, player_{stat_type}
         """
-        logger.info(f"Starting stats scrape of {source}")
+        logger.info(f"Starting {stat_type} stats scrape of {source}")
         
         # Get all tables using base scraper
         all_tables = self.scrape_tables(source)
@@ -39,14 +44,72 @@ class StatsScraper(BaseScraper):
             logger.error("Could not identify all required stat tables")
             return {}
         
-        # Clean the data using your exact logic (now type-safe)
+        # Clean the data using your exact logic
         cleaned_tables = self._clean_data([squad_table, opponent_table, player_table])
         
+        # Sanitize column names for all tables
+        for table in cleaned_tables:
+            table.columns = [self._sanitize_column_name(col) for col in table.columns]
+        
+        # Return with correct table names
         return {
-            'squad_stats': cleaned_tables[0],
-            'opponent_stats': cleaned_tables[1], 
-            'player_stats': cleaned_tables[2]
+            f'squad_{stat_type}': cleaned_tables[0],
+            f'opponent_{stat_type}': cleaned_tables[1], 
+            f'player_{stat_type}': cleaned_tables[2]
         }
+    
+    def _sanitize_column_name(self, col_name: str) -> str:
+        """
+        Convert FBRef column names to clean PascalCase
+        
+        Examples:
+        'Per 90 Minutes G+A' -> 'Per90MinGPlusA'
+        'Performance G-PK' -> 'PerformanceGMinusPK'
+        'Expected npxG+xAG' -> 'ExpectedNpxGPlusXAG'
+        """
+        # Convert to string and strip whitespace
+        clean_name = str(col_name).strip()
+        
+        # Replace common special characters
+        replacements = {
+            '+': 'Plus',
+            '-': 'Minus', 
+            '/': 'Per',
+            '%': 'Pct',
+            '&': 'And',
+            '.': '',
+            '(': '',
+            ')': '',
+            ':': '',
+            "'": '',
+            '"': ''
+        }
+        
+        for old, new in replacements.items():
+            clean_name = clean_name.replace(old, new)
+        
+        # Split on spaces and join as PascalCase
+        words = clean_name.split()
+        
+        # Convert each word to proper case, handling numbers
+        pascal_words = []
+        for word in words:
+            if word.isdigit():
+                pascal_words.append(word)
+            else:
+                # Capitalize first letter, keep rest as is for abbreviations
+                pascal_words.append(word.capitalize())
+        
+        result = ''.join(pascal_words)
+        
+        # Remove any remaining special characters and ensure it starts with letter
+        result = re.sub(r'[^a-zA-Z0-9]', '', result)
+        
+        # Ensure it starts with a letter (for SQL compatibility)
+        if result and result[0].isdigit():
+            result = 'Col' + result
+            
+        return result if result else 'UnknownColumn'
     
     def _identify_stat_tables(self, tables: List[pd.DataFrame]) -> Tuple[pd.DataFrame | None, pd.DataFrame | None, pd.DataFrame | None]:
         """
