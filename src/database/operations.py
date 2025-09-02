@@ -43,28 +43,47 @@ class DatabaseOperations:
         logger.debug("Created gameweeks table")
     
     def _create_fixtures_table(self, conn):
-        """Create fixtures table"""
+        """Enhanced fixtures table that includes gameweek metadata"""
         sql = """
-        CREATE TABLE IF NOT EXISTS fixtures (
+        CREATE TABLE IF NOT EXISTS current_fixtures (
             fixture_id VARCHAR PRIMARY KEY,
             gameweek INTEGER,
-            date DATE,
-            time TIME,
+            match_date DATE,
+            match_time TIME,
             home_team VARCHAR,
             away_team VARCHAR,
             home_score INTEGER,
             away_score INTEGER,
+            home_xg FLOAT,
+            away_xg FLOAT,
             venue VARCHAR,
             referee VARCHAR,
             attendance INTEGER,
             is_completed BOOLEAN DEFAULT FALSE,
-            scraped_date DATE DEFAULT CURRENT_DATE,
-            FOREIGN KEY (gameweek) REFERENCES gameweeks(gameweek)
+            -- Gameweek metadata
+            gameweek_start_date DATE,
+            gameweek_end_date DATE,
+            gameweek_is_complete BOOLEAN DEFAULT FALSE,
+            scraped_date DATE DEFAULT CURRENT_DATE
         )
         """
         conn.execute(sql)
-        logger.debug("Created fixtures table")
+        logger.debug("Created current_fixtures table")
     
+    def create_current_state_tables(self):
+        """Create tables for current state only (5 tables total)"""
+        logger.info("Creating current state tables...")
+        
+        with self.db.get_connection() as conn:
+            # Infrastructure tables (unchanged)
+            self._create_fixtures_table(conn)  # Combines fixtures + gameweeks info
+            self._create_teams_table(conn)
+            
+            # Note: Stats tables will be created dynamically when data is inserted
+            # This allows for flexible column structures from consolidated data
+        
+        logger.info("Current state tables created successfully")
+
     def _create_data_scraping_log_table(self, conn):
         """Create scraping log table - FIXED to match the 8 columns we're inserting"""
         sql = """
@@ -132,6 +151,35 @@ class DatabaseOperations:
         conn.execute(sql)
         logger.debug(f"Created {table_name} table")
     
+    def insert_current_state_data(self, table_name: str, data: pd.DataFrame, current_gameweek: int):
+        """
+        Insert data with current state approach (overwrite existing)
+        """
+        if data.empty:
+            logger.warning(f"No data to insert for {table_name}")
+            return
+        
+        # Add metadata
+        data = data.copy()
+        data['current_through_gameweek'] = current_gameweek
+        data['last_updated'] = datetime.now().date()
+        
+        with self.db.get_connection() as conn:
+            try:
+                # Drop table if it exists (overwrite approach)
+                conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+                
+                # Create new table with current data structure
+                conn.register('create_table_data', data)
+                conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM create_table_data")
+                conn.unregister('create_table_data')
+                
+                logger.info(f"✅ Overwrote {table_name} with {len(data)} rows for gameweek {current_gameweek}")
+                
+            except Exception as e:
+                logger.error(f"❌ Failed to insert current state data into {table_name}: {e}")
+                raise
+
     def insert_data(self, table_name: str, data: pd.DataFrame, gameweek: int):
         """
         Insert data using DuckDB - create table if it doesn't exist
@@ -229,3 +277,38 @@ class DatabaseOperations:
             conn.execute("UPDATE gameweeks SET is_complete = TRUE WHERE gameweek = ?", (gameweek,))
         
         logger.info(f"Marked gameweek {gameweek} as complete")
+    
+    def get_current_database_status(self) -> Dict[str, Any]:
+        """Get status of current database"""
+        with self.db.get_connection() as conn:
+            # Get all table names
+            tables_result = conn.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='main'").fetchall()
+            table_names = [row[0] for row in tables_result]
+            
+            status = {
+                'total_tables': len(table_names),
+                'table_names': table_names,
+                'table_details': {}
+            }
+            
+            # Get details for each table
+            for table_name in table_names:
+                try:
+                    count_result = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()
+                    row_count = count_result[0] if count_result else 0
+                    
+                    # Get current gameweek if applicable
+                    current_gw = None
+                    if 'current_through_gameweek' in conn.execute(f"PRAGMA table_info({table_name})").fetchall():
+                        gw_result = conn.execute(f"SELECT MAX(current_through_gameweek) FROM {table_name}").fetchone()
+                        current_gw = gw_result[0] if gw_result and gw_result[0] else None
+                    
+                    status['table_details'][table_name] = {
+                        'row_count': row_count,
+                        'current_through_gameweek': current_gw
+                    }
+                    
+                except Exception as e:
+                    status['table_details'][table_name] = {'error': str(e)}
+            
+            return status
