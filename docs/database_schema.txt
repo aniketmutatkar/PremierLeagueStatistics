@@ -1,0 +1,2057 @@
+================================================================================
+PREMIER LEAGUE STATISTICS - DATABASE SCHEMA
+================================================================================
+Generated: 2025-09-02 21:30:34
+Database: data/premierleague_raw.duckdb
+================================================================================
+
+TOTAL TABLES: 35
+----------------------------------------
+Stat Tables: 33
+Infrastructure Tables: 2
+
+============================================================
+TABLE 1: OPPONENT_DEFENSE
+============================================================
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Tackles Tkl'
+  4. 'Tackles TklW'
+  5. 'Tackles Def 3rd'
+  6. 'Tackles Mid 3rd'
+  7. 'Tackles Att 3rd'
+  8. 'Challenges Tkl'
+  9. 'Challenges Att'
+ 10. 'Challenges Tkl%'
+ 11. 'Challenges Lost'
+ 12. 'Blocks Blocks'
+ 13. 'Blocks Sh'
+ 14. 'Blocks Pass'
+ 15. 'Int'
+ 16. 'Tkl+Int'
+ 17. 'Clr'
+ 18. 'Err'
+ 19. 'Current Date'
+ 20. 'current_through_gameweek'
+ 21. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  90s  Tackles Tkl  Tackles TklW  Tackles Def 3rd  Tackles Mid 3rd  Tackles Att 3rd  Challenges Tkl  Challenges Att
+    vs Arsenal  21  3.0           51            32               29               16                6              33              57
+vs Aston Villa  19  3.0           64            39               35               19               10              30              54
+vs Bournemouth  18  3.0           53            35               27               19                7              31              57
+... and 12 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Tackles Tkl': int64
+'Tackles TklW': int64
+'Tackles Def 3rd': int64
+'Tackles Mid 3rd': int64
+'Tackles Att 3rd': int64
+'Challenges Tkl': int64
+'Challenges Att': int64
+... and 12 more columns
+
+============================================================
+TABLE 2: OPPONENT_GOALSHOTCREATION
+============================================================
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'SCA SCA'
+  4. 'SCA SCA90'
+  5. 'SCA Types PassLive'
+  6. 'SCA Types PassDead'
+  7. 'SCA Types TO'
+  8. 'SCA Types Sh'
+  9. 'SCA Types Fld'
+ 10. 'SCA Types Def'
+ 11. 'GCA GCA'
+ 12. 'GCA GCA90'
+ 13. 'GCA Types PassLive'
+ 14. 'GCA Types PassDead'
+ 15. 'GCA Types TO'
+ 16. 'GCA Types Sh'
+ 17. 'GCA Types Fld'
+ 18. 'GCA Types Def'
+ 19. 'Current Date'
+ 20. 'current_through_gameweek'
+ 21. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  90s  SCA SCA  SCA SCA90  SCA Types PassLive  SCA Types PassDead  SCA Types TO  SCA Types Sh  SCA Types Fld
+    vs Arsenal  21  3.0       64      21.33                  48                   2             6             3              4
+vs Aston Villa  19  3.0       56      18.67                  40                   3             5             4              2
+vs Bournemouth  18  3.0       57      19.00                  49                   4             1             1              2
+... and 12 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'SCA SCA': int64
+'SCA SCA90': float64
+'SCA Types PassLive': int64
+'SCA Types PassDead': int64
+'SCA Types TO': int64
+'SCA Types Sh': int64
+'SCA Types Fld': int64
+... and 12 more columns
+
+============================================================
+TABLE 3: OPPONENT_KEEPERS
+============================================================
+Rows: 20
+Columns: 24
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. 'Playing Time MP'
+  3. 'Playing Time Starts'
+  4. 'Playing Time Min'
+  5. 'Playing Time 90s'
+  6. 'Performance GA'
+  7. 'Performance GA90'
+  8. 'Performance SoTA'
+  9. 'Performance Saves'
+ 10. 'Performance Save%'
+ 11. 'Performance W'
+ 12. 'Performance D'
+ 13. 'Performance L'
+ 14. 'Performance CS'
+ 15. 'Performance CS%'
+ 16. 'Penalty Kicks PKatt'
+ 17. 'Penalty Kicks PKA'
+ 18. 'Penalty Kicks PKsv'
+ 19. 'Penalty Kicks PKm'
+ 20. 'Penalty Kicks Save%'
+ 21. 'Current Date'
+ 22. 'current_through_gameweek'
+ 23. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  Playing Time MP  Playing Time Starts  Playing Time Min  Playing Time 90s  Performance GA  Performance GA90  Performance SoTA  Performance Saves
+    vs Arsenal   1                3                    3               270               3.0               6              2.00                 9                  3
+vs Aston Villa   2                3                    3               270               3.0               0              0.00                 9                  9
+vs Bournemouth   1                3                    3               270               3.0               4              1.33                13                  9
+... and 14 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'Playing Time MP': int64
+'Playing Time Starts': int64
+'Playing Time Min': int64
+'Playing Time 90s': float64
+'Performance GA': int64
+'Performance GA90': float64
+'Performance SoTA': int64
+'Performance Saves': int64
+... and 14 more columns
+
+============================================================
+TABLE 4: OPPONENT_KEEPERSADV
+============================================================
+Rows: 20
+Columns: 31
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Goals GA'
+  4. 'Goals PKA'
+  5. 'Goals FK'
+  6. 'Goals CK'
+  7. 'Goals OG'
+  8. 'Expected PSxG'
+  9. 'Expected PSxG/SoT'
+ 10. 'Expected PSxG+/-'
+ 11. 'Expected /90'
+ 12. 'Launched Cmp'
+ 13. 'Launched Att'
+ 14. 'Launched Cmp%'
+ 15. 'Passes Att (GK)'
+ 16. 'Passes Thr'
+ 17. 'Passes Launch%'
+ 18. 'Passes AvgLen'
+ 19. 'Goal Kicks Att'
+ 20. 'Goal Kicks Launch%'
+ 21. 'Goal Kicks AvgLen'
+ 22. 'Crosses Opp'
+ 23. 'Crosses Stp'
+ 24. 'Crosses Stp%'
+ 25. 'Sweeper #OPA'
+ 26. 'Sweeper #OPA/90'
+ 27. 'Sweeper AvgDist'
+ 28. 'Current Date'
+ 29. 'current_through_gameweek'
+ 30. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  90s  Goals GA  Goals PKA  Goals FK  Goals CK  Goals OG  Expected PSxG  Expected PSxG/SoT
+    vs Arsenal   1  3.0         6          1         0         3         0            4.5               0.44
+vs Aston Villa   2  3.0         0          0         0         0         0            1.4               0.15
+vs Bournemouth   1  3.0         4          0         0         0         0            3.2               0.25
+... and 21 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Goals GA': int64
+'Goals PKA': int64
+'Goals FK': int64
+'Goals CK': int64
+'Goals OG': int64
+'Expected PSxG': float64
+'Expected PSxG/SoT': float64
+... and 21 more columns
+
+============================================================
+TABLE 5: OPPONENT_MISC
+============================================================
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Performance CrdY'
+  4. 'Performance CrdR'
+  5. 'Performance 2CrdY'
+  6. 'Performance Fls'
+  7. 'Performance Fld'
+  8. 'Performance Off'
+  9. 'Performance Crs'
+ 10. 'Performance Int'
+ 11. 'Performance TklW'
+ 12. 'Performance PKwon'
+ 13. 'Performance PKcon'
+ 14. 'Performance OG'
+ 15. 'Performance Recov'
+ 16. 'Aerial Duels Won'
+ 17. 'Aerial Duels Lost'
+ 18. 'Aerial Duels Won%'
+ 19. 'Current Date'
+ 20. 'current_through_gameweek'
+ 21. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  90s  Performance CrdY  Performance CrdR  Performance 2CrdY  Performance Fls  Performance Fld  Performance Off  Performance Crs
+    vs Arsenal  21  3.0                 5                 0                  0               28               37                2               27
+vs Aston Villa  19  3.0                 5                 0                  0               36               29                4               48
+vs Bournemouth  18  3.0                 7                 1                  0               40               36                6               54
+... and 12 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Performance CrdY': int64
+'Performance CrdR': int64
+'Performance 2CrdY': int64
+'Performance Fls': int64
+'Performance Fld': int64
+'Performance Off': int64
+'Performance Crs': int64
+... and 12 more columns
+
+============================================================
+TABLE 6: OPPONENT_PASSING
+============================================================
+Rows: 20
+Columns: 29
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Total Cmp'
+  4. 'Total Att'
+  5. 'Total Cmp%'
+  6. 'Total TotDist'
+  7. 'Total PrgDist'
+  8. 'Short Cmp'
+  9. 'Short Att'
+ 10. 'Short Cmp%'
+ 11. 'Medium Cmp'
+ 12. 'Medium Att'
+ 13. 'Medium Cmp%'
+ 14. 'Long Cmp'
+ 15. 'Long Att'
+ 16. 'Long Cmp%'
+ 17. 'Ast'
+ 18. 'xAG'
+ 19. 'Expected xA'
+ 20. 'Expected A-xAG'
+ 21. 'KP'
+ 22. '1/3'
+ 23. 'PPA'
+ 24. 'CrsPA'
+ 25. 'PrgP'
+ 26. 'Current Date'
+ 27. 'current_through_gameweek'
+ 28. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  90s  Total Cmp  Total Att  Total Cmp%  Total TotDist  Total PrgDist  Short Cmp  Short Att
+    vs Arsenal  21  3.0       1038       1291        80.4          18631           6344        453        516
+vs Aston Villa  19  3.0        883       1118        79.0          15923           6163        412        467
+vs Bournemouth  18  3.0       1104       1419        77.8          20966           8132        455        515
+... and 19 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Total Cmp': int64
+'Total Att': int64
+'Total Cmp%': float64
+'Total TotDist': int64
+'Total PrgDist': int64
+'Short Cmp': int64
+'Short Att': int64
+... and 19 more columns
+
+============================================================
+TABLE 7: OPPONENT_PASSINGTYPES
+============================================================
+Rows: 20
+Columns: 21
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Att'
+  4. 'Pass Types Live'
+  5. 'Pass Types Dead'
+  6. 'Pass Types FK'
+  7. 'Pass Types TB'
+  8. 'Pass Types Sw'
+  9. 'Pass Types Crs'
+ 10. 'Pass Types TI'
+ 11. 'Pass Types CK'
+ 12. 'Corner Kicks In'
+ 13. 'Corner Kicks Out'
+ 14. 'Corner Kicks Str'
+ 15. 'Outcomes Cmp'
+ 16. 'Outcomes Off'
+ 17. 'Outcomes Blocks'
+ 18. 'Current Date'
+ 19. 'current_through_gameweek'
+ 20. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  90s  Att  Pass Types Live  Pass Types Dead  Pass Types FK  Pass Types TB  Pass Types Sw  Pass Types Crs
+    vs Arsenal  21  3.0 1291             1158              131             37              7             14              27
+vs Aston Villa  19  3.0 1118             1021               93             30             11              6              48
+vs Bournemouth  18  3.0 1419             1265              148             42              3              4              54
+... and 11 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Att': int64
+'Pass Types Live': int64
+'Pass Types Dead': int64
+'Pass Types FK': int64
+'Pass Types TB': int64
+'Pass Types Sw': int64
+'Pass Types Crs': int64
+... and 11 more columns
+
+============================================================
+TABLE 8: OPPONENT_PLAYINGTIME
+============================================================
+Rows: 20
+Columns: 26
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. 'Age'
+  3. 'Playing Time MP'
+  4. 'Playing Time Min'
+  5. 'Playing Time Mn/MP'
+  6. 'Playing Time Min%'
+  7. 'Playing Time 90s'
+  8. 'Starts Starts'
+  9. 'Starts Mn/Start'
+ 10. 'Starts Compl'
+ 11. 'Subs Subs'
+ 12. 'Subs Mn/Sub'
+ 13. 'Subs unSub'
+ 14. 'Team Success PPM'
+ 15. 'Team Success onG'
+ 16. 'Team Success onGA'
+ 17. 'Team Success +/-'
+ 18. 'Team Success +/-90'
+ 19. 'Team Success (xG) onxG'
+ 20. 'Team Success (xG) onxGA'
+ 21. 'Team Success (xG) xG+/-'
+ 22. 'Team Success (xG) xG+/-90'
+ 23. 'Current Date'
+ 24. 'current_through_gameweek'
+ 25. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  Age  Playing Time MP  Playing Time Min  Playing Time Mn/MP  Playing Time Min%  Playing Time 90s  Starts Starts  Starts Mn/Start
+    vs Arsenal  21 26.5                3               270                  90                100               3.0             33               78
+vs Aston Villa  19 26.9                3               270                  90                100               3.0             33               82
+vs Bournemouth  18 26.9                3               270                  90                100               3.0             33               83
+... and 16 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'Age': float64
+'Playing Time MP': int64
+'Playing Time Min': int64
+'Playing Time Mn/MP': int64
+'Playing Time Min%': int64
+'Playing Time 90s': float64
+'Starts Starts': int64
+'Starts Mn/Start': int64
+... and 16 more columns
+
+============================================================
+TABLE 9: OPPONENT_POSSESSION
+============================================================
+Rows: 20
+Columns: 29
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. 'Poss'
+  3. '90s'
+  4. 'Touches Touches'
+  5. 'Touches Def Pen'
+  6. 'Touches Def 3rd'
+  7. 'Touches Mid 3rd'
+  8. 'Touches Att 3rd'
+  9. 'Touches Att Pen'
+ 10. 'Touches Live'
+ 11. 'Take-Ons Att'
+ 12. 'Take-Ons Succ'
+ 13. 'Take-Ons Succ%'
+ 14. 'Take-Ons Tkld'
+ 15. 'Take-Ons Tkld%'
+ 16. 'Carries Carries'
+ 17. 'Carries TotDist'
+ 18. 'Carries PrgDist'
+ 19. 'Carries PrgC'
+ 20. 'Carries 1/3'
+ 21. 'Carries CPA'
+ 22. 'Carries Mis'
+ 23. 'Carries Dis'
+ 24. 'Receiving Rec'
+ 25. 'Receiving PrgR'
+ 26. 'Current Date'
+ 27. 'current_through_gameweek'
+ 28. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  Poss  90s  Touches Touches  Touches Def Pen  Touches Def 3rd  Touches Mid 3rd  Touches Att 3rd  Touches Att Pen
+    vs Arsenal  21  49.0  3.0             1603              224              671              683              264               55
+vs Aston Villa  19  41.3  3.0             1505              200              519              639              362               69
+vs Bournemouth  18  54.3  3.0             1800              228              664              770              384               66
+... and 19 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'Poss': float64
+'90s': float64
+'Touches Touches': int64
+'Touches Def Pen': int64
+'Touches Def 3rd': int64
+'Touches Mid 3rd': int64
+'Touches Att 3rd': int64
+'Touches Att Pen': int64
+... and 19 more columns
+
+============================================================
+TABLE 10: OPPONENT_SHOOTING
+============================================================
+Rows: 20
+Columns: 23
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Standard Gls'
+  4. 'Standard Sh'
+  5. 'Standard SoT'
+  6. 'Standard SoT%'
+  7. 'Standard Sh/90'
+  8. 'Standard SoT/90'
+  9. 'Standard G/Sh'
+ 10. 'Standard G/SoT'
+ 11. 'Standard Dist'
+ 12. 'Standard FK'
+ 13. 'Standard PK'
+ 14. 'Standard PKatt'
+ 15. 'Expected xG'
+ 16. 'Expected npxG'
+ 17. 'Expected npxG/Sh'
+ 18. 'Expected G-xG'
+ 19. 'Expected np:G-xG'
+ 20. 'Current Date'
+ 21. 'current_through_gameweek'
+ 22. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  90s  Standard Gls  Standard Sh  Standard SoT  Standard SoT%  Standard Sh/90  Standard SoT/90  Standard G/Sh
+    vs Arsenal  21  3.0             1           34            11           32.4           11.33             3.67           0.03
+vs Aston Villa  19  3.0             4           30             8           26.7           10.00             2.67           0.10
+vs Bournemouth  18  3.0             4           30            12           40.0           10.00             4.00           0.13
+... and 13 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Standard Gls': int64
+'Standard Sh': int64
+'Standard SoT': int64
+'Standard SoT%': float64
+'Standard Sh/90': float64
+'Standard SoT/90': float64
+'Standard G/Sh': float64
+... and 13 more columns
+
+============================================================
+TABLE 11: OPPONENT_STANDARD
+============================================================
+Rows: 20
+Columns: 35
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. 'Age'
+  3. 'Poss'
+  4. 'Playing Time MP'
+  5. 'Playing Time Starts'
+  6. 'Playing Time Min'
+  7. 'Playing Time 90s'
+  8. 'Performance Gls'
+  9. 'Performance Ast'
+ 10. 'Performance G+A'
+ 11. 'Performance G-PK'
+ 12. 'Performance PK'
+ 13. 'Performance PKatt'
+ 14. 'Performance CrdY'
+ 15. 'Performance CrdR'
+ 16. 'Expected xG'
+ 17. 'Expected npxG'
+ 18. 'Expected xAG'
+ 19. 'Expected npxG+xAG'
+ 20. 'Progression PrgC'
+ 21. 'Progression PrgP'
+ 22. 'Per 90 Minutes Gls'
+ 23. 'Per 90 Minutes Ast'
+ 24. 'Per 90 Minutes G+A'
+ 25. 'Per 90 Minutes G-PK'
+ 26. 'Per 90 Minutes G+A-PK'
+ 27. 'Per 90 Minutes xG'
+ 28. 'Per 90 Minutes xAG'
+ 29. 'Per 90 Minutes xG+xAG'
+ 30. 'Per 90 Minutes npxG'
+ 31. 'Per 90 Minutes npxG+xAG'
+ 32. 'Current Date'
+ 33. 'current_through_gameweek'
+ 34. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+         Squad  Pl  Age  Poss  Playing Time MP  Playing Time Starts  Playing Time Min  Playing Time 90s  Performance Gls  Performance Ast
+    vs Arsenal  21 26.5  49.0                3                   33               270               3.0                1                0
+vs Aston Villa  19 26.9  41.3                3                   33               270               3.0                4                1
+vs Bournemouth  18 26.9  54.3                3                   33               270               3.0                4                3
+... and 25 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'Age': float64
+'Poss': float64
+'Playing Time MP': int64
+'Playing Time Starts': int64
+'Playing Time Min': int64
+'Playing Time 90s': float64
+'Performance Gls': int64
+'Performance Ast': int64
+... and 25 more columns
+
+============================================================
+TABLE 12: PLAYER_DEFENSE
+============================================================
+Rows: 370
+Columns: 26
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. '90s'
+  7. 'Tackles Tkl'
+  8. 'Tackles TklW'
+  9. 'Tackles Def 3rd'
+ 10. 'Tackles Mid 3rd'
+ 11. 'Tackles Att 3rd'
+ 12. 'Challenges Tkl'
+ 13. 'Challenges Att'
+ 14. 'Challenges Tkl%'
+ 15. 'Challenges Lost'
+ 16. 'Blocks Blocks'
+ 17. 'Blocks Sh'
+ 18. 'Blocks Pass'
+ 19. 'Int'
+ 20. 'Tkl+Int'
+ 21. 'Clr'
+ 22. 'Err'
+ 23. 'Current Date'
+ 24. 'current_through_gameweek'
+ 25. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+           Player Nation Pos        Squad  Age  Born  90s  Tackles Tkl  Tackles TklW  Tackles Def 3rd
+ Brenden Aaronson    USA  FW Leeds United   24  2000  0.9            4             3                1
+Joshua Acheampong    ENG  DF      Chelsea   19  2006  1.0            2             2                1
+      Tyler Adams    USA  MF  Bournemouth   26  1999  3.0            9             3                3
+... and 16 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'90s': float64
+'Tackles Tkl': int64
+'Tackles TklW': int64
+'Tackles Def 3rd': int64
+... and 16 more columns
+
+============================================================
+TABLE 13: PLAYER_GOALSHOTCREATION
+============================================================
+Rows: 370
+Columns: 26
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. '90s'
+  7. 'SCA SCA'
+  8. 'SCA SCA90'
+  9. 'SCA Types PassLive'
+ 10. 'SCA Types PassDead'
+ 11. 'SCA Types TO'
+ 12. 'SCA Types Sh'
+ 13. 'SCA Types Fld'
+ 14. 'SCA Types Def'
+ 15. 'GCA GCA'
+ 16. 'GCA GCA90'
+ 17. 'GCA Types PassLive'
+ 18. 'GCA Types PassDead'
+ 19. 'GCA Types TO'
+ 20. 'GCA Types Sh'
+ 21. 'GCA Types Fld'
+ 22. 'GCA Types Def'
+ 23. 'Current Date'
+ 24. 'current_through_gameweek'
+ 25. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+           Player Nation Pos        Squad  Age  Born  90s  SCA SCA  SCA SCA90  SCA Types PassLive
+ Brenden Aaronson    USA  FW Leeds United   24  2000  0.9        3       3.38                   2
+Joshua Acheampong    ENG  DF      Chelsea   19  2006  1.0        0       0.00                   0
+      Tyler Adams    USA  MF  Bournemouth   26  1999  3.0        4       1.35                   3
+... and 16 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'90s': float64
+'SCA SCA': int64
+'SCA SCA90': float64
+'SCA Types PassLive': int64
+... and 16 more columns
+
+============================================================
+TABLE 14: PLAYER_KEEPERS
+============================================================
+Rows: 21
+Columns: 28
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. 'Playing Time MP'
+  7. 'Playing Time Starts'
+  8. 'Playing Time Min'
+  9. 'Playing Time 90s'
+ 10. 'Performance GA'
+ 11. 'Performance GA90'
+ 12. 'Performance SoTA'
+ 13. 'Performance Saves'
+ 14. 'Performance Save%'
+ 15. 'Performance W'
+ 16. 'Performance D'
+ 17. 'Performance L'
+ 18. 'Performance CS'
+ 19. 'Performance CS%'
+ 20. 'Penalty Kicks PKatt'
+ 21. 'Penalty Kicks PKA'
+ 22. 'Penalty Kicks PKsv'
+ 23. 'Penalty Kicks PKm'
+ 24. 'Penalty Kicks Save%'
+ 25. 'Current Date'
+ 26. 'current_through_gameweek'
+ 27. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+        Player Nation Pos          Squad  Age  Born  Playing Time MP  Playing Time Starts  Playing Time Min  Playing Time 90s
+       Alisson    BRA  GK      Liverpool   32  1992                3                    3               270               3.0
+Altay Bayındır    TUR  GK Manchester Utd   27  1998                3                    3               270               3.0
+   Marco Bizot    NED  GK    Aston Villa   34  1991                2                    2               180               2.0
+... and 18 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'Playing Time MP': int64
+'Playing Time Starts': int64
+'Playing Time Min': int64
+'Playing Time 90s': float64
+... and 18 more columns
+
+============================================================
+TABLE 15: PLAYER_KEEPERSADV
+============================================================
+Rows: 21
+Columns: 35
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. '90s'
+  7. 'Goals GA'
+  8. 'Goals PKA'
+  9. 'Goals FK'
+ 10. 'Goals CK'
+ 11. 'Goals OG'
+ 12. 'Expected PSxG'
+ 13. 'Expected PSxG/SoT'
+ 14. 'Expected PSxG+/-'
+ 15. 'Expected /90'
+ 16. 'Launched Cmp'
+ 17. 'Launched Att'
+ 18. 'Launched Cmp%'
+ 19. 'Passes Att (GK)'
+ 20. 'Passes Thr'
+ 21. 'Passes Launch%'
+ 22. 'Passes AvgLen'
+ 23. 'Goal Kicks Att'
+ 24. 'Goal Kicks Launch%'
+ 25. 'Goal Kicks AvgLen'
+ 26. 'Crosses Opp'
+ 27. 'Crosses Stp'
+ 28. 'Crosses Stp%'
+ 29. 'Sweeper #OPA'
+ 30. 'Sweeper #OPA/90'
+ 31. 'Sweeper AvgDist'
+ 32. 'Current Date'
+ 33. 'current_through_gameweek'
+ 34. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+        Player Nation Pos          Squad  Age  Born  90s  Goals GA  Goals PKA  Goals FK
+       Alisson    BRA  GK      Liverpool   32  1992  3.0         4          0         0
+Altay Bayındır    TUR  GK Manchester Utd   27  1998  3.0         4          0         0
+   Marco Bizot    NED  GK    Aston Villa   34  1991  2.0         3          1         0
+... and 25 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'90s': float64
+'Goals GA': int64
+'Goals PKA': int64
+'Goals FK': int64
+... and 25 more columns
+
+============================================================
+TABLE 16: PLAYER_MISC
+============================================================
+Rows: 370
+Columns: 26
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. '90s'
+  7. 'Performance CrdY'
+  8. 'Performance CrdR'
+  9. 'Performance 2CrdY'
+ 10. 'Performance Fls'
+ 11. 'Performance Fld'
+ 12. 'Performance Off'
+ 13. 'Performance Crs'
+ 14. 'Performance Int'
+ 15. 'Performance TklW'
+ 16. 'Performance PKwon'
+ 17. 'Performance PKcon'
+ 18. 'Performance OG'
+ 19. 'Performance Recov'
+ 20. 'Aerial Duels Won'
+ 21. 'Aerial Duels Lost'
+ 22. 'Aerial Duels Won%'
+ 23. 'Current Date'
+ 24. 'current_through_gameweek'
+ 25. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+           Player Nation Pos        Squad  Age  Born  90s  Performance CrdY  Performance CrdR  Performance 2CrdY
+ Brenden Aaronson    USA  FW Leeds United   24  2000  0.9                 0                 0                  0
+Joshua Acheampong    ENG  DF      Chelsea   19  2006  1.0                 0                 0                  0
+      Tyler Adams    USA  MF  Bournemouth   26  1999  3.0                 2                 0                  0
+... and 16 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'90s': float64
+'Performance CrdY': int64
+'Performance CrdR': int64
+'Performance 2CrdY': int64
+... and 16 more columns
+
+============================================================
+TABLE 17: PLAYER_PASSING
+============================================================
+Rows: 370
+Columns: 33
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. '90s'
+  7. 'Total Cmp'
+  8. 'Total Att'
+  9. 'Total Cmp%'
+ 10. 'Total TotDist'
+ 11. 'Total PrgDist'
+ 12. 'Short Cmp'
+ 13. 'Short Att'
+ 14. 'Short Cmp%'
+ 15. 'Medium Cmp'
+ 16. 'Medium Att'
+ 17. 'Medium Cmp%'
+ 18. 'Long Cmp'
+ 19. 'Long Att'
+ 20. 'Long Cmp%'
+ 21. 'Ast'
+ 22. 'xAG'
+ 23. 'Expected xA'
+ 24. 'Expected A-xAG'
+ 25. 'KP'
+ 26. '1/3'
+ 27. 'PPA'
+ 28. 'CrsPA'
+ 29. 'PrgP'
+ 30. 'Current Date'
+ 31. 'current_through_gameweek'
+ 32. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+           Player Nation Pos        Squad  Age  Born  90s  Total Cmp  Total Att  Total Cmp%
+ Brenden Aaronson    USA  FW Leeds United   24  2000  0.9         18         24        75.0
+Joshua Acheampong    ENG  DF      Chelsea   19  2006  1.0         87         93        93.5
+      Tyler Adams    USA  MF  Bournemouth   26  1999  3.0         93        117        79.5
+... and 23 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'90s': float64
+'Total Cmp': int64
+'Total Att': int64
+'Total Cmp%': float64
+... and 23 more columns
+
+============================================================
+TABLE 18: PLAYER_PASSINGTYPES
+============================================================
+Rows: 370
+Columns: 25
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. '90s'
+  7. 'Att'
+  8. 'Pass Types Live'
+  9. 'Pass Types Dead'
+ 10. 'Pass Types FK'
+ 11. 'Pass Types TB'
+ 12. 'Pass Types Sw'
+ 13. 'Pass Types Crs'
+ 14. 'Pass Types TI'
+ 15. 'Pass Types CK'
+ 16. 'Corner Kicks In'
+ 17. 'Corner Kicks Out'
+ 18. 'Corner Kicks Str'
+ 19. 'Outcomes Cmp'
+ 20. 'Outcomes Off'
+ 21. 'Outcomes Blocks'
+ 22. 'Current Date'
+ 23. 'current_through_gameweek'
+ 24. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+           Player Nation Pos        Squad  Age  Born  90s  Att  Pass Types Live  Pass Types Dead
+ Brenden Aaronson    USA  FW Leeds United   24  2000  0.9   24               21                3
+Joshua Acheampong    ENG  DF      Chelsea   19  2006  1.0   93               92                1
+      Tyler Adams    USA  MF  Bournemouth   26  1999  3.0  117              112                5
+... and 15 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'90s': float64
+'Att': int64
+'Pass Types Live': int64
+'Pass Types Dead': int64
+... and 15 more columns
+
+============================================================
+TABLE 19: PLAYER_PLAYINGTIME
+============================================================
+Rows: 456
+Columns: 31
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. 'Playing Time MP'
+  7. 'Playing Time Min'
+  8. 'Playing Time Mn/MP'
+  9. 'Playing Time Min%'
+ 10. 'Playing Time 90s'
+ 11. 'Starts Starts'
+ 12. 'Starts Mn/Start'
+ 13. 'Starts Compl'
+ 14. 'Subs Subs'
+ 15. 'Subs Mn/Sub'
+ 16. 'Subs unSub'
+ 17. 'Team Success PPM'
+ 18. 'Team Success onG'
+ 19. 'Team Success onGA'
+ 20. 'Team Success +/-'
+ 21. 'Team Success +/-90'
+ 22. 'Team Success On-Off'
+ 23. 'Team Success (xG) onxG'
+ 24. 'Team Success (xG) onxGA'
+ 25. 'Team Success (xG) xG+/-'
+ 26. 'Team Success (xG) xG+/-90'
+ 27. 'Team Success (xG) On-Off'
+ 28. 'Current Date'
+ 29. 'current_through_gameweek'
+ 30. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+           Player Nation Pos           Squad  Age  Born  Playing Time MP  Playing Time Min  Playing Time Mn/MP  Playing Time Min%
+ Brenden Aaronson    USA  FW    Leeds United   24  2000                3                80                  27               29.6
+      Zach Abbott    ENG  DF Nott'ham Forest   19  2006                0                 0                   0                0.0
+Joshua Acheampong    ENG  DF         Chelsea   19  2006                1                90                  90               33.3
+... and 21 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'Playing Time MP': int64
+'Playing Time Min': int64
+'Playing Time Mn/MP': int64
+'Playing Time Min%': float64
+... and 21 more columns
+
+============================================================
+TABLE 20: PLAYER_POSSESSION
+============================================================
+Rows: 370
+Columns: 32
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. '90s'
+  7. 'Touches Touches'
+  8. 'Touches Def Pen'
+  9. 'Touches Def 3rd'
+ 10. 'Touches Mid 3rd'
+ 11. 'Touches Att 3rd'
+ 12. 'Touches Att Pen'
+ 13. 'Touches Live'
+ 14. 'Take-Ons Att'
+ 15. 'Take-Ons Succ'
+ 16. 'Take-Ons Succ%'
+ 17. 'Take-Ons Tkld'
+ 18. 'Take-Ons Tkld%'
+ 19. 'Carries Carries'
+ 20. 'Carries TotDist'
+ 21. 'Carries PrgDist'
+ 22. 'Carries PrgC'
+ 23. 'Carries 1/3'
+ 24. 'Carries CPA'
+ 25. 'Carries Mis'
+ 26. 'Carries Dis'
+ 27. 'Receiving Rec'
+ 28. 'Receiving PrgR'
+ 29. 'Current Date'
+ 30. 'current_through_gameweek'
+ 31. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+           Player Nation Pos        Squad  Age  Born  90s  Touches Touches  Touches Def Pen  Touches Def 3rd
+ Brenden Aaronson    USA  FW Leeds United   24  2000  0.9               36                0                5
+Joshua Acheampong    ENG  DF      Chelsea   19  2006  1.0              102                6               38
+      Tyler Adams    USA  MF  Bournemouth   26  1999  3.0              156               13               49
+... and 22 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'90s': float64
+'Touches Touches': int64
+'Touches Def Pen': int64
+'Touches Def 3rd': int64
+... and 22 more columns
+
+============================================================
+TABLE 21: PLAYER_SHOOTING
+============================================================
+Rows: 370
+Columns: 27
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. '90s'
+  7. 'Standard Gls'
+  8. 'Standard Sh'
+  9. 'Standard SoT'
+ 10. 'Standard SoT%'
+ 11. 'Standard Sh/90'
+ 12. 'Standard SoT/90'
+ 13. 'Standard G/Sh'
+ 14. 'Standard G/SoT'
+ 15. 'Standard Dist'
+ 16. 'Standard FK'
+ 17. 'Standard PK'
+ 18. 'Standard PKatt'
+ 19. 'Expected xG'
+ 20. 'Expected npxG'
+ 21. 'Expected npxG/Sh'
+ 22. 'Expected G-xG'
+ 23. 'Expected np:G-xG'
+ 24. 'Current Date'
+ 25. 'current_through_gameweek'
+ 26. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+           Player Nation Pos        Squad  Age  Born  90s  Standard Gls  Standard Sh  Standard SoT
+ Brenden Aaronson    USA  FW Leeds United   24  2000  0.9             0            0             0
+Joshua Acheampong    ENG  DF      Chelsea   19  2006  1.0             0            1             0
+      Tyler Adams    USA  MF  Bournemouth   26  1999  3.0             0            2             2
+... and 17 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'90s': float64
+'Standard Gls': int64
+'Standard Sh': int64
+'Standard SoT': int64
+... and 17 more columns
+
+============================================================
+TABLE 22: PLAYER_STANDARD
+============================================================
+Rows: 370
+Columns: 38
+
+COLUMN LIST:
+------------------------------
+  0. 'Player'
+  1. 'Nation'
+  2. 'Pos'
+  3. 'Squad'
+  4. 'Age'
+  5. 'Born'
+  6. 'Playing Time MP'
+  7. 'Playing Time Starts'
+  8. 'Playing Time Min'
+  9. 'Playing Time 90s'
+ 10. 'Performance Gls'
+ 11. 'Performance Ast'
+ 12. 'Performance G+A'
+ 13. 'Performance G-PK'
+ 14. 'Performance PK'
+ 15. 'Performance PKatt'
+ 16. 'Performance CrdY'
+ 17. 'Performance CrdR'
+ 18. 'Expected xG'
+ 19. 'Expected npxG'
+ 20. 'Expected xAG'
+ 21. 'Expected npxG+xAG'
+ 22. 'Progression PrgC'
+ 23. 'Progression PrgP'
+ 24. 'Progression PrgR'
+ 25. 'Per 90 Minutes Gls'
+ 26. 'Per 90 Minutes Ast'
+ 27. 'Per 90 Minutes G+A'
+ 28. 'Per 90 Minutes G-PK'
+ 29. 'Per 90 Minutes G+A-PK'
+ 30. 'Per 90 Minutes xG'
+ 31. 'Per 90 Minutes xAG'
+ 32. 'Per 90 Minutes xG+xAG'
+ 33. 'Per 90 Minutes npxG'
+ 34. 'Per 90 Minutes npxG+xAG'
+ 35. 'Current Date'
+ 36. 'current_through_gameweek'
+ 37. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+           Player Nation Pos        Squad  Age  Born  Playing Time MP  Playing Time Starts  Playing Time Min  Playing Time 90s
+ Brenden Aaronson    USA  FW Leeds United   24  2000                3                    0                80               0.9
+Joshua Acheampong    ENG  DF      Chelsea   19  2006                1                    1                90               1.0
+      Tyler Adams    USA  MF  Bournemouth   26  1999                3                    3               266               3.0
+... and 28 more columns
+
+COLUMN TYPES:
+------------------------------
+'Player': object
+'Nation': object
+'Pos': object
+'Squad': object
+'Age': int64
+'Born': int64
+'Playing Time MP': int64
+'Playing Time Starts': int64
+'Playing Time Min': int64
+'Playing Time 90s': float64
+... and 28 more columns
+
+============================================================
+TABLE 23: RAW_FIXTURES
+============================================================
+Rows: 380
+Columns: 21
+
+COLUMN LIST:
+------------------------------
+  0. 'gameweek'
+  1. 'day_of_week'
+  2. 'match_date'
+  3. 'match_time'
+  4. 'home_team'
+  5. 'xG'
+  6. 'score'
+  7. 'xG.1'
+  8. 'away_team'
+  9. 'attendance'
+ 10. 'venue'
+ 11. 'referee'
+ 12. 'Match Report'
+ 13. 'Notes'
+ 14. 'home_score'
+ 15. 'away_score'
+ 16. 'is_completed'
+ 17. 'fixture_id'
+ 18. 'scraped_date'
+ 19. 'current_through_gameweek'
+ 20. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+ gameweek day_of_week match_date match_time   home_team  xG score  xG.1     away_team  attendance
+      1.0         Fri 2025-08-15   20:00:00   Liverpool 2.2   4–2   1.7   Bournemouth     60315.0
+      1.0         Sat 2025-08-16   12:30:00 Aston Villa 0.2   0–0   1.4 Newcastle Utd     42526.0
+      1.0         Sat 2025-08-16   15:00:00  Sunderland 0.7   3–0   0.6      West Ham     46233.0
+... and 11 more columns
+
+COLUMN TYPES:
+------------------------------
+'gameweek': float64
+'day_of_week': object
+'match_date': datetime64[ns]
+'match_time': object
+'home_team': object
+'xG': float64
+'score': object
+'xG.1': float64
+'away_team': object
+'attendance': float64
+... and 11 more columns
+
+============================================================
+TABLE 24: SQUAD_DEFENSE
+============================================================
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Tackles Tkl'
+  4. 'Tackles TklW'
+  5. 'Tackles Def 3rd'
+  6. 'Tackles Mid 3rd'
+  7. 'Tackles Att 3rd'
+  8. 'Challenges Tkl'
+  9. 'Challenges Att'
+ 10. 'Challenges Tkl%'
+ 11. 'Challenges Lost'
+ 12. 'Blocks Blocks'
+ 13. 'Blocks Sh'
+ 14. 'Blocks Pass'
+ 15. 'Int'
+ 16. 'Tkl+Int'
+ 17. 'Clr'
+ 18. 'Err'
+ 19. 'Current Date'
+ 20. 'current_through_gameweek'
+ 21. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  90s  Tackles Tkl  Tackles TklW  Tackles Def 3rd  Tackles Mid 3rd  Tackles Att 3rd  Challenges Tkl  Challenges Att
+    Arsenal  21  3.0           44            24               21               15                8              18              38
+Aston Villa  19  3.0           36            22               15               18                3              17              33
+Bournemouth  18  3.0           60            34               21               28               11              29              52
+... and 12 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Tackles Tkl': int64
+'Tackles TklW': int64
+'Tackles Def 3rd': int64
+'Tackles Mid 3rd': int64
+'Tackles Att 3rd': int64
+'Challenges Tkl': int64
+'Challenges Att': int64
+... and 12 more columns
+
+============================================================
+TABLE 25: SQUAD_GOALSHOTCREATION
+============================================================
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'SCA SCA'
+  4. 'SCA SCA90'
+  5. 'SCA Types PassLive'
+  6. 'SCA Types PassDead'
+  7. 'SCA Types TO'
+  8. 'SCA Types Sh'
+  9. 'SCA Types Fld'
+ 10. 'SCA Types Def'
+ 11. 'GCA GCA'
+ 12. 'GCA GCA90'
+ 13. 'GCA Types PassLive'
+ 14. 'GCA Types PassDead'
+ 15. 'GCA Types TO'
+ 16. 'GCA Types Sh'
+ 17. 'GCA Types Fld'
+ 18. 'GCA Types Def'
+ 19. 'Current Date'
+ 20. 'current_through_gameweek'
+ 21. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  90s  SCA SCA  SCA SCA90  SCA Types PassLive  SCA Types PassDead  SCA Types TO  SCA Types Sh  SCA Types Fld
+    Arsenal  21  3.0       61      20.33                  35                   5             6             9              5
+Aston Villa  19  3.0       60      20.00                  51                   5             1             3              0
+Bournemouth  18  3.0       81      27.00                  62                   4             3             5              4
+... and 12 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'SCA SCA': int64
+'SCA SCA90': float64
+'SCA Types PassLive': int64
+'SCA Types PassDead': int64
+'SCA Types TO': int64
+'SCA Types Sh': int64
+'SCA Types Fld': int64
+... and 12 more columns
+
+============================================================
+TABLE 26: SQUAD_KEEPERS
+============================================================
+Rows: 20
+Columns: 24
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. 'Playing Time MP'
+  3. 'Playing Time Starts'
+  4. 'Playing Time Min'
+  5. 'Playing Time 90s'
+  6. 'Performance GA'
+  7. 'Performance GA90'
+  8. 'Performance SoTA'
+  9. 'Performance Saves'
+ 10. 'Performance Save%'
+ 11. 'Performance W'
+ 12. 'Performance D'
+ 13. 'Performance L'
+ 14. 'Performance CS'
+ 15. 'Performance CS%'
+ 16. 'Penalty Kicks PKatt'
+ 17. 'Penalty Kicks PKA'
+ 18. 'Penalty Kicks PKsv'
+ 19. 'Penalty Kicks PKm'
+ 20. 'Penalty Kicks Save%'
+ 21. 'Current Date'
+ 22. 'current_through_gameweek'
+ 23. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  Playing Time MP  Playing Time Starts  Playing Time Min  Playing Time 90s  Performance GA  Performance GA90  Performance SoTA  Performance Saves
+    Arsenal   1                3                    3               270               3.0               1              0.33                11                 10
+Aston Villa   2                3                    3               270               3.0               4              1.33                 9                  5
+Bournemouth   1                3                    3               270               3.0               4              1.33                12                  8
+... and 14 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'Playing Time MP': int64
+'Playing Time Starts': int64
+'Playing Time Min': int64
+'Playing Time 90s': float64
+'Performance GA': int64
+'Performance GA90': float64
+'Performance SoTA': int64
+'Performance Saves': int64
+... and 14 more columns
+
+============================================================
+TABLE 27: SQUAD_KEEPERSADV
+============================================================
+Rows: 20
+Columns: 31
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Goals GA'
+  4. 'Goals PKA'
+  5. 'Goals FK'
+  6. 'Goals CK'
+  7. 'Goals OG'
+  8. 'Expected PSxG'
+  9. 'Expected PSxG/SoT'
+ 10. 'Expected PSxG+/-'
+ 11. 'Expected /90'
+ 12. 'Launched Cmp'
+ 13. 'Launched Att'
+ 14. 'Launched Cmp%'
+ 15. 'Passes Att (GK)'
+ 16. 'Passes Thr'
+ 17. 'Passes Launch%'
+ 18. 'Passes AvgLen'
+ 19. 'Goal Kicks Att'
+ 20. 'Goal Kicks Launch%'
+ 21. 'Goal Kicks AvgLen'
+ 22. 'Crosses Opp'
+ 23. 'Crosses Stp'
+ 24. 'Crosses Stp%'
+ 25. 'Sweeper #OPA'
+ 26. 'Sweeper #OPA/90'
+ 27. 'Sweeper AvgDist'
+ 28. 'Current Date'
+ 29. 'current_through_gameweek'
+ 30. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  90s  Goals GA  Goals PKA  Goals FK  Goals CK  Goals OG  Expected PSxG  Expected PSxG/SoT
+    Arsenal   1  3.0         1          0         1         0         0            1.2               0.11
+Aston Villa   2  3.0         4          1         0         0         0            4.1               0.41
+Bournemouth   1  3.0         4          0         0         0         0            3.5               0.29
+... and 21 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Goals GA': int64
+'Goals PKA': int64
+'Goals FK': int64
+'Goals CK': int64
+'Goals OG': int64
+'Expected PSxG': float64
+'Expected PSxG/SoT': float64
+... and 21 more columns
+
+============================================================
+TABLE 28: SQUAD_MISC
+============================================================
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Performance CrdY'
+  4. 'Performance CrdR'
+  5. 'Performance 2CrdY'
+  6. 'Performance Fls'
+  7. 'Performance Fld'
+  8. 'Performance Off'
+  9. 'Performance Crs'
+ 10. 'Performance Int'
+ 11. 'Performance TklW'
+ 12. 'Performance PKwon'
+ 13. 'Performance PKcon'
+ 14. 'Performance OG'
+ 15. 'Performance Recov'
+ 16. 'Aerial Duels Won'
+ 17. 'Aerial Duels Lost'
+ 18. 'Aerial Duels Won%'
+ 19. 'Current Date'
+ 20. 'current_through_gameweek'
+ 21. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  90s  Performance CrdY  Performance CrdR  Performance 2CrdY  Performance Fls  Performance Fld  Performance Off  Performance Crs
+    Arsenal  21  3.0                 6                 0                  0               37               28                2               47
+Aston Villa  19  3.0                 5                 1                  0               29               35                2               69
+Bournemouth  18  3.0                 8                 0                  0               36               39                7               58
+... and 12 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Performance CrdY': int64
+'Performance CrdR': int64
+'Performance 2CrdY': int64
+'Performance Fls': int64
+'Performance Fld': int64
+'Performance Off': int64
+'Performance Crs': int64
+... and 12 more columns
+
+============================================================
+TABLE 29: SQUAD_PASSING
+============================================================
+Rows: 20
+Columns: 29
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Total Cmp'
+  4. 'Total Att'
+  5. 'Total Cmp%'
+  6. 'Total TotDist'
+  7. 'Total PrgDist'
+  8. 'Short Cmp'
+  9. 'Short Att'
+ 10. 'Short Cmp%'
+ 11. 'Medium Cmp'
+ 12. 'Medium Att'
+ 13. 'Medium Cmp%'
+ 14. 'Long Cmp'
+ 15. 'Long Att'
+ 16. 'Long Cmp%'
+ 17. 'Ast'
+ 18. 'xAG'
+ 19. 'Expected xA'
+ 20. 'Expected A-xAG'
+ 21. 'KP'
+ 22. '1/3'
+ 23. 'PPA'
+ 24. 'CrsPA'
+ 25. 'PrgP'
+ 26. 'Current Date'
+ 27. 'current_through_gameweek'
+ 28. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  90s  Total Cmp  Total Att  Total Cmp%  Total TotDist  Total PrgDist  Short Cmp  Short Att
+    Arsenal  21  3.0       1148       1389        82.6          20716           6712        505        565
+Aston Villa  19  3.0       1286       1573        81.8          23325           7588        553        608
+Bournemouth  18  3.0        859       1174        73.2          15970           6038        360        411
+... and 19 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Total Cmp': int64
+'Total Att': int64
+'Total Cmp%': float64
+'Total TotDist': int64
+'Total PrgDist': int64
+'Short Cmp': int64
+'Short Att': int64
+... and 19 more columns
+
+============================================================
+TABLE 30: SQUAD_PASSINGTYPES
+============================================================
+Rows: 20
+Columns: 21
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Att'
+  4. 'Pass Types Live'
+  5. 'Pass Types Dead'
+  6. 'Pass Types FK'
+  7. 'Pass Types TB'
+  8. 'Pass Types Sw'
+  9. 'Pass Types Crs'
+ 10. 'Pass Types TI'
+ 11. 'Pass Types CK'
+ 12. 'Corner Kicks In'
+ 13. 'Corner Kicks Out'
+ 14. 'Corner Kicks Str'
+ 15. 'Outcomes Cmp'
+ 16. 'Outcomes Off'
+ 17. 'Outcomes Blocks'
+ 18. 'Current Date'
+ 19. 'current_through_gameweek'
+ 20. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  90s  Att  Pass Types Live  Pass Types Dead  Pass Types FK  Pass Types TB  Pass Types Sw  Pass Types Crs
+    Arsenal  21  3.0 1389             1267              120             27              5              4              47
+Aston Villa  19  3.0 1573             1414              157             40              9              5              69
+Bournemouth  18  3.0 1174             1013              154             41              4              4              58
+... and 11 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Att': int64
+'Pass Types Live': int64
+'Pass Types Dead': int64
+'Pass Types FK': int64
+'Pass Types TB': int64
+'Pass Types Sw': int64
+'Pass Types Crs': int64
+... and 11 more columns
+
+============================================================
+TABLE 31: SQUAD_PLAYINGTIME
+============================================================
+Rows: 20
+Columns: 26
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. 'Age'
+  3. 'Playing Time MP'
+  4. 'Playing Time Min'
+  5. 'Playing Time Mn/MP'
+  6. 'Playing Time Min%'
+  7. 'Playing Time 90s'
+  8. 'Starts Starts'
+  9. 'Starts Mn/Start'
+ 10. 'Starts Compl'
+ 11. 'Subs Subs'
+ 12. 'Subs Mn/Sub'
+ 13. 'Subs unSub'
+ 14. 'Team Success PPM'
+ 15. 'Team Success onG'
+ 16. 'Team Success onGA'
+ 17. 'Team Success +/-'
+ 18. 'Team Success +/-90'
+ 19. 'Team Success (xG) onxG'
+ 20. 'Team Success (xG) onxGA'
+ 21. 'Team Success (xG) xG+/-'
+ 22. 'Team Success (xG) xG+/-90'
+ 23. 'Current Date'
+ 24. 'current_through_gameweek'
+ 25. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  Age  Playing Time MP  Playing Time Min  Playing Time Mn/MP  Playing Time Min%  Playing Time 90s  Starts Starts  Starts Mn/Start
+    Arsenal  21 25.7                3               270                  90                100               3.0             33               78
+Aston Villa  19 28.5                3               270                  90                100               3.0             33               82
+Bournemouth  18 26.4                3               270                  90                100               3.0             33               83
+... and 16 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'Age': float64
+'Playing Time MP': int64
+'Playing Time Min': int64
+'Playing Time Mn/MP': int64
+'Playing Time Min%': int64
+'Playing Time 90s': float64
+'Starts Starts': int64
+'Starts Mn/Start': int64
+... and 16 more columns
+
+============================================================
+TABLE 32: SQUAD_POSSESSION
+============================================================
+Rows: 20
+Columns: 29
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. 'Poss'
+  3. '90s'
+  4. 'Touches Touches'
+  5. 'Touches Def Pen'
+  6. 'Touches Def 3rd'
+  7. 'Touches Mid 3rd'
+  8. 'Touches Att 3rd'
+  9. 'Touches Att Pen'
+ 10. 'Touches Live'
+ 11. 'Take-Ons Att'
+ 12. 'Take-Ons Succ'
+ 13. 'Take-Ons Succ%'
+ 14. 'Take-Ons Tkld'
+ 15. 'Take-Ons Tkld%'
+ 16. 'Carries Carries'
+ 17. 'Carries TotDist'
+ 18. 'Carries PrgDist'
+ 19. 'Carries PrgC'
+ 20. 'Carries 1/3'
+ 21. 'Carries CPA'
+ 22. 'Carries Mis'
+ 23. 'Carries Dis'
+ 24. 'Receiving Rec'
+ 25. 'Receiving PrgR'
+ 26. 'Current Date'
+ 27. 'current_through_gameweek'
+ 28. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  Poss  90s  Touches Touches  Touches Def Pen  Touches Def 3rd  Touches Mid 3rd  Touches Att 3rd  Touches Att Pen
+    Arsenal  21  51.0  3.0             1726              195              542              798              411               77
+Aston Villa  19  58.7  3.0             1872              181              495              900              490               75
+Bournemouth  18  45.7  3.0             1582              172              501              684              414               83
+... and 19 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'Poss': float64
+'90s': float64
+'Touches Touches': int64
+'Touches Def Pen': int64
+'Touches Def 3rd': int64
+'Touches Mid 3rd': int64
+'Touches Att 3rd': int64
+'Touches Att Pen': int64
+... and 19 more columns
+
+============================================================
+TABLE 33: SQUAD_SHOOTING
+============================================================
+Rows: 20
+Columns: 23
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. '90s'
+  3. 'Standard Gls'
+  4. 'Standard Sh'
+  5. 'Standard SoT'
+  6. 'Standard SoT%'
+  7. 'Standard Sh/90'
+  8. 'Standard SoT/90'
+  9. 'Standard G/Sh'
+ 10. 'Standard G/SoT'
+ 11. 'Standard Dist'
+ 12. 'Standard FK'
+ 13. 'Standard PK'
+ 14. 'Standard PKatt'
+ 15. 'Expected xG'
+ 16. 'Expected npxG'
+ 17. 'Expected npxG/Sh'
+ 18. 'Expected G-xG'
+ 19. 'Expected np:G-xG'
+ 20. 'Current Date'
+ 21. 'current_through_gameweek'
+ 22. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  90s  Standard Gls  Standard Sh  Standard SoT  Standard SoT%  Standard Sh/90  Standard SoT/90  Standard G/Sh
+    Arsenal  21  3.0             6           37             8           21.6           12.33             2.67           0.14
+Aston Villa  19  3.0             0           33             9           27.3           11.00             3.00           0.00
+Bournemouth  18  3.0             4           44            13           29.5           14.67             4.33           0.09
+... and 13 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'90s': float64
+'Standard Gls': int64
+'Standard Sh': int64
+'Standard SoT': int64
+'Standard SoT%': float64
+'Standard Sh/90': float64
+'Standard SoT/90': float64
+'Standard G/Sh': float64
+... and 13 more columns
+
+============================================================
+TABLE 34: SQUAD_STANDARD
+============================================================
+Rows: 20
+Columns: 35
+
+COLUMN LIST:
+------------------------------
+  0. 'Squad'
+  1. 'Pl'
+  2. 'Age'
+  3. 'Poss'
+  4. 'Playing Time MP'
+  5. 'Playing Time Starts'
+  6. 'Playing Time Min'
+  7. 'Playing Time 90s'
+  8. 'Performance Gls'
+  9. 'Performance Ast'
+ 10. 'Performance G+A'
+ 11. 'Performance G-PK'
+ 12. 'Performance PK'
+ 13. 'Performance PKatt'
+ 14. 'Performance CrdY'
+ 15. 'Performance CrdR'
+ 16. 'Expected xG'
+ 17. 'Expected npxG'
+ 18. 'Expected xAG'
+ 19. 'Expected npxG+xAG'
+ 20. 'Progression PrgC'
+ 21. 'Progression PrgP'
+ 22. 'Per 90 Minutes Gls'
+ 23. 'Per 90 Minutes Ast'
+ 24. 'Per 90 Minutes G+A'
+ 25. 'Per 90 Minutes G-PK'
+ 26. 'Per 90 Minutes G+A-PK'
+ 27. 'Per 90 Minutes xG'
+ 28. 'Per 90 Minutes xAG'
+ 29. 'Per 90 Minutes xG+xAG'
+ 30. 'Per 90 Minutes npxG'
+ 31. 'Per 90 Minutes npxG+xAG'
+ 32. 'Current Date'
+ 33. 'current_through_gameweek'
+ 34. 'last_updated'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+(Showing first 10 columns)
+      Squad  Pl  Age  Poss  Playing Time MP  Playing Time Starts  Playing Time Min  Playing Time 90s  Performance Gls  Performance Ast
+    Arsenal  21 25.7  51.0                3                   33               270               3.0                6                4
+Aston Villa  19 28.5  58.7                3                   33               270               3.0                0                0
+Bournemouth  18 26.4  45.7                3                   33               270               3.0                4                4
+... and 25 more columns
+
+COLUMN TYPES:
+------------------------------
+'Squad': object
+'Pl': int64
+'Age': float64
+'Poss': float64
+'Playing Time MP': int64
+'Playing Time Starts': int64
+'Playing Time Min': int64
+'Playing Time 90s': float64
+'Performance Gls': int64
+'Performance Ast': int64
+... and 25 more columns
+
+============================================================
+TABLE 35: TEAMS
+============================================================
+Rows: 0
+Columns: 2
+
+COLUMN LIST:
+------------------------------
+  0. 'team_name'
+  1. 'created_at'
+
+SAMPLE DATA (first 3 rows):
+------------------------------
+No sample data available
+
+COLUMN TYPES:
+------------------------------
+'team_name': unknown
+'created_at': unknown
+
+================================================================================
+SUMMARY
+================================================================================
+STAT TABLES BY CATEGORY:
+----------------------------------------
+standard        3/3 tables: ['squad_standard', 'opponent_standard', 'player_standard']
+keepers         3/3 tables: ['squad_keepers', 'opponent_keepers', 'player_keepers']
+keepersadv      3/3 tables: ['squad_keepersadv', 'opponent_keepersadv', 'player_keepersadv']
+shooting        3/3 tables: ['squad_shooting', 'opponent_shooting', 'player_shooting']
+passing         3/3 tables: ['squad_passing', 'opponent_passing', 'player_passing']
+passingtypes    3/3 tables: ['squad_passingtypes', 'opponent_passingtypes', 'player_passingtypes']
+goalshotcreation 3/3 tables: ['squad_goalshotcreation', 'opponent_goalshotcreation', 'player_goalshotcreation']
+defense         3/3 tables: ['squad_defense', 'opponent_defense', 'player_defense']
+possession      3/3 tables: ['squad_possession', 'opponent_possession', 'player_possession']
+playingtime     3/3 tables: ['squad_playingtime', 'opponent_playingtime', 'player_playingtime']
+misc            3/3 tables: ['squad_misc', 'opponent_misc', 'player_misc']
+
+INFRASTRUCTURE TABLES:
+----------------------------------------
+raw_fixtures
+teams
