@@ -280,12 +280,12 @@ class FBRefScraper:
             columns = [str(col).lower() for col in table.columns]
             
             # Player table: has 'player' column and 250+ rows
-            if any('player' in col for col in columns) and len(table) > 250:
+            if any('player' in col for col in columns):
                 logger.debug(f"Identified player table: Table {i} with {len(table)} rows")
                 player_table = table
                 
             # Squad tables: have 'squad' column and ~20 rows
-            elif any('squad' in col for col in columns) and 15 <= len(table) <= 25:
+            elif any('squad' in col for col in columns):
                 first_squad_col = None
                 for col in table.columns:
                     if 'squad' in str(col).lower():

@@ -45,8 +45,9 @@ def test_raw_pipeline():
     # Test with available HTML files
     test_categories = {
         'standard': 'data/standard.html',
-        'passing': 'data/passing.html'
-        # Add more if you have the HTML files
+        'passing': 'data/passing.html',
+        'keepers': 'data/keepers.html',           # NEW
+        'keepersadv': 'data/keepersadv.html'     # NEW
     }
     
     successful_categories = []
