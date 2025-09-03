@@ -1,0 +1,125 @@
+# KEEPERS STATS REFERENCE
+======================================================================
+Generated: 2025-09-02 21:59:39
+Category: KEEPERS
+Tables: player_keepers, squad_keepers, opponent_keepers
+======================================================================
+
+## PLAYER KEEPERS TABLE (21 rows)
+Purpose: Individual player statistics
+--------------------------------------------------
+
+### Basic Information
+'Player' -- Player name
+'Nation' -- Player nationality (3-letter country code)
+'Pos' -- Position abbreviation (GK, DF, MF, FW, with variants)
+'Squad' -- Team/club name
+'Age' -- Player age (years.days at start of season)
+'Born' -- Birth year
+
+### Playing Time
+'Playing Time MP' -- Matches Played: Number of matches played
+'Playing Time Starts' -- Games Started: Number of games started in starting XI
+'Playing Time Min' -- Minutes: Total minutes played
+'Playing Time 90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+
+### Performance
+'Performance GA' -- Goals Against: Goals conceded
+'Performance GA90' -- Goals Against per 90: Goals conceded per 90 minutes
+'Performance SoTA' -- Shots on Target Against: Shots on target faced
+'Performance Saves' -- Saves: Shots saved
+'Performance Save%' -- Save %: Percentage of shots on target saved
+'Performance W' -- Wins: Matches won
+'Performance D' -- Draws: Matches drawn
+'Performance L' -- Losses: Matches lost
+'Performance CS' -- Clean Sheets: Matches without conceding
+'Performance CS%' -- Clean Sheet %: Percentage of matches with clean sheets
+
+### Other Stats
+'Penalty Kicks PKatt' -- Penalty Kicks Attempted: Total penalty kick attempts
+'Penalty Kicks PKA' -- Penalty Kicks Against: Penalties faced
+'Penalty Kicks PKsv' -- Penalty Kicks Saved: Penalties saved
+'Penalty Kicks PKm' -- Penalty Kicks Missed: Penalties missed by opponent
+'Penalty Kicks Save%' -- Save %: Percentage of shots on target saved
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## SQUAD KEEPERS TABLE (20 rows)
+Purpose: Team statistics (what the team does)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Playing Time
+'Playing Time MP' -- Matches Played: Number of matches played
+'Playing Time Starts' -- Games Started: Number of games started in starting XI
+'Playing Time Min' -- Minutes: Total minutes played
+'Playing Time 90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+
+### Performance
+'Performance GA' -- Goals Against: Goals conceded
+'Performance GA90' -- Goals Against per 90: Goals conceded per 90 minutes
+'Performance SoTA' -- Shots on Target Against: Shots on target faced
+'Performance Saves' -- Saves: Shots saved
+'Performance Save%' -- Save %: Percentage of shots on target saved
+'Performance W' -- Wins: Matches won
+'Performance D' -- Draws: Matches drawn
+'Performance L' -- Losses: Matches lost
+'Performance CS' -- Clean Sheets: Matches without conceding
+'Performance CS%' -- Clean Sheet %: Percentage of matches with clean sheets
+
+### Other Stats
+'Penalty Kicks PKatt' -- Penalty Kicks Attempted: Total penalty kick attempts
+'Penalty Kicks PKA' -- Penalty Kicks Against: Penalties faced
+'Penalty Kicks PKsv' -- Penalty Kicks Saved: Penalties saved
+'Penalty Kicks PKm' -- Penalty Kicks Missed: Penalties missed by opponent
+'Penalty Kicks Save%' -- Save %: Percentage of shots on target saved
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## OPPONENT KEEPERS TABLE (20 rows)
+Purpose: Opponent statistics (what teams face/allow)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Playing Time
+'Playing Time MP' -- Matches Played: Number of matches played
+'Playing Time Starts' -- Games Started: Number of games started in starting XI
+'Playing Time Min' -- Minutes: Total minutes played
+'Playing Time 90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+
+### Performance
+'Performance GA' -- Goals Against: Goals conceded
+'Performance GA90' -- Goals Against per 90: Goals conceded per 90 minutes
+'Performance SoTA' -- Shots on Target Against: Shots on target faced
+'Performance Saves' -- Saves: Shots saved
+'Performance Save%' -- Save %: Percentage of shots on target saved
+'Performance W' -- Wins: Matches won
+'Performance D' -- Draws: Matches drawn
+'Performance L' -- Losses: Matches lost
+'Performance CS' -- Clean Sheets: Matches without conceding
+'Performance CS%' -- Clean Sheet %: Percentage of matches with clean sheets
+
+### Other Stats
+'Penalty Kicks PKatt' -- Penalty Kicks Attempted: Total penalty kick attempts
+'Penalty Kicks PKA' -- Penalty Kicks Against: Penalties faced
+'Penalty Kicks PKsv' -- Penalty Kicks Saved: Penalties saved
+'Penalty Kicks PKm' -- Penalty Kicks Missed: Penalties missed by opponent
+'Penalty Kicks Save%' -- Save %: Percentage of shots on target saved
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+

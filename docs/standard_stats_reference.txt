@@ -1,0 +1,169 @@
+# STANDARD STATS REFERENCE
+======================================================================
+Generated: 2025-09-02 21:59:39
+Category: STANDARD
+Tables: player_standard, squad_standard, opponent_standard
+======================================================================
+
+## PLAYER STANDARD TABLE (370 rows)
+Purpose: Individual player statistics
+--------------------------------------------------
+
+### Basic Information
+'Player' -- Player name
+'Nation' -- Player nationality (3-letter country code)
+'Pos' -- Position abbreviation (GK, DF, MF, FW, with variants)
+'Squad' -- Team/club name
+'Age' -- Player age (years.days at start of season)
+'Born' -- Birth year
+
+### Playing Time
+'Playing Time MP' -- Matches Played: Number of matches played
+'Playing Time Starts' -- Games Started: Number of games started in starting XI
+'Playing Time Min' -- Minutes: Total minutes played
+'Playing Time 90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+
+### Performance
+'Performance Gls' -- Goals: Goals scored or allowed
+'Performance Ast' -- Assists: Assists provided
+'Performance G+A' -- Goals + Assists: Combined goals and assists
+'Performance G-PK' -- Non-Penalty Goals: Goals excluding penalty kicks
+'Performance PK' -- Penalty Kicks Made: Successful penalty kicks
+'Performance PKatt' -- Penalty Kicks Attempted: Total penalty kick attempts
+'Performance CrdY' -- Yellow Cards: Yellow cards received
+'Performance CrdR' -- Red Cards: Red cards received
+
+### Expected Stats
+'Expected xG' -- Expected Goals: Statistical expectation of goals based on shot quality
+'Expected npxG' -- Non-Penalty xG: Expected goals excluding penalties
+'Expected xAG' -- Expected Assisted Goals: xG value of shots assisted
+'Expected npxG+xAG' -- Non-Penalty xG + xAG: Combined non-penalty expected goals and assists
+
+### Progression
+'Progression PrgC' -- Progressive Carries: Ball carries moving 10+ yards toward goal
+'Progression PrgP' -- Progressive Passes: Passes moving 10+ yards toward goal or into penalty area
+'Progression PrgR' -- Progressive Passes Received: Progressive passes received by player
+
+### Per 90 Minutes
+'Per 90 Minutes Gls' -- Goals: Goals scored or allowed
+'Per 90 Minutes Ast' -- Assists: Assists provided
+'Per 90 Minutes G+A' -- Goals + Assists: Combined goals and assists
+'Per 90 Minutes G-PK' -- Non-Penalty Goals: Goals excluding penalty kicks
+'Per 90 Minutes G+A-PK' -- Non-Penalty Goals + Assists: Goals plus assists excluding penalty kicks
+'Per 90 Minutes xG' -- Expected Goals: Statistical expectation of goals based on shot quality
+'Per 90 Minutes xAG' -- Expected Assisted Goals: xG value of shots assisted
+'Per 90 Minutes xG+xAG' -- Expected Goals + Expected Assisted Goals: Combined expected goals and assists
+'Per 90 Minutes npxG' -- Non-Penalty xG: Expected goals excluding penalties
+'Per 90 Minutes npxG+xAG' -- Non-Penalty xG + xAG: Combined non-penalty expected goals and assists
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## SQUAD STANDARD TABLE (20 rows)
+Purpose: Team statistics (what the team does)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+'Age' -- Player age (years.days at start of season)
+'Poss' -- Possession: Possession calculated as percentage of passes attempted
+
+### Playing Time
+'Playing Time MP' -- Matches Played: Number of matches played
+'Playing Time Starts' -- Games Started: Number of games started in starting XI
+'Playing Time Min' -- Minutes: Total minutes played
+'Playing Time 90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+
+### Performance
+'Performance Gls' -- Goals: Goals scored or allowed
+'Performance Ast' -- Assists: Assists provided
+'Performance G+A' -- Goals + Assists: Combined goals and assists
+'Performance G-PK' -- Non-Penalty Goals: Goals excluding penalty kicks
+'Performance PK' -- Penalty Kicks Made: Successful penalty kicks
+'Performance PKatt' -- Penalty Kicks Attempted: Total penalty kick attempts
+'Performance CrdY' -- Yellow Cards: Yellow cards received
+'Performance CrdR' -- Red Cards: Red cards received
+
+### Expected Stats
+'Expected xG' -- Expected Goals: Statistical expectation of goals based on shot quality
+'Expected npxG' -- Non-Penalty xG: Expected goals excluding penalties
+'Expected xAG' -- Expected Assisted Goals: xG value of shots assisted
+'Expected npxG+xAG' -- Non-Penalty xG + xAG: Combined non-penalty expected goals and assists
+
+### Progression
+'Progression PrgC' -- Progressive Carries: Ball carries moving 10+ yards toward goal
+'Progression PrgP' -- Progressive Passes: Passes moving 10+ yards toward goal or into penalty area
+
+### Per 90 Minutes
+'Per 90 Minutes Gls' -- Goals: Goals scored or allowed
+'Per 90 Minutes Ast' -- Assists: Assists provided
+'Per 90 Minutes G+A' -- Goals + Assists: Combined goals and assists
+'Per 90 Minutes G-PK' -- Non-Penalty Goals: Goals excluding penalty kicks
+'Per 90 Minutes G+A-PK' -- Non-Penalty Goals + Assists: Goals plus assists excluding penalty kicks
+'Per 90 Minutes xG' -- Expected Goals: Statistical expectation of goals based on shot quality
+'Per 90 Minutes xAG' -- Expected Assisted Goals: xG value of shots assisted
+'Per 90 Minutes xG+xAG' -- Expected Goals + Expected Assisted Goals: Combined expected goals and assists
+'Per 90 Minutes npxG' -- Non-Penalty xG: Expected goals excluding penalties
+'Per 90 Minutes npxG+xAG' -- Non-Penalty xG + xAG: Combined non-penalty expected goals and assists
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## OPPONENT STANDARD TABLE (20 rows)
+Purpose: Opponent statistics (what teams face/allow)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+'Age' -- Player age (years.days at start of season)
+'Poss' -- Possession: Possession calculated as percentage of passes attempted
+
+### Playing Time
+'Playing Time MP' -- Matches Played: Number of matches played
+'Playing Time Starts' -- Games Started: Number of games started in starting XI
+'Playing Time Min' -- Minutes: Total minutes played
+'Playing Time 90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+
+### Performance
+'Performance Gls' -- Goals: Goals scored or allowed
+'Performance Ast' -- Assists: Assists provided
+'Performance G+A' -- Goals + Assists: Combined goals and assists
+'Performance G-PK' -- Non-Penalty Goals: Goals excluding penalty kicks
+'Performance PK' -- Penalty Kicks Made: Successful penalty kicks
+'Performance PKatt' -- Penalty Kicks Attempted: Total penalty kick attempts
+'Performance CrdY' -- Yellow Cards: Yellow cards received
+'Performance CrdR' -- Red Cards: Red cards received
+
+### Expected Stats
+'Expected xG' -- Expected Goals: Statistical expectation of goals based on shot quality
+'Expected npxG' -- Non-Penalty xG: Expected goals excluding penalties
+'Expected xAG' -- Expected Assisted Goals: xG value of shots assisted
+'Expected npxG+xAG' -- Non-Penalty xG + xAG: Combined non-penalty expected goals and assists
+
+### Progression
+'Progression PrgC' -- Progressive Carries: Ball carries moving 10+ yards toward goal
+'Progression PrgP' -- Progressive Passes: Passes moving 10+ yards toward goal or into penalty area
+
+### Per 90 Minutes
+'Per 90 Minutes Gls' -- Goals: Goals scored or allowed
+'Per 90 Minutes Ast' -- Assists: Assists provided
+'Per 90 Minutes G+A' -- Goals + Assists: Combined goals and assists
+'Per 90 Minutes G-PK' -- Non-Penalty Goals: Goals excluding penalty kicks
+'Per 90 Minutes G+A-PK' -- Non-Penalty Goals + Assists: Goals plus assists excluding penalty kicks
+'Per 90 Minutes xG' -- Expected Goals: Statistical expectation of goals based on shot quality
+'Per 90 Minutes xAG' -- Expected Assisted Goals: xG value of shots assisted
+'Per 90 Minutes xG+xAG' -- Expected Goals + Expected Assisted Goals: Combined expected goals and assists
+'Per 90 Minutes npxG' -- Non-Penalty xG: Expected goals excluding penalties
+'Per 90 Minutes npxG+xAG' -- Non-Penalty xG + xAG: Combined non-penalty expected goals and assists
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+

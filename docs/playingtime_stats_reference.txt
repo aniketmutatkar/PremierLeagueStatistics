@@ -1,0 +1,126 @@
+# PLAYINGTIME STATS REFERENCE
+======================================================================
+Generated: 2025-09-02 21:59:39
+Category: PLAYINGTIME
+Tables: player_playingtime, squad_playingtime, opponent_playingtime
+======================================================================
+
+## PLAYER PLAYINGTIME TABLE (456 rows)
+Purpose: Individual player statistics
+--------------------------------------------------
+
+### Basic Information
+'Player' -- Player name
+'Nation' -- Player nationality (3-letter country code)
+'Pos' -- Position abbreviation (GK, DF, MF, FW, with variants)
+'Squad' -- Team/club name
+'Age' -- Player age (years.days at start of season)
+'Born' -- Birth year
+
+### Playing Time
+'Playing Time MP' -- Matches Played: Number of matches played
+'Playing Time Min' -- Minutes: Total minutes played
+'Playing Time Mn/MP' -- Minutes per Match: Average minutes per match played
+'Playing Time Min%' -- Minutes %: Percentage of total team minutes played
+'Playing Time 90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+
+### Other Stats
+'Starts Starts' -- Games Started: Number of games started in starting XI
+'Starts Mn/Start' -- Minutes per Start: Average minutes per game started
+'Starts Compl' -- Complete Matches: Games played full 90+ minutes
+'Subs Subs' -- Substitute Appearances: Games as substitute
+'Subs Mn/Sub' -- Minutes per Sub: Average minutes when coming off bench
+'Subs unSub' -- Unused Substitute: Games as unused sub
+'Team Success PPM' -- Points per Match: Average points when player plays
+'Team Success onG' -- Goals For (on pitch): Team goals while player on pitch
+'Team Success onGA' -- Football stat: Team Success onGA (see FBRef playingtime glossary for details)
+'Team Success +/-' -- Plus/Minus: Goal difference while player on pitch
+'Team Success +/-90' -- Plus/Minus per 90: Goal difference per 90 minutes
+'Team Success On-Off' -- On-Off: Team performance difference with/without player
+'Team Success (xG) onxG' -- Team xG (on pitch): Team expected goals while player on pitch
+'Team Success (xG) onxGA' -- Team xGA (on pitch): Team expected goals against while player on pitch
+'Team Success (xG) xG+/-' -- xG Plus/Minus: Expected goal difference while player on pitch
+'Team Success (xG) xG+/-90' -- xG Plus/Minus per 90: Expected goal difference per 90 minutes
+'Team Success (xG) On-Off' -- On-Off: Team performance difference with/without player
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## SQUAD PLAYINGTIME TABLE (20 rows)
+Purpose: Team statistics (what the team does)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+'Age' -- Player age (years.days at start of season)
+
+### Playing Time
+'Playing Time MP' -- Matches Played: Number of matches played
+'Playing Time Min' -- Minutes: Total minutes played
+'Playing Time Mn/MP' -- Minutes per Match: Average minutes per match played
+'Playing Time Min%' -- Minutes %: Percentage of total team minutes played
+'Playing Time 90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+
+### Other Stats
+'Starts Starts' -- Games Started: Number of games started in starting XI
+'Starts Mn/Start' -- Minutes per Start: Average minutes per game started
+'Starts Compl' -- Complete Matches: Games played full 90+ minutes
+'Subs Subs' -- Substitute Appearances: Games as substitute
+'Subs Mn/Sub' -- Minutes per Sub: Average minutes when coming off bench
+'Subs unSub' -- Unused Substitute: Games as unused sub
+'Team Success PPM' -- Points per Match: Average points when player plays
+'Team Success onG' -- Goals For (on pitch): Team goals while player on pitch
+'Team Success onGA' -- Football stat: Team Success onGA (see FBRef playingtime glossary for details)
+'Team Success +/-' -- Plus/Minus: Goal difference while player on pitch
+'Team Success +/-90' -- Plus/Minus per 90: Goal difference per 90 minutes
+'Team Success (xG) onxG' -- Team xG (on pitch): Team expected goals while player on pitch
+'Team Success (xG) onxGA' -- Team xGA (on pitch): Team expected goals against while player on pitch
+'Team Success (xG) xG+/-' -- xG Plus/Minus: Expected goal difference while player on pitch
+'Team Success (xG) xG+/-90' -- xG Plus/Minus per 90: Expected goal difference per 90 minutes
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## OPPONENT PLAYINGTIME TABLE (20 rows)
+Purpose: Opponent statistics (what teams face/allow)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+'Age' -- Player age (years.days at start of season)
+
+### Playing Time
+'Playing Time MP' -- Matches Played: Number of matches played
+'Playing Time Min' -- Minutes: Total minutes played
+'Playing Time Mn/MP' -- Minutes per Match: Average minutes per match played
+'Playing Time Min%' -- Minutes %: Percentage of total team minutes played
+'Playing Time 90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+
+### Other Stats
+'Starts Starts' -- Games Started: Number of games started in starting XI
+'Starts Mn/Start' -- Minutes per Start: Average minutes per game started
+'Starts Compl' -- Complete Matches: Games played full 90+ minutes
+'Subs Subs' -- Substitute Appearances: Games as substitute
+'Subs Mn/Sub' -- Minutes per Sub: Average minutes when coming off bench
+'Subs unSub' -- Unused Substitute: Games as unused sub
+'Team Success PPM' -- Points per Match: Average points when player plays
+'Team Success onG' -- Goals For (on pitch): Team goals while player on pitch
+'Team Success onGA' -- Football stat: Team Success onGA (see FBRef playingtime glossary for details)
+'Team Success +/-' -- Plus/Minus: Goal difference while player on pitch
+'Team Success +/-90' -- Plus/Minus per 90: Goal difference per 90 minutes
+'Team Success (xG) onxG' -- Team xG (on pitch): Team expected goals while player on pitch
+'Team Success (xG) onxGA' -- Team xGA (on pitch): Team expected goals against while player on pitch
+'Team Success (xG) xG+/-' -- xG Plus/Minus: Expected goal difference while player on pitch
+'Team Success (xG) xG+/-90' -- xG Plus/Minus per 90: Expected goal difference per 90 minutes
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+

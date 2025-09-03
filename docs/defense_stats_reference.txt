@@ -1,0 +1,107 @@
+# DEFENSE STATS REFERENCE
+======================================================================
+Generated: 2025-09-02 21:59:39
+Category: DEFENSE
+Tables: player_defense, squad_defense, opponent_defense
+======================================================================
+
+## PLAYER DEFENSE TABLE (370 rows)
+Purpose: Individual player statistics
+--------------------------------------------------
+
+### Basic Information
+'Player' -- Player name
+'Nation' -- Player nationality (3-letter country code)
+'Pos' -- Position abbreviation (GK, DF, MF, FW, with variants)
+'Squad' -- Team/club name
+'Age' -- Player age (years.days at start of season)
+'Born' -- Birth year
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Tackles Tkl' -- Tackles: Defensive tackles attempted
+'Tackles TklW' -- Tackles Won: Tackles where team regained possession
+'Tackles Def 3rd' -- Defensive Third Touches: Touches in defensive third
+'Tackles Mid 3rd' -- Middle Third Touches: Touches in middle third
+'Tackles Att 3rd' -- Attacking Third Touches: Touches in attacking third
+'Challenges Tkl' -- Tackles: Defensive tackles attempted
+'Challenges Att' -- Passes Attempted: Total pass attempts
+'Challenges Tkl%' -- Tackle Success %: Percentage of successful tackles
+'Challenges Lost' -- Challenges Lost: Unsuccessful tackle/challenge attempts
+'Blocks Blocks' -- Blocked Passes: Passes blocked by opponents
+'Blocks Sh' -- Shots: Total shots attempted (excluding penalties)
+'Blocks Pass' -- Football stat: Blocks Pass (see FBRef defense glossary for details)
+'Int' -- Interceptions: Passes intercepted
+'Tkl+Int' -- Football stat: Tkl+Int (see FBRef defense glossary for details)
+'Clr' -- Clearances: Defensive clearances
+'Err' -- Errors: Mistakes leading to opponent shots
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## SQUAD DEFENSE TABLE (20 rows)
+Purpose: Team statistics (what the team does)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Tackles Tkl' -- Tackles: Defensive tackles attempted
+'Tackles TklW' -- Tackles Won: Tackles where team regained possession
+'Tackles Def 3rd' -- Defensive Third Touches: Touches in defensive third
+'Tackles Mid 3rd' -- Middle Third Touches: Touches in middle third
+'Tackles Att 3rd' -- Attacking Third Touches: Touches in attacking third
+'Challenges Tkl' -- Tackles: Defensive tackles attempted
+'Challenges Att' -- Passes Attempted: Total pass attempts
+'Challenges Tkl%' -- Tackle Success %: Percentage of successful tackles
+'Challenges Lost' -- Challenges Lost: Unsuccessful tackle/challenge attempts
+'Blocks Blocks' -- Blocked Passes: Passes blocked by opponents
+'Blocks Sh' -- Shots: Total shots attempted (excluding penalties)
+'Blocks Pass' -- Football stat: Blocks Pass (see FBRef defense glossary for details)
+'Int' -- Interceptions: Passes intercepted
+'Tkl+Int' -- Football stat: Tkl+Int (see FBRef defense glossary for details)
+'Clr' -- Clearances: Defensive clearances
+'Err' -- Errors: Mistakes leading to opponent shots
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## OPPONENT DEFENSE TABLE (20 rows)
+Purpose: Opponent statistics (what teams face/allow)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Tackles Tkl' -- Tackles: Defensive tackles attempted
+'Tackles TklW' -- Tackles Won: Tackles where team regained possession
+'Tackles Def 3rd' -- Defensive Third Touches: Touches in defensive third
+'Tackles Mid 3rd' -- Middle Third Touches: Touches in middle third
+'Tackles Att 3rd' -- Attacking Third Touches: Touches in attacking third
+'Challenges Tkl' -- Tackles: Defensive tackles attempted
+'Challenges Att' -- Passes Attempted: Total pass attempts
+'Challenges Tkl%' -- Tackle Success %: Percentage of successful tackles
+'Challenges Lost' -- Challenges Lost: Unsuccessful tackle/challenge attempts
+'Blocks Blocks' -- Blocked Passes: Passes blocked by opponents
+'Blocks Sh' -- Shots: Total shots attempted (excluding penalties)
+'Blocks Pass' -- Football stat: Blocks Pass (see FBRef defense glossary for details)
+'Int' -- Interceptions: Passes intercepted
+'Tkl+Int' -- Football stat: Tkl+Int (see FBRef defense glossary for details)
+'Clr' -- Clearances: Defensive clearances
+'Err' -- Errors: Mistakes leading to opponent shots
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+

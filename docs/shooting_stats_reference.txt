@@ -1,0 +1,116 @@
+# SHOOTING STATS REFERENCE
+======================================================================
+Generated: 2025-09-02 21:59:39
+Category: SHOOTING
+Tables: player_shooting, squad_shooting, opponent_shooting
+======================================================================
+
+## PLAYER SHOOTING TABLE (370 rows)
+Purpose: Individual player statistics
+--------------------------------------------------
+
+### Basic Information
+'Player' -- Player name
+'Nation' -- Player nationality (3-letter country code)
+'Pos' -- Position abbreviation (GK, DF, MF, FW, with variants)
+'Squad' -- Team/club name
+'Age' -- Player age (years.days at start of season)
+'Born' -- Birth year
+
+### Expected Stats
+'Expected xG' -- Expected Goals: Statistical expectation of goals based on shot quality
+'Expected npxG' -- Non-Penalty xG: Expected goals excluding penalties
+'Expected npxG/Sh' -- Non-Penalty xG per Shot: Shot quality excluding penalties
+'Expected G-xG' -- Goals minus xG: Actual goals compared to expected
+'Expected np:G-xG' -- Non-Penalty Goals minus npxG: Non-penalty goal over/underperformance
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Standard Gls' -- Goals: Goals scored or allowed
+'Standard Sh' -- Shots: Total shots attempted (excluding penalties)
+'Standard SoT' -- Shots on Target: Shots on target (excluding penalties)
+'Standard SoT%' -- Shot Accuracy %: Percentage of shots on target
+'Standard Sh/90' -- Shots per 90: Shots per 90 minutes
+'Standard SoT/90' -- Shots on Target per 90: Shots on target per 90 minutes
+'Standard G/Sh' -- Goals per Shot: Shooting efficiency
+'Standard G/SoT' -- Goals per Shot on Target: Conversion rate of shots on target
+'Standard Dist' -- Average Shot Distance: Average distance from goal (yards)
+'Standard FK' -- Free Kick Shots/Goals: Shots or goals from free kicks
+'Standard PK' -- Penalty Kicks Made: Successful penalty kicks
+'Standard PKatt' -- Penalty Kicks Attempted: Total penalty kick attempts
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## SQUAD SHOOTING TABLE (20 rows)
+Purpose: Team statistics (what the team does)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Expected Stats
+'Expected xG' -- Expected Goals: Statistical expectation of goals based on shot quality
+'Expected npxG' -- Non-Penalty xG: Expected goals excluding penalties
+'Expected npxG/Sh' -- Non-Penalty xG per Shot: Shot quality excluding penalties
+'Expected G-xG' -- Goals minus xG: Actual goals compared to expected
+'Expected np:G-xG' -- Non-Penalty Goals minus npxG: Non-penalty goal over/underperformance
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Standard Gls' -- Goals: Goals scored or allowed
+'Standard Sh' -- Shots: Total shots attempted (excluding penalties)
+'Standard SoT' -- Shots on Target: Shots on target (excluding penalties)
+'Standard SoT%' -- Shot Accuracy %: Percentage of shots on target
+'Standard Sh/90' -- Shots per 90: Shots per 90 minutes
+'Standard SoT/90' -- Shots on Target per 90: Shots on target per 90 minutes
+'Standard G/Sh' -- Goals per Shot: Shooting efficiency
+'Standard G/SoT' -- Goals per Shot on Target: Conversion rate of shots on target
+'Standard Dist' -- Average Shot Distance: Average distance from goal (yards)
+'Standard FK' -- Free Kick Shots/Goals: Shots or goals from free kicks
+'Standard PK' -- Penalty Kicks Made: Successful penalty kicks
+'Standard PKatt' -- Penalty Kicks Attempted: Total penalty kick attempts
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## OPPONENT SHOOTING TABLE (20 rows)
+Purpose: Opponent statistics (what teams face/allow)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Expected Stats
+'Expected xG' -- Expected Goals: Statistical expectation of goals based on shot quality
+'Expected npxG' -- Non-Penalty xG: Expected goals excluding penalties
+'Expected npxG/Sh' -- Non-Penalty xG per Shot: Shot quality excluding penalties
+'Expected G-xG' -- Goals minus xG: Actual goals compared to expected
+'Expected np:G-xG' -- Non-Penalty Goals minus npxG: Non-penalty goal over/underperformance
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Standard Gls' -- Goals: Goals scored or allowed
+'Standard Sh' -- Shots: Total shots attempted (excluding penalties)
+'Standard SoT' -- Shots on Target: Shots on target (excluding penalties)
+'Standard SoT%' -- Shot Accuracy %: Percentage of shots on target
+'Standard Sh/90' -- Shots per 90: Shots per 90 minutes
+'Standard SoT/90' -- Shots on Target per 90: Shots on target per 90 minutes
+'Standard G/Sh' -- Goals per Shot: Shooting efficiency
+'Standard G/SoT' -- Goals per Shot on Target: Conversion rate of shots on target
+'Standard Dist' -- Average Shot Distance: Average distance from goal (yards)
+'Standard FK' -- Free Kick Shots/Goals: Shots or goals from free kicks
+'Standard PK' -- Penalty Kicks Made: Successful penalty kicks
+'Standard PKatt' -- Penalty Kicks Attempted: Total penalty kick attempts
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+

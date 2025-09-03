@@ -1,0 +1,140 @@
+# KEEPERSADV STATS REFERENCE
+======================================================================
+Generated: 2025-09-02 21:59:39
+Category: KEEPERSADV
+Tables: player_keepersadv, squad_keepersadv, opponent_keepersadv
+======================================================================
+
+## PLAYER KEEPERSADV TABLE (21 rows)
+Purpose: Individual player statistics
+--------------------------------------------------
+
+### Basic Information
+'Player' -- Player name
+'Nation' -- Player nationality (3-letter country code)
+'Pos' -- Position abbreviation (GK, DF, MF, FW, with variants)
+'Squad' -- Team/club name
+'Age' -- Player age (years.days at start of season)
+'Born' -- Birth year
+
+### Expected Stats
+'Expected PSxG' -- Post-Shot xG: Expected goals based on shot difficulty for keeper
+'Expected PSxG/SoT' -- PSxG per Shot on Target: Average post-shot xG per shot faced
+'Expected PSxG+/-' -- PSxG minus Goals Against: Keeper performance vs expectation
+'Expected /90' -- PSxG+/- per 90: Keeper performance per 90 minutes
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Goals GA' -- Goals Against: Goals conceded
+'Goals PKA' -- Penalty Kicks Against: Penalties faced
+'Goals FK' -- Free Kick Shots/Goals: Shots or goals from free kicks
+'Goals CK' -- Corner Kicks: Corner kick attempts
+'Goals OG' -- Own Goals: Own goals scored
+'Launched Cmp' -- Passes Completed: Successful passes
+'Launched Att' -- Passes Attempted: Total pass attempts
+'Launched Cmp%' -- Pass Completion %: Passing accuracy percentage
+'Passes Att (GK)' -- Football stat: Passes Att (GK) (see FBRef keepersadv glossary for details)
+'Passes Thr' -- Throws: Goalkeeper throws attempted
+'Passes Launch%' -- Launch %: Percentage of passes/kicks longer than 40 yards
+'Passes AvgLen' -- Average Length: Average distance of passes/kicks in yards
+'Goal Kicks Att' -- Passes Attempted: Total pass attempts
+'Goal Kicks Launch%' -- Launch %: Percentage of passes/kicks longer than 40 yards
+'Goal Kicks AvgLen' -- Average Length: Average distance of passes/kicks in yards
+'Crosses Opp' -- Crosses Faced: Opponent crosses into penalty area
+'Crosses Stp' -- Crosses Stopped: Crosses successfully defended
+'Crosses Stp%' -- Crosses Stopped %: Percentage of crosses stopped
+'Sweeper #OPA' -- Defensive Actions Outside Penalty Area: Sweeper actions
+'Sweeper #OPA/90' -- Defensive Actions Outside PA per 90: Sweeper actions per 90
+'Sweeper AvgDist' -- Average Distance: Average distance of defensive actions from goal
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## SQUAD KEEPERSADV TABLE (20 rows)
+Purpose: Team statistics (what the team does)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Expected Stats
+'Expected PSxG' -- Post-Shot xG: Expected goals based on shot difficulty for keeper
+'Expected PSxG/SoT' -- PSxG per Shot on Target: Average post-shot xG per shot faced
+'Expected PSxG+/-' -- PSxG minus Goals Against: Keeper performance vs expectation
+'Expected /90' -- PSxG+/- per 90: Keeper performance per 90 minutes
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Goals GA' -- Goals Against: Goals conceded
+'Goals PKA' -- Penalty Kicks Against: Penalties faced
+'Goals FK' -- Free Kick Shots/Goals: Shots or goals from free kicks
+'Goals CK' -- Corner Kicks: Corner kick attempts
+'Goals OG' -- Own Goals: Own goals scored
+'Launched Cmp' -- Passes Completed: Successful passes
+'Launched Att' -- Passes Attempted: Total pass attempts
+'Launched Cmp%' -- Pass Completion %: Passing accuracy percentage
+'Passes Att (GK)' -- Football stat: Passes Att (GK) (see FBRef keepersadv glossary for details)
+'Passes Thr' -- Throws: Goalkeeper throws attempted
+'Passes Launch%' -- Launch %: Percentage of passes/kicks longer than 40 yards
+'Passes AvgLen' -- Average Length: Average distance of passes/kicks in yards
+'Goal Kicks Att' -- Passes Attempted: Total pass attempts
+'Goal Kicks Launch%' -- Launch %: Percentage of passes/kicks longer than 40 yards
+'Goal Kicks AvgLen' -- Average Length: Average distance of passes/kicks in yards
+'Crosses Opp' -- Crosses Faced: Opponent crosses into penalty area
+'Crosses Stp' -- Crosses Stopped: Crosses successfully defended
+'Crosses Stp%' -- Crosses Stopped %: Percentage of crosses stopped
+'Sweeper #OPA' -- Defensive Actions Outside Penalty Area: Sweeper actions
+'Sweeper #OPA/90' -- Defensive Actions Outside PA per 90: Sweeper actions per 90
+'Sweeper AvgDist' -- Average Distance: Average distance of defensive actions from goal
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## OPPONENT KEEPERSADV TABLE (20 rows)
+Purpose: Opponent statistics (what teams face/allow)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Expected Stats
+'Expected PSxG' -- Post-Shot xG: Expected goals based on shot difficulty for keeper
+'Expected PSxG/SoT' -- PSxG per Shot on Target: Average post-shot xG per shot faced
+'Expected PSxG+/-' -- PSxG minus Goals Against: Keeper performance vs expectation
+'Expected /90' -- PSxG+/- per 90: Keeper performance per 90 minutes
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Goals GA' -- Goals Against: Goals conceded
+'Goals PKA' -- Penalty Kicks Against: Penalties faced
+'Goals FK' -- Free Kick Shots/Goals: Shots or goals from free kicks
+'Goals CK' -- Corner Kicks: Corner kick attempts
+'Goals OG' -- Own Goals: Own goals scored
+'Launched Cmp' -- Passes Completed: Successful passes
+'Launched Att' -- Passes Attempted: Total pass attempts
+'Launched Cmp%' -- Pass Completion %: Passing accuracy percentage
+'Passes Att (GK)' -- Football stat: Passes Att (GK) (see FBRef keepersadv glossary for details)
+'Passes Thr' -- Throws: Goalkeeper throws attempted
+'Passes Launch%' -- Launch %: Percentage of passes/kicks longer than 40 yards
+'Passes AvgLen' -- Average Length: Average distance of passes/kicks in yards
+'Goal Kicks Att' -- Passes Attempted: Total pass attempts
+'Goal Kicks Launch%' -- Launch %: Percentage of passes/kicks longer than 40 yards
+'Goal Kicks AvgLen' -- Average Length: Average distance of passes/kicks in yards
+'Crosses Opp' -- Crosses Faced: Opponent crosses into penalty area
+'Crosses Stp' -- Crosses Stopped: Crosses successfully defended
+'Crosses Stp%' -- Crosses Stopped %: Percentage of crosses stopped
+'Sweeper #OPA' -- Defensive Actions Outside Penalty Area: Sweeper actions
+'Sweeper #OPA/90' -- Defensive Actions Outside PA per 90: Sweeper actions per 90
+'Sweeper AvgDist' -- Average Distance: Average distance of defensive actions from goal
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+

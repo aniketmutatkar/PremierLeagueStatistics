@@ -1,0 +1,113 @@
+# MISC STATS REFERENCE
+======================================================================
+Generated: 2025-09-02 21:59:39
+Category: MISC
+Tables: player_misc, squad_misc, opponent_misc
+======================================================================
+
+## PLAYER MISC TABLE (370 rows)
+Purpose: Individual player statistics
+--------------------------------------------------
+
+### Basic Information
+'Player' -- Player name
+'Nation' -- Player nationality (3-letter country code)
+'Pos' -- Position abbreviation (GK, DF, MF, FW, with variants)
+'Squad' -- Team/club name
+'Age' -- Player age (years.days at start of season)
+'Born' -- Birth year
+
+### Performance
+'Performance CrdY' -- Yellow Cards: Yellow cards received
+'Performance CrdR' -- Red Cards: Red cards received
+'Performance 2CrdY' -- Second Yellow Cards: Second bookings leading to red card
+'Performance Fls' -- Fouls Committed: Fouls committed by player
+'Performance Fld' -- Fouls Drawn: Fouls drawn by player
+'Performance Off' -- Offsides: Offside infractions
+'Performance Crs' -- Crosses: Cross attempts
+'Performance Int' -- Interceptions: Passes intercepted
+'Performance TklW' -- Tackles Won: Tackles where team regained possession
+'Performance PKwon' -- Penalty Kicks Won: Penalties earned/won
+'Performance PKcon' -- Penalty Kicks Conceded: Penalties given away
+'Performance OG' -- Own Goals: Own goals scored
+'Performance Recov' -- Ball Recoveries: Loose balls recovered
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Aerial Duels Won' -- Aerials Won: Aerial duels won
+'Aerial Duels Lost' -- Challenges Lost: Unsuccessful tackle/challenge attempts
+'Aerial Duels Won%' -- Aerial Win %: Percentage of aerial duels won
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## SQUAD MISC TABLE (20 rows)
+Purpose: Team statistics (what the team does)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Performance
+'Performance CrdY' -- Yellow Cards: Yellow cards received
+'Performance CrdR' -- Red Cards: Red cards received
+'Performance 2CrdY' -- Second Yellow Cards: Second bookings leading to red card
+'Performance Fls' -- Fouls Committed: Fouls committed by player
+'Performance Fld' -- Fouls Drawn: Fouls drawn by player
+'Performance Off' -- Offsides: Offside infractions
+'Performance Crs' -- Crosses: Cross attempts
+'Performance Int' -- Interceptions: Passes intercepted
+'Performance TklW' -- Tackles Won: Tackles where team regained possession
+'Performance PKwon' -- Penalty Kicks Won: Penalties earned/won
+'Performance PKcon' -- Penalty Kicks Conceded: Penalties given away
+'Performance OG' -- Own Goals: Own goals scored
+'Performance Recov' -- Ball Recoveries: Loose balls recovered
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Aerial Duels Won' -- Aerials Won: Aerial duels won
+'Aerial Duels Lost' -- Challenges Lost: Unsuccessful tackle/challenge attempts
+'Aerial Duels Won%' -- Aerial Win %: Percentage of aerial duels won
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## OPPONENT MISC TABLE (20 rows)
+Purpose: Opponent statistics (what teams face/allow)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Performance
+'Performance CrdY' -- Yellow Cards: Yellow cards received
+'Performance CrdR' -- Red Cards: Red cards received
+'Performance 2CrdY' -- Second Yellow Cards: Second bookings leading to red card
+'Performance Fls' -- Fouls Committed: Fouls committed by player
+'Performance Fld' -- Fouls Drawn: Fouls drawn by player
+'Performance Off' -- Offsides: Offside infractions
+'Performance Crs' -- Crosses: Cross attempts
+'Performance Int' -- Interceptions: Passes intercepted
+'Performance TklW' -- Tackles Won: Tackles where team regained possession
+'Performance PKwon' -- Penalty Kicks Won: Penalties earned/won
+'Performance PKcon' -- Penalty Kicks Conceded: Penalties given away
+'Performance OG' -- Own Goals: Own goals scored
+'Performance Recov' -- Ball Recoveries: Loose balls recovered
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Aerial Duels Won' -- Aerials Won: Aerial duels won
+'Aerial Duels Lost' -- Challenges Lost: Unsuccessful tackle/challenge attempts
+'Aerial Duels Won%' -- Aerial Win %: Percentage of aerial duels won
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+

@@ -1,0 +1,104 @@
+# PASSINGTYPES STATS REFERENCE
+======================================================================
+Generated: 2025-09-02 21:59:39
+Category: PASSINGTYPES
+Tables: player_passingtypes, squad_passingtypes, opponent_passingtypes
+======================================================================
+
+## PLAYER PASSINGTYPES TABLE (370 rows)
+Purpose: Individual player statistics
+--------------------------------------------------
+
+### Basic Information
+'Player' -- Player name
+'Nation' -- Player nationality (3-letter country code)
+'Pos' -- Position abbreviation (GK, DF, MF, FW, with variants)
+'Squad' -- Team/club name
+'Age' -- Player age (years.days at start of season)
+'Born' -- Birth year
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Att' -- Passes Attempted: Total pass attempts
+'Pass Types Live' -- Live-ball Passes: Passes during live play
+'Pass Types Dead' -- Dead-ball Passes: Set piece passes
+'Pass Types FK' -- Free Kick Shots/Goals: Shots or goals from free kicks
+'Pass Types TB' -- Through Balls: Passes between defenders into space
+'Pass Types Sw' -- Switches: Passes traveling 40+ yards across pitch width
+'Pass Types Crs' -- Crosses: Cross attempts
+'Pass Types TI' -- Throw-ins: Throw-in attempts
+'Pass Types CK' -- Corner Kicks: Corner kick attempts
+'Corner Kicks In' -- Inswinging Corners: Inswinging corner kicks
+'Corner Kicks Out' -- Outswinging Corners: Outswinging corner kicks
+'Corner Kicks Str' -- Straight Corners: Straight corner kicks
+'Outcomes Cmp' -- Passes Completed: Successful passes
+'Outcomes Off' -- Offsides: Offside infractions
+'Outcomes Blocks' -- Blocked Passes: Passes blocked by opponents
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## SQUAD PASSINGTYPES TABLE (20 rows)
+Purpose: Team statistics (what the team does)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Att' -- Passes Attempted: Total pass attempts
+'Pass Types Live' -- Live-ball Passes: Passes during live play
+'Pass Types Dead' -- Dead-ball Passes: Set piece passes
+'Pass Types FK' -- Free Kick Shots/Goals: Shots or goals from free kicks
+'Pass Types TB' -- Through Balls: Passes between defenders into space
+'Pass Types Sw' -- Switches: Passes traveling 40+ yards across pitch width
+'Pass Types Crs' -- Crosses: Cross attempts
+'Pass Types TI' -- Throw-ins: Throw-in attempts
+'Pass Types CK' -- Corner Kicks: Corner kick attempts
+'Corner Kicks In' -- Inswinging Corners: Inswinging corner kicks
+'Corner Kicks Out' -- Outswinging Corners: Outswinging corner kicks
+'Corner Kicks Str' -- Straight Corners: Straight corner kicks
+'Outcomes Cmp' -- Passes Completed: Successful passes
+'Outcomes Off' -- Offsides: Offside infractions
+'Outcomes Blocks' -- Blocked Passes: Passes blocked by opponents
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## OPPONENT PASSINGTYPES TABLE (20 rows)
+Purpose: Opponent statistics (what teams face/allow)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'Att' -- Passes Attempted: Total pass attempts
+'Pass Types Live' -- Live-ball Passes: Passes during live play
+'Pass Types Dead' -- Dead-ball Passes: Set piece passes
+'Pass Types FK' -- Free Kick Shots/Goals: Shots or goals from free kicks
+'Pass Types TB' -- Through Balls: Passes between defenders into space
+'Pass Types Sw' -- Switches: Passes traveling 40+ yards across pitch width
+'Pass Types Crs' -- Crosses: Cross attempts
+'Pass Types TI' -- Throw-ins: Throw-in attempts
+'Pass Types CK' -- Corner Kicks: Corner kick attempts
+'Corner Kicks In' -- Inswinging Corners: Inswinging corner kicks
+'Corner Kicks Out' -- Outswinging Corners: Outswinging corner kicks
+'Corner Kicks Str' -- Straight Corners: Straight corner kicks
+'Outcomes Cmp' -- Passes Completed: Successful passes
+'Outcomes Off' -- Offsides: Offside infractions
+'Outcomes Blocks' -- Blocked Passes: Passes blocked by opponents
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+

@@ -1,0 +1,107 @@
+# GOALSHOTCREATION STATS REFERENCE
+======================================================================
+Generated: 2025-09-02 21:59:39
+Category: GOALSHOTCREATION
+Tables: player_goalshotcreation, squad_goalshotcreation, opponent_goalshotcreation
+======================================================================
+
+## PLAYER GOALSHOTCREATION TABLE (370 rows)
+Purpose: Individual player statistics
+--------------------------------------------------
+
+### Basic Information
+'Player' -- Player name
+'Nation' -- Player nationality (3-letter country code)
+'Pos' -- Position abbreviation (GK, DF, MF, FW, with variants)
+'Squad' -- Team/club name
+'Age' -- Player age (years.days at start of season)
+'Born' -- Birth year
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'SCA SCA' -- Shot-Creating Actions: Two actions leading to a shot
+'SCA SCA90' -- Shot-Creating Actions per 90: SCA per 90 minutes
+'SCA Types PassLive' -- Football stat: SCA Types PassLive (see FBRef goalshotcreation glossary for details)
+'SCA Types PassDead' -- Football stat: SCA Types PassDead (see FBRef goalshotcreation glossary for details)
+'SCA Types TO' -- Football stat: SCA Types TO (see FBRef goalshotcreation glossary for details)
+'SCA Types Sh' -- Football stat: SCA Types Sh (see FBRef goalshotcreation glossary for details)
+'SCA Types Fld' -- Football stat: SCA Types Fld (see FBRef goalshotcreation glossary for details)
+'SCA Types Def' -- Football stat: SCA Types Def (see FBRef goalshotcreation glossary for details)
+'GCA GCA' -- Goal-Creating Actions: Two actions leading to a goal
+'GCA GCA90' -- Goal-Creating Actions per 90: GCA per 90 minutes
+'GCA Types PassLive' -- Football stat: GCA Types PassLive (see FBRef goalshotcreation glossary for details)
+'GCA Types PassDead' -- Football stat: GCA Types PassDead (see FBRef goalshotcreation glossary for details)
+'GCA Types TO' -- Football stat: GCA Types TO (see FBRef goalshotcreation glossary for details)
+'GCA Types Sh' -- Football stat: GCA Types Sh (see FBRef goalshotcreation glossary for details)
+'GCA Types Fld' -- Football stat: GCA Types Fld (see FBRef goalshotcreation glossary for details)
+'GCA Types Def' -- Football stat: GCA Types Def (see FBRef goalshotcreation glossary for details)
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## SQUAD GOALSHOTCREATION TABLE (20 rows)
+Purpose: Team statistics (what the team does)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'SCA SCA' -- Shot-Creating Actions: Two actions leading to a shot
+'SCA SCA90' -- Shot-Creating Actions per 90: SCA per 90 minutes
+'SCA Types PassLive' -- Football stat: SCA Types PassLive (see FBRef goalshotcreation glossary for details)
+'SCA Types PassDead' -- Football stat: SCA Types PassDead (see FBRef goalshotcreation glossary for details)
+'SCA Types TO' -- Football stat: SCA Types TO (see FBRef goalshotcreation glossary for details)
+'SCA Types Sh' -- Football stat: SCA Types Sh (see FBRef goalshotcreation glossary for details)
+'SCA Types Fld' -- Football stat: SCA Types Fld (see FBRef goalshotcreation glossary for details)
+'SCA Types Def' -- Football stat: SCA Types Def (see FBRef goalshotcreation glossary for details)
+'GCA GCA' -- Goal-Creating Actions: Two actions leading to a goal
+'GCA GCA90' -- Goal-Creating Actions per 90: GCA per 90 minutes
+'GCA Types PassLive' -- Football stat: GCA Types PassLive (see FBRef goalshotcreation glossary for details)
+'GCA Types PassDead' -- Football stat: GCA Types PassDead (see FBRef goalshotcreation glossary for details)
+'GCA Types TO' -- Football stat: GCA Types TO (see FBRef goalshotcreation glossary for details)
+'GCA Types Sh' -- Football stat: GCA Types Sh (see FBRef goalshotcreation glossary for details)
+'GCA Types Fld' -- Football stat: GCA Types Fld (see FBRef goalshotcreation glossary for details)
+'GCA Types Def' -- Football stat: GCA Types Def (see FBRef goalshotcreation glossary for details)
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
+## OPPONENT GOALSHOTCREATION TABLE (20 rows)
+Purpose: Opponent statistics (what teams face/allow)
+--------------------------------------------------
+
+### Basic Information
+'Squad' -- Team/club name
+'Pl' -- Number of Players: Number of players used in games
+
+### Other Stats
+'90s' -- 90s Played: Total minutes divided by 90 (equivalent full games)
+'SCA SCA' -- Shot-Creating Actions: Two actions leading to a shot
+'SCA SCA90' -- Shot-Creating Actions per 90: SCA per 90 minutes
+'SCA Types PassLive' -- Football stat: SCA Types PassLive (see FBRef goalshotcreation glossary for details)
+'SCA Types PassDead' -- Football stat: SCA Types PassDead (see FBRef goalshotcreation glossary for details)
+'SCA Types TO' -- Football stat: SCA Types TO (see FBRef goalshotcreation glossary for details)
+'SCA Types Sh' -- Football stat: SCA Types Sh (see FBRef goalshotcreation glossary for details)
+'SCA Types Fld' -- Football stat: SCA Types Fld (see FBRef goalshotcreation glossary for details)
+'SCA Types Def' -- Football stat: SCA Types Def (see FBRef goalshotcreation glossary for details)
+'GCA GCA' -- Goal-Creating Actions: Two actions leading to a goal
+'GCA GCA90' -- Goal-Creating Actions per 90: GCA per 90 minutes
+'GCA Types PassLive' -- Football stat: GCA Types PassLive (see FBRef goalshotcreation glossary for details)
+'GCA Types PassDead' -- Football stat: GCA Types PassDead (see FBRef goalshotcreation glossary for details)
+'GCA Types TO' -- Football stat: GCA Types TO (see FBRef goalshotcreation glossary for details)
+'GCA Types Sh' -- Football stat: GCA Types Sh (see FBRef goalshotcreation glossary for details)
+'GCA Types Fld' -- Football stat: GCA Types Fld (see FBRef goalshotcreation glossary for details)
+'GCA Types Def' -- Football stat: GCA Types Def (see FBRef goalshotcreation glossary for details)
+
+### Metadata
+'Current Date' -- Date when data was scraped
+'current_through_gameweek' -- Latest gameweek included in data
+'last_updated' -- Timestamp of last database update
+
