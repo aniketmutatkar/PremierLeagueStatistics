@@ -175,8 +175,8 @@ def load_real_data():
     ORDER BY match_date
     """
     recent_df = conn.execute(recent_results_query).fetchdf()
-    recent_results = [f"{row['home_team']} {row['home_score']}-{row['away_score']} {row['away_team']}" 
-                     for _, row in recent_df.iterrows()]
+    recent_results = [f"{row['home_team']} {int(row['home_score'])}-{int(row['away_score'])} {row['away_team']}" 
+                 for _, row in recent_df.iterrows()]
     
     # Upcoming fixtures (current gameweek)
     upcoming_fixtures_query = f"""
