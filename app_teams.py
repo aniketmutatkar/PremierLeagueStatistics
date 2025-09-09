@@ -412,10 +412,10 @@ def format_stat(value, is_percentage=False):
     
     return str(value)
 
-def create_comparison_table(title, metrics_list, team_a_stats, team_b_stats, team_a, team_b):
-    """Create a comparison table with color coding"""
+def create_grouped_comparison_table(group_title, metrics_list, team_a_stats, team_b_stats, team_a, team_b):
+    """Create a grouped comparison table with better organization"""
     
-    st.subheader(title)
+    st.markdown(f"**{group_title}**")
     
     comparison_data = []
     
@@ -456,18 +456,18 @@ def create_comparison_table(title, metrics_list, team_a_stats, team_b_stats, tea
                     if abs(num_a - num_b) > 0.01:
                         if higher_is_better:
                             if num_a > num_b:
-                                styles[1] = 'background-color: #006400'  # Green  
-                                styles[2] = 'background-color: #8B0000' # Red
+                                styles[1] = 'background-color: #006400' 
+                                styles[2] = 'background-color: #8B0000'
                             else:
-                                styles[1] = 'background-color: #8B0000' # Red
-                                styles[2] = 'background-color: #006400'  # Green  
+                                styles[1] = 'background-color: #8B0000'
+                                styles[2] = 'background-color: #006400' 
                         else:  # Lower is better
                             if num_a < num_b:
-                                styles[1] = 'background-color: #006400'  # Green  
-                                styles[2] = 'background-color: #8B0000' # Red
+                                styles[1] = 'background-color: #006400' 
+                                styles[2] = 'background-color: #8B0000'
                             else:
-                                styles[1] = 'background-color: #8B0000' # Red
-                                styles[2] = 'background-color: #006400'  # Green  
+                                styles[1] = 'background-color: #8B0000'
+                                styles[2] = 'background-color: #006400' 
                 except:
                     pass
             
@@ -478,10 +478,10 @@ def create_comparison_table(title, metrics_list, team_a_stats, team_b_stats, tea
     styled_df = style_colors(df, metrics_list)
     st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
-def create_opponent_comparison_table(title, metrics_list, team_a_stats, team_b_stats, team_a, team_b):
-    """Create opponent performance comparison table"""
+def create_grouped_opponent_table(group_title, metrics_list, team_a_stats, team_b_stats, team_a, team_b):
+    """Create a grouped opponent comparison table"""
     
-    st.subheader(title)
+    st.markdown(f"**{group_title}**")
     
     comparison_data = []
     
@@ -492,7 +492,7 @@ def create_opponent_comparison_table(title, metrics_list, team_a_stats, team_b_s
     
     df = pd.DataFrame(comparison_data, columns=["Metric", f"vs {team_a}", f"vs {team_b}"])
     
-    # Color styling function (same as regular table)
+    # Color styling function (same logic but for opponent stats)
     def style_colors(df, metrics_list):
         def highlight_better(row):
             styles = [''] * len(row)
@@ -518,22 +518,22 @@ def create_opponent_comparison_table(title, metrics_list, team_a_stats, team_b_s
                         num_a = float(val_a)
                         num_b = float(val_b)
                     
-                    # Color based on which is better (note: for opponent stats, lower is usually better for the team)
+                    # Color based on which is better (note: for opponent stats, logic is inverted)
                     if abs(num_a - num_b) > 0.01:
                         if higher_is_better:
                             if num_a > num_b:
-                                styles[1] = 'background-color: #8B0000' # Red (worse for team A)
-                                styles[2] = 'background-color: #006400'  # Green   (better for team B)
+                                styles[1] = 'background-color: #8B0000'# Red (worse for team A)
+                                styles[2] = 'background-color: #006400' # Green (better for team B)
                             else:
-                                styles[1] = 'background-color: #006400'  # Green   (better for team A)
-                                styles[2] = 'background-color: #8B0000' # Red (worse for team B)
+                                styles[1] = 'background-color: #006400' # Green (better for team A)
+                                styles[2] = 'background-color: #8B0000'# Red (worse for team B)
                         else:  # Lower is better
                             if num_a < num_b:
-                                styles[1] = 'background-color: #006400'  # Green   (better for team A)
-                                styles[2] = 'background-color: #8B0000' # Red (worse for team B)
+                                styles[1] = 'background-color: #006400' # Green (better for team A)
+                                styles[2] = 'background-color: #8B0000'# Red (worse for team B)
                             else:
-                                styles[1] = 'background-color: #8B0000' # Red (worse for team A)
-                                styles[2] = 'background-color: #006400'  # Green   (better for team B)
+                                styles[1] = 'background-color: #8B0000'# Red (worse for team A)
+                                styles[2] = 'background-color: #006400' # Green (better for team B)
                 except:
                     pass
             
@@ -544,34 +544,39 @@ def create_opponent_comparison_table(title, metrics_list, team_a_stats, team_b_s
     styled_df = style_colors(df, metrics_list)
     st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
+# Replace your current header section with this clean Option 2 implementation:
+
 # Main app
 st.title("Premier League Team Comparison")
 
-# Header layout
-col1, col2, col3 = st.columns([3, 3, 2])
+# Center the team selection 
+_, center_col, _ = st.columns([1.5, 3, 1])
 
-# Load teams
-teams = load_team_list()
-if not teams:
-    st.error("Could not load team data")
-    st.stop()
+with center_col:
+    col1, col2, col3 = st.columns([3, 3, 2])
 
-with col1:
-    team_a = st.selectbox(
-        "Team A",
-        teams,
-        index=teams.index("Manchester City") if "Manchester City" in teams else 0
-    )
+    # Load teams
+    teams = load_team_list()
+    if not teams:
+        st.error("Could not load team data")
+        st.stop()
 
-with col2:
-    team_b = st.selectbox(
-        "Team B", 
-        teams,
-        index=teams.index("Arsenal") if "Arsenal" in teams else 1
-    )
+    with col1:
+        team_a = st.selectbox(
+            "Team A",
+            teams,
+            index=teams.index("Manchester City") if "Manchester City" in teams else 0
+        )
 
-with col3:
-    view_mode = st.radio("View", ["Per Game", "Season Total"], horizontal=True)
+    with col2:
+        team_b = st.selectbox(
+            "Team B", 
+            teams,
+            index=teams.index("Arsenal") if "Arsenal" in teams else 1
+        )
+
+    with col3:
+        view_mode = st.radio("View", ["Per Game", "Season Total"], horizontal=True)
 
 # Load team data
 team_a_stats = load_team_stats(team_a)
@@ -590,19 +595,43 @@ if view_mode == "Per Game":
 team_a_record = get_team_record(team_a)
 team_b_record = get_team_record(team_b)
 
-# Team summary
-with st.container():
-    col1, col2 = st.columns(2)
+# Create team cards using info boxes - centered layout
+_, _, card_center, _, _ = st.columns([1, 1, 4.25, 1, 1])
+
+with card_center:
+    # Three columns: Team A card, VS, Team B card
+    team_a_col, vs_col, team_b_col = st.columns([2, 0.5, 2])
     
-    with col1:
-        st.subheader(team_a)
-        st.write(f"**{team_a_record['wins']}W-{team_a_record['draws']}D-{team_a_record['losses']}L** | **{team_a_record['points']} pts**")
-        st.write(f"Goals: {team_a_stats.get('goals_for', 0):.1f} For, {team_a_stats.get('goals_against', 0):.1f} Against")
-        
-    with col2:
-        st.subheader(team_b)
-        st.write(f"**{team_b_record['wins']}W-{team_b_record['draws']}D-{team_b_record['losses']}L** | **{team_b_record['points']} pts**")
-        st.write(f"Goals: {team_b_stats.get('goals_for', 0):.1f} For, {team_b_stats.get('goals_against', 0):.1f} Against")
+    with team_a_col:
+        # Team A info card
+        goal_diff_a = team_a_stats.get('goals_for', 0) - team_a_stats.get('goals_against', 0)
+        team_a_card = f"""
+# {team_a}
+
+**Record:** {team_a_record['wins']}-{team_a_record['draws']}-{team_a_record['losses']}  
+**Points:** {team_a_record['points']}  
+**Goal Difference:** {goal_diff_a:+.1f}  
+**Goals:** {team_a_stats.get('goals_for', 0):.1f} for, {team_a_stats.get('goals_against', 0):.1f} against
+        """
+        st.info(team_a_card)
+    
+    with vs_col:
+        st.markdown("")
+        st.markdown("")
+        st.markdown("## **VS**")
+    
+    with team_b_col:
+        # Team B info card
+        goal_diff_b = team_b_stats.get('goals_for', 0) - team_b_stats.get('goals_against', 0)
+        team_b_card = f"""
+# {team_b}
+
+**Record:** {team_b_record['wins']}-{team_b_record['draws']}-{team_b_record['losses']}  
+**Points:** {team_b_record['points']}  
+**Goal Difference:** {goal_diff_b:+.1f}  
+**Goals:** {team_b_stats.get('goals_for', 0):.1f} for, {team_b_stats.get('goals_against', 0):.1f} against
+        """
+        st.info(team_b_card)
 
 st.markdown("---")
 
@@ -616,122 +645,201 @@ with col_left:
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["Attack", "Passing", "Defense", "Discipline", "Advanced"])
     
     with tab1:
-        attacking_metrics = [
+        # Finishing Group
+        finishing_metrics = [
             ("Goals", "goals_for", True, False),
             ("Expected Goals (xG)", "xg_for", True, False),
             ("Non-Penalty xG", "npxg_for", True, False),
             ("Goals - xG", "goals_minus_xg", True, False),
             ("Non-Penalty Goals", "non_penalty_goals", True, False),
-            ("Assists", "assists", True, False),
-            ("Expected Assists (xAG)", "xag", True, False),
-            ("Goals + Assists", "goals_assists", True, False),
-            ("Penalties Scored", "penalties_scored", True, False),
-            ("Penalties Attempted", "penalties_attempted", True, False),
+            ("Goals per Shot", "goals_per_shot", True, False),
+            ("Goals per Shot on Target", "goals_per_shot_on_target", True, False),
+        ]
+        create_grouped_comparison_table("Finishing", finishing_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Chance Creation Group
+        chance_creation_metrics = [
             ("Shots", "shots", True, False),
             ("Shots on Target", "shots_on_target", True, False),
             ("Shot Accuracy %", "shot_accuracy", True, True),
-            ("Goals per Shot", "goals_per_shot", True, False),
-            ("Goals per Shot on Target", "goals_per_shot_on_target", True, False),
             ("Average Shot Distance", "avg_shot_distance", False, False),
             ("Free Kick Shots", "free_kick_shots", True, False),
+        ]
+        create_grouped_comparison_table("Chance Creation", chance_creation_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Playmaking Group
+        playmaking_metrics = [
+            ("Assists", "assists", True, False),
+            ("Expected Assists (xAG)", "xag", True, False),
+            ("Goals + Assists", "goals_assists", True, False),
             ("SCA", "shot_creating_actions", True, False),
             ("SCA per 90", "sca_per_90", True, False),
             ("GCA", "goal_creating_actions", True, False),
             ("GCA per 90", "gca_per_90", True, False),
         ]
-        create_comparison_table("Attack & Shooting", attacking_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        create_grouped_comparison_table("Playmaking", playmaking_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Set Pieces Group
+        set_pieces_metrics = [
+            ("Penalties Scored", "penalties_scored", True, False),
+            ("Penalties Attempted", "penalties_attempted", True, False),
+        ]
+        create_grouped_comparison_table("Set Pieces", set_pieces_metrics, team_a_stats, team_b_stats, team_a, team_b)
     
     with tab2:
-        passing_metrics = [
+        # Passing Accuracy Group
+        passing_accuracy_metrics = [
             ("Passes Completed", "passes_completed", True, False),
             ("Passes Attempted", "passes_attempted", True, False),
             ("Pass Accuracy %", "pass_accuracy", True, True),
             ("Short Pass Accuracy %", "short_pass_accuracy", True, True),
             ("Medium Pass Accuracy %", "medium_pass_accuracy", True, True),
             ("Long Pass Accuracy %", "long_pass_accuracy", True, True),
+        ]
+        create_grouped_comparison_table("Passing Accuracy", passing_accuracy_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Progressive Passing Group
+        progressive_passing_metrics = [
             ("Progressive Passes", "progressive_passes", True, False),
             ("Progressive Pass Distance", "progressive_pass_distance", True, False),
             ("Key Passes", "key_passes", True, False),
             ("Final Third Passes", "final_third_passes", True, False),
             ("Penalty Area Passes", "penalty_area_passes", True, False),
             ("Crosses into Penalty Area", "crosses_into_penalty_area", True, False),
+        ]
+        create_grouped_comparison_table("Progressive Passing", progressive_passing_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Pass Types Group
+        pass_types_metrics = [
             ("Through Balls", "through_balls", True, False),
             ("Switches", "switches", True, False),
             ("Crosses", "crosses", True, False),
-            ("Throw-ins", "throw_ins", True, False),
-            ("Corner Kicks", "corner_kicks", True, False),
             ("Live Ball Passes", "live_ball_passes", True, False),
             ("Dead Ball Passes", "dead_ball_passes", True, False),
-            ("Possession %", "possession_pct", True, True),
         ]
-        create_comparison_table("Passing & Build-up", passing_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        create_grouped_comparison_table("Pass Types", pass_types_metrics, team_a_stats, team_b_stats, team_a, team_b)
         
-        # Second passing section for possession
-        possession_metrics = [
-            ("Touches", "touches", True, False),
-            ("Touches Def Third", "touches_def_third", True, False),
-            ("Touches Mid Third", "touches_mid_third", True, False),
-            ("Touches Att Third", "touches_att_third", True, False),
-            ("Touches Penalty Area", "touches_penalty_area", True, False),
-            ("Progressive Carries", "progressive_carries", True, False),
-            ("Progressive Carry Distance", "progressive_carry_distance", True, False),
-            ("Carries", "carries", True, False),
-            ("Carries Final Third", "carries_final_third", True, False),
-            ("Carries Penalty Area", "carries_penalty_area", True, False),
-            ("Take-Ons Attempted", "take_ons_attempted", True, False),
-            ("Take-Ons Successful", "take_ons_successful", True, False),
-            ("Take-On Success %", "take_on_success_rate", True, True),
-            ("Miscontrols", "miscontrols", False, False),
-            ("Dispossessed", "dispossessed", False, False),
+        # Set Pieces Group
+        set_piece_passing_metrics = [
+            ("Throw-ins", "throw_ins", True, False),
+            ("Corner Kicks", "corner_kicks", True, False),
         ]
-        create_comparison_table("Possession & Movement", possession_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        create_grouped_comparison_table("Set Piece Delivery", set_piece_passing_metrics, team_a_stats, team_b_stats, team_a, team_b)
     
     with tab3:
-        defensive_metrics = [
+        # Goals Against Group
+        goals_against_metrics = [
             ("Goals Against", "goals_against", False, False),
             ("xG Against", "xg_against", False, False),
             ("Shots Against", "shots_against", False, False),
             ("Shots on Target Against", "shots_on_target_against", False, False),
             ("Clean Sheets", "clean_sheets", True, False),
             ("Clean Sheet %", "clean_sheet_percentage", True, True),
-            ("Save %", "save_percentage", True, True),
+        ]
+        create_grouped_comparison_table("Goals Against", goals_against_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Defensive Actions Group
+        defensive_actions_metrics = [
             ("Tackles", "tackles", True, False),
             ("Tackles Won", "tackles_won", True, False),
-            ("Tackles Def Third", "tackles_def_third", True, False),
-            ("Tackles Mid Third", "tackles_mid_third", True, False),
-            ("Tackles Att Third", "tackles_att_third", True, False),
             ("Tackle Success %", "tackle_success_rate", True, True),
             ("Interceptions", "interceptions", True, False),
             ("Tackles + Interceptions", "tackles_plus_interceptions", True, False),
+            ("Clearances", "clearances", True, False),
+        ]
+        create_grouped_comparison_table("Defensive Actions", defensive_actions_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Defensive Areas Group
+        defensive_areas_metrics = [
+            ("Tackles Def Third", "tackles_def_third", True, False),
+            ("Tackles Mid Third", "tackles_mid_third", True, False),
+            ("Tackles Att Third", "tackles_att_third", True, False),
+        ]
+        create_grouped_comparison_table("Defensive Areas", defensive_areas_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Blocks & Errors Group
+        blocks_errors_metrics = [
             ("Blocks", "blocks", True, False),
             ("Shots Blocked", "shots_blocked", True, False),
             ("Passes Blocked", "passes_blocked_def", True, False),
-            ("Clearances", "clearances", True, False),
             ("Errors Leading to Shots", "errors", False, False),
         ]
-        create_comparison_table("Defensive Performance", defensive_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        create_grouped_comparison_table("Blocks & Errors", blocks_errors_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Goalkeeping Group
+        goalkeeping_metrics = [
+            ("Save %", "save_percentage", True, True),
+        ]
+        create_grouped_comparison_table("Goalkeeping", goalkeeping_metrics, team_a_stats, team_b_stats, team_a, team_b)
     
     with tab4:
+        # Cards & Discipline Group
         discipline_metrics = [
             ("Yellow Cards", "yellow_cards", False, False),
             ("Red Cards", "red_cards", False, False),
             ("Second Yellow Cards", "second_yellows", False, False),
+        ]
+        create_grouped_comparison_table("Cards & Discipline", discipline_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Fouls Group
+        fouls_metrics = [
             ("Fouls Committed", "fouls_committed", False, False),
             ("Fouls Drawn", "fouls_drawn", True, False),
             ("Offsides", "offsides", False, False),
+        ]
+        create_grouped_comparison_table("Fouls", fouls_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Penalties & Own Goals Group
+        penalties_og_metrics = [
             ("Penalties Won", "penalties_won", True, False),
             ("Penalties Conceded", "penalties_conceded", False, False),
             ("Own Goals", "own_goals", False, False),
+        ]
+        create_grouped_comparison_table("Penalties & Own Goals", penalties_og_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Physical Duels Group
+        physical_metrics = [
             ("Ball Recoveries", "ball_recoveries", True, False),
             ("Aerial Duels Won", "aerial_duels_won", True, False),
             ("Aerial Duels Lost", "aerial_duels_lost", False, False),
             ("Aerial Win %", "aerial_duel_success_rate", True, True),
         ]
-        create_comparison_table("Discipline & Duels", discipline_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        create_grouped_comparison_table("Physical Duels", physical_metrics, team_a_stats, team_b_stats, team_a, team_b)
     
     with tab5:
+        # Possession Control Group
+        possession_control_metrics = [
+            ("Possession %", "possession_pct", True, True),
+            ("Touches", "touches", True, False),
+            ("Touches Def Third", "touches_def_third", True, False),
+            ("Touches Mid Third", "touches_mid_third", True, False),
+            ("Touches Att Third", "touches_att_third", True, False),
+            ("Touches Penalty Area", "touches_penalty_area", True, False),
+        ]
+        create_grouped_comparison_table("Possession Control", possession_control_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Ball Carrying Group
+        ball_carrying_metrics = [
+            ("Progressive Carries", "progressive_carries", True, False),
+            ("Progressive Carry Distance", "progressive_carry_distance", True, False),
+            ("Carries", "carries", True, False),
+            ("Carries Final Third", "carries_final_third", True, False),
+            ("Carries Penalty Area", "carries_penalty_area", True, False),
+        ]
+        create_grouped_comparison_table("Ball Carrying", ball_carrying_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Take-Ons Group
+        takerons_metrics = [
+            ("Take-Ons Attempted", "take_ons_attempted", True, False),
+            ("Take-Ons Successful", "take_ons_successful", True, False),
+            ("Take-On Success %", "take_on_success_rate", True, True),
+            ("Miscontrols", "miscontrols", False, False),
+            ("Dispossessed", "dispossessed", False, False),
+        ]
+        create_grouped_comparison_table("Take-Ons & Ball Control", takerons_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
         # Advanced Goalkeeper Stats
-        goalkeeper_metrics = [
+        goalkeeper_advanced_metrics = [
             ("Post-Shot xG", "post_shot_xg", False, False),  # Higher = faced harder shots
             ("PSxG Performance", "psxg_performance", True, False),
             ("Cross Stopping %", "cross_stopping_percentage", True, True),
@@ -740,7 +848,7 @@ with col_left:
             ("Keeper Pass Accuracy %", "keeper_pass_accuracy", True, True),
             ("Keeper Avg Pass Length", "keeper_avg_pass_length", True, False),
         ]
-        create_comparison_table("Advanced Goalkeeper", goalkeeper_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        create_grouped_comparison_table("Advanced Goalkeeper", goalkeeper_advanced_metrics, team_a_stats, team_b_stats, team_a, team_b)
         
         # Team Success Stats
         team_success_metrics = [
@@ -750,99 +858,107 @@ with col_left:
             ("xG Difference (Team Success)", "xg_difference_team_success", True, False),
             ("xG Difference per 90", "xg_difference_per_90", True, False),
         ]
-        create_comparison_table("Team Success Metrics", team_success_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        create_grouped_comparison_table("Team Success Metrics", team_success_metrics, team_a_stats, team_b_stats, team_a, team_b)
 
 with col_right:
-    st.header("Opponent Impact Analysis")
+    st.header("Defensive Impact Analysis")
     st.caption("How opponents perform when facing each team")
     
+    # Add explanation
+    st.info("**What this shows:** How opposing teams perform when they face each of these teams. Lower values typically indicate better defensive performance by the team being analyzed.")
+    
     # Use tabs for organization within right column
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["vs Attack", "vs Passing", "vs Defense", "vs Possession", "vs Creation"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Attack Allowed", "Passing Allowed", "Possession Allowed", "Creation Allowed"])
     
     with tab1:
-        # What opponents achieve against each team (attacking perspective)
-        opponent_attack_metrics = [
+        # What opponents score
+        opponent_scoring_metrics = [
             ("Goals Scored vs Team", "goals_against", False, False),  # Lower is better for defending team
             ("xG vs Team", "xg_against", False, False),
             ("npxG vs Team", "npxg_against", False, False),
+        ]
+        create_grouped_opponent_table("Opponent Scoring", opponent_scoring_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # What opponents shoot
+        opponent_shooting_metrics = [
             ("Shots vs Team", "shots_against", False, False),
             ("Shots on Target vs Team", "shots_on_target_against", False, False),
         ]
+        create_grouped_opponent_table("Opponent Shooting", opponent_shooting_metrics, team_a_stats, team_b_stats, team_a, team_b)
         
-        create_opponent_comparison_table("Opponent Attacking vs Each Team", opponent_attack_metrics, team_a_stats, team_b_stats, team_a, team_b)
-        
-        st.write("**Lower values = Better defense**")
+        st.markdown("**Lower values = Better defense**")
         st.caption("Shows what opponents typically achieve when playing against each team")
     
     with tab2:
-        # What opponents achieve in passing against each team
-        opponent_passing_metrics = [
+        # Opponent passing volume
+        opponent_passing_volume_metrics = [
             ("Passes Completed vs Team", "opponent_passes_completed", False, False),
             ("Passes Attempted vs Team", "opponent_passes_attempted", False, False),
+        ]
+        create_grouped_opponent_table("Opponent Passing Volume", opponent_passing_volume_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Opponent passing accuracy
+        opponent_passing_accuracy_metrics = [
             ("Pass Accuracy vs Team %", "opponent_pass_accuracy", False, True),  # Lower is better for defending team
             ("Short Pass Accuracy vs Team %", "opponent_short_pass_accuracy", False, True),
             ("Medium Pass Accuracy vs Team %", "opponent_medium_pass_accuracy", False, True),
             ("Long Pass Accuracy vs Team %", "opponent_long_pass_accuracy", False, True),
+        ]
+        create_grouped_opponent_table("Opponent Passing Accuracy", opponent_passing_accuracy_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Opponent progressive passing
+        opponent_progressive_passing_metrics = [
             ("Progressive Passes vs Team", "opponent_progressive_passes", False, False),
             ("Key Passes vs Team", "opponent_key_passes", False, False),
             ("Final Third Passes vs Team", "opponent_final_third_passes", False, False),
             ("Penalty Area Passes vs Team", "opponent_penalty_area_passes", False, False),
             ("Crosses into Pen Area vs Team", "opponent_crosses_into_penalty_area", False, False),
         ]
+        create_grouped_opponent_table("Opponent Progressive Passing", opponent_progressive_passing_metrics, team_a_stats, team_b_stats, team_a, team_b)
         
-        create_opponent_comparison_table("Opponent Passing vs Each Team", opponent_passing_metrics, team_a_stats, team_b_stats, team_a, team_b)
-        
-        st.write("**Lower values = Better defensive disruption**")
+        st.markdown("**Lower values = Better defensive disruption**")
         st.caption("Shows how accurately/effectively opponents pass when facing each team")
     
     with tab3:
-        # Note: Most defensive stats don't have opponent equivalents since they're team actions
-        st.subheader("Defensive Context")
-        st.write("**Note:** Most defensive actions (tackles, blocks, clearances) are performed by the defending team, so opponent equivalents don't exist in the data.")
-        st.write("**See 'vs Attack' tab** for what opponents achieve offensively against each team's defense.")
-        
-        # Show the few defensive-related opponent stats we do have
-        opponent_defensive_context = [
+        # Opponent ball control
+        opponent_control_metrics = [
             ("Opponent Possession % vs Team", "opponent_possession_pct", False, True),
             ("Opponent Touches vs Team", "opponent_touches", False, False),
+            ("Opponent Touches Att Third vs Team", "opponent_touches_att_third", False, False),
+            ("Opponent Touches Penalty Area vs Team", "opponent_touches_penalty_area", False, False),
         ]
+        create_grouped_opponent_table("Opponent Ball Control", opponent_control_metrics, team_a_stats, team_b_stats, team_a, team_b)
         
-        create_opponent_comparison_table("Opponent Ball Control vs Each Team", opponent_defensive_context, team_a_stats, team_b_stats, team_a, team_b)
-        
-        st.write("**Lower values = Better at limiting opponent control**")
-    
-    with tab4:
-        # What opponents achieve in possession/movement against each team
-        opponent_possession_metrics = [
-            ("Touches vs Team", "opponent_touches", False, False),
-            ("Touches Att Third vs Team", "opponent_touches_att_third", False, False),
-            ("Touches Penalty Area vs Team", "opponent_touches_penalty_area", False, False),
+        # Opponent movement
+        opponent_movement_metrics = [
             ("Take-Ons Attempted vs Team", "opponent_take_ons_attempted", False, False),
             ("Take-On Success vs Team %", "opponent_takeon_success_rate", False, True),  # Lower is better for defending team
             ("Successful Take-Ons vs Team", "opponent_successful_takerons", False, False),
+        ]
+        create_grouped_opponent_table("Opponent Take-Ons", opponent_movement_metrics, team_a_stats, team_b_stats, team_a, team_b)
+        
+        # Opponent carries
+        opponent_carries_metrics = [
             ("Progressive Carries vs Team", "opponent_progressive_carries", False, False),
             ("Carries Final Third vs Team", "opponent_carries_final_third", False, False),
             ("Carries Penalty Area vs Team", "opponent_carries_penalty_area", False, False),
-            ("Possession % vs Team", "opponent_possession_pct", False, True),
         ]
+        create_grouped_opponent_table("Opponent Carries", opponent_carries_metrics, team_a_stats, team_b_stats, team_a, team_b)
         
-        create_opponent_comparison_table("Opponent Possession vs Each Team", opponent_possession_metrics, team_a_stats, team_b_stats, team_a, team_b)
-        
-        st.write("**Lower values = Better at limiting opponent movement**")
+        st.markdown("**Lower values = Better at limiting opponent movement**")
         st.caption("Shows how successfully opponents move the ball when facing each team")
     
-    with tab5:
-        # What opponents achieve in chance creation against each team
+    with tab4:
+        # What opponents create
         opponent_creation_metrics = [
             ("SCA vs Team", "opponent_shot_creating_actions", False, False),  # Lower is better for defending team
             ("GCA vs Team", "opponent_goal_creating_actions", False, False),
             ("SCA per 90 vs Team", "opponent_sca_per_90", False, False),
             ("GCA per 90 vs Team", "opponent_gca_per_90", False, False),
         ]
+        create_grouped_opponent_table("Opponent Chance Creation", opponent_creation_metrics, team_a_stats, team_b_stats, team_a, team_b)
         
-        create_opponent_comparison_table("Opponent Chance Creation vs Each Team", opponent_creation_metrics, team_a_stats, team_b_stats, team_a, team_b)
-        
-        st.write("**Lower values = Better at preventing opponent creativity**")
+        st.markdown("**Lower values = Better at preventing opponent creativity**")
         st.caption("Shows how many chances opponents create when facing each team")
 
 # Summary Section
