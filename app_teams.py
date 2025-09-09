@@ -32,23 +32,23 @@ def calculate_defensive_stats(team_name, conn):
     """Calculate defensive stats from fixtures and squad tables"""
     
     # Goals against and clean sheets from fixtures
-    defensive_from_fixtures = conn.execute(f"""
+    defensive_from_fixtures = conn.execute("""
         SELECT 
             COUNT(*) as matches_played,
             SUM(CASE 
-                WHEN home_team = '{team_name}' THEN away_score
-                WHEN away_team = '{team_name}' THEN home_score
+                WHEN home_team = ? THEN away_score
+                WHEN away_team = ? THEN home_score
                 ELSE 0 
             END) as goals_against,
             SUM(CASE 
-                WHEN (home_team = '{team_name}' AND away_score = 0) OR 
-                     (away_team = '{team_name}' AND home_score = 0) 
+                WHEN (home_team = ? AND away_score = 0) OR 
+                     (away_team = ? AND home_score = 0) 
                 THEN 1 ELSE 0 
             END) as clean_sheets
         FROM raw_fixtures 
-        WHERE (home_team = '{team_name}' OR away_team = '{team_name}')
+        WHERE (home_team = ? OR away_team = ?)
         AND is_completed = true
-    """).fetchone()
+    """, [team_name, team_name, team_name, team_name, team_name, team_name]).fetchone()
     
     matches = defensive_from_fixtures[0] if defensive_from_fixtures[0] else 1
     goals_against = defensive_from_fixtures[1] if defensive_from_fixtures[1] else 0
@@ -101,8 +101,8 @@ def calculate_defensive_stats(team_name, conn):
         LEFT JOIN opponent_passing op ON o.Squad = op.Squad
         LEFT JOIN opponent_possession opos ON o.Squad = opos.Squad  
         LEFT JOIN opponent_goalshotcreation ogsc ON o.Squad = ogsc.Squad
-        WHERE o.Squad = '{vs_team_name}'
-    """).fetchone()
+        WHERE o.Squad = ?
+    """, [vs_team_name]).fetchone()
     
     return {
         'goals_against': goals_against,
@@ -289,10 +289,10 @@ def load_team_stats(team_name):
         LEFT JOIN squad_keepers k ON s.Squad = k.Squad
         LEFT JOIN squad_keepersadv ka ON s.Squad = ka.Squad
         LEFT JOIN squad_playingtime pt_time ON s.Squad = pt_time.Squad
-        WHERE s.Squad = '{team_name}'
+        WHERE s.Squad = ?
         """
         
-        squad_df = conn.execute(squad_query).fetchdf()
+        squad_df = conn.execute(squad_query, [team_name]).fetchdf()
         
         if squad_df.empty:
             conn.close()
@@ -358,15 +358,15 @@ def get_team_record(team_name):
     conn = duckdb.connect("data/premierleague_raw.duckdb")
     
     try:
-        fixtures_query = f"""
+        fixtures_query = """
         SELECT 
             home_team, away_team, home_score, away_score, is_completed
         FROM raw_fixtures 
-        WHERE (home_team = '{team_name}' OR away_team = '{team_name}')
+        WHERE (home_team = ? OR away_team = ?)
         AND is_completed = true
         """
-        
-        fixtures_df = conn.execute(fixtures_query).fetchdf()
+
+        fixtures_df = conn.execute(fixtures_query, [team_name, team_name]).fetchdf()
         conn.close()
         
         if fixtures_df.empty:
@@ -544,8 +544,6 @@ def create_grouped_opponent_table(group_title, metrics_list, team_a_stats, team_
     styled_df = style_colors(df, metrics_list)
     st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
-# Replace your current header section with this clean Option 2 implementation:
-
 # Main app
 st.title("Premier League Team Comparison")
 
@@ -596,11 +594,11 @@ team_a_record = get_team_record(team_a)
 team_b_record = get_team_record(team_b)
 
 # Create team cards using info boxes - centered layout
-_, _, card_center, _, _ = st.columns([1, 1, 4.25, 1, 1])
+_, card_center, _= st.columns([1, 10, 1])
 
 with card_center:
     # Three columns: Team A card, VS, Team B card
-    team_a_col, vs_col, team_b_col = st.columns([2, 0.5, 2])
+    team_a_col, _, vs_col, team_b_col = st.columns([2, 0.5, 1, 2])
     
     with team_a_col:
         # Team A info card
