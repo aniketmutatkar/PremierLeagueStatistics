@@ -35,6 +35,11 @@ class AnalyticsDBOperations:
             with self.db.get_analytics_connection() as conn:
                 current_date = datetime.now().date()
                 
+                # First count current records
+                current_count = conn.execute("""
+                    SELECT COUNT(*) FROM analytics_players WHERE is_current = true
+                """).fetchone()[0]
+                
                 # Mark current records as historical
                 conn.execute("""
                     UPDATE analytics_players 
@@ -43,8 +48,7 @@ class AnalyticsDBOperations:
                     WHERE is_current = true
                 """, [current_date])
                 
-                rows_updated = conn.execute("SELECT changes()").fetchone()[0]
-                logger.info(f"Marked {rows_updated} records as historical for gameweek {gameweek}")
+                logger.info(f"Marked {current_count} records as historical for gameweek {gameweek}")
                 return True
                 
         except Exception as e:
@@ -123,16 +127,19 @@ class AnalyticsDBOperations:
                 # Check 3: Null percentage in key fields
                 null_check = conn.execute("""
                     SELECT 
-                        SUM(CASE WHEN player_name IS NULL THEN 1 ELSE 0 END) as null_names,
-                        SUM(CASE WHEN squad IS NULL THEN 1 ELSE 0 END) as null_squads,
+                        COALESCE(SUM(CASE WHEN player_name IS NULL THEN 1 ELSE 0 END), 0) as null_names,
+                        COALESCE(SUM(CASE WHEN squad IS NULL THEN 1 ELSE 0 END), 0) as null_squads,
                         COUNT(*) as total
                     FROM analytics_players 
                     WHERE gameweek = ? AND is_current = true
                 """, [gameweek]).fetchone()
                 
-                null_percentage = (null_check[0] + null_check[1]) / null_check[2] * 100
-                if null_percentage > 5:  # Max 5% nulls allowed
-                    issues.append(f"High null percentage: {null_percentage:.1f}%")
+                if null_check[2] > 0:  # Only calculate if we have records
+                    null_percentage = (null_check[0] + null_check[1]) / null_check[2] * 100
+                    if null_percentage > 5:  # Max 5% nulls allowed
+                        issues.append(f"High null percentage: {null_percentage:.1f}%")
+                else:
+                    issues.append("No records found for validation")
                 
                 logger.info(f"Data quality check for GW{gameweek}: {len(issues)} issues found")
                 return len(issues) == 0, issues
