@@ -1,16 +1,21 @@
-# Database Configuration
+# Database Configuration - Enhanced for Analytics Layer
 database:
   type: "duckdb"
-  path: "data/premierleague.duckdb"
+  
+  # Database file paths
+  paths:
+    raw: "data/premierleague_raw.duckdb"                      # Current raw data
+    raw_backup: "data/premierleague_raw_backup_gw4.duckdb"    # Backup of GW4 data
+    analytics: "data/premierleague_analytics.duckdb"          # Analytics database
   
   # Connection settings
   connection:
     read_only: false
-    memory_limit: "1GB"
+    memory_limit: "2GB"  # Increased for analytics processing
     threads: 4
     
-  # Table settings
-  tables:
+  # Raw Layer Tables (existing)
+  raw_tables:
     # Squad stats tables (11 tables)
     squad_tables:
       - "squad_standard"
@@ -55,13 +60,47 @@ database:
     
     # Infrastructure tables
     infrastructure_tables:
-      - "fixtures"
-      - "gameweeks"
+      - "raw_fixtures"
       - "teams"
       - "data_scraping_log"
 
-  # Historical data settings
-  historical:
+  # Analytics Layer Tables (new)
+  analytics_tables:
+    core_tables:
+      - "analytics_players"
+      - "analytics_teams" 
+      - "analytics_teams_defense"
+      - "analytics_fixtures"
+    
+    # Derived metrics to calculate
+    derived_metrics:
+      attacking:
+        - "goals_vs_expected"           # goals - xG
+        - "npgoals_vs_expected"         # non-penalty goals - npxG  
+        - "key_pass_conversion"         # assists / key_passes
+        - "expected_goal_involvement_per_90"  # (npxG + xAG) / 90s
+      
+      possession:
+        - "progressive_actions_per_90"  # (prog_carries + prog_passes) / 90s
+        - "possession_efficiency"       # progressive_actions / total_touches
+        - "final_third_involvement"     # att_3rd_touches / total_touches
+      
+      defensive:
+        - "defensive_actions_per_90"    # (tackles + interceptions + blocks) / 90s
+        - "aerial_duel_success_rate"    # aerial_wins / (aerial_wins + aerial_losses)
+      
+      form:
+        - "goals_last_5gw"             # Requires gameweek history
+        - "assists_last_5gw"           # Requires gameweek history
+        - "form_score"                 # Weighted recent performance
+      
+      context:
+        - "goal_share_of_team"         # player_goals / team_total_goals
+        - "assist_share_of_team"       # player_assists / team_total_assists
+        - "minutes_percentage_of_team" # player_minutes / team_available_minutes
+
+  # Analytics processing settings
+  analytics:
+    # Basic settings - keep it simple for now
     track_gameweeks: true
-    incremental_updates: true
-    retain_all_versions: true
+    create_indexes: true
