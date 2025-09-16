@@ -54,6 +54,14 @@ class PlayerDataConsolidator:
             try:
                 stat_df = self._get_table_data(raw_conn, table, gameweek)
                 if not stat_df.empty:
+                    # Filter out players with 0 playing time for player_playingtime table
+                    if table == 'player_playingtime':
+                        initial_count = len(stat_df)
+                        stat_df = stat_df[stat_df['Playing Time Min'] > 0]
+                        filtered_count = len(stat_df)
+                        if initial_count != filtered_count:
+                            logger.info(f"Filtered out {initial_count - filtered_count} zero-minute players from {table}")
+                    
                     consolidated_df = self._join_stat_table(consolidated_df, stat_df, table)
                     logger.debug(f"Joined {table}: {len(stat_df)} records")
                 else:
@@ -163,6 +171,9 @@ class PlayerDataConsolidator:
                 df = pd.read_sql(query, raw_conn, params=[gameweek])
             
             if not df.empty:
+                # Create composite key for joining (consistent across all tables)
+                df['player_key'] = df['Player'] + '_' + df['Born'].astype(str)
+
                 # Create deduplication key (Player + Born + Squad to handle transfers)
                 df['dedup_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
                 
@@ -183,8 +194,13 @@ class PlayerDataConsolidator:
     def _join_stat_table(self, base_df: pd.DataFrame, stat_df: pd.DataFrame, table_name: str) -> pd.DataFrame:
         """Join a stat table to the base dataframe"""
         try:
+            # Check if player_key exists in stat_df
+            if 'player_key' not in stat_df.columns:
+                logger.error(f"Error joining {table_name}: player_key column missing")
+                return base_df
+            
             # Identify columns to join (exclude common ones)
-            exclude_cols = ['Player', 'Born', 'current_through_gameweek', 'last_updated', 'Current Date', 'player_key']
+            exclude_cols = ['Player', 'Born', 'current_through_gameweek', 'last_updated', 'Current Date', 'player_key', 'dedup_key']
             stat_cols = [col for col in stat_df.columns if col not in exclude_cols]
             
             # Select only the player_key and stat columns
