@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional, Tuple
 from .connection import AnalyticsDBConnection
+from src.scraping.fbref_scraper import FBRefScraper
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +61,14 @@ class AnalyticsDBOperations:
         try:
             with self.db.get_analytics_connection() as conn:
                 current_date = datetime.now().date()
+                scraper = FBRefScraper()
                 
                 # Add SCD Type 2 columns
                 player_data['gameweek'] = gameweek
                 player_data['valid_from'] = current_date
                 player_data['valid_to'] = None
                 player_data['is_current'] = True
-                player_data['season'] = f"2024-25"  # TODO: Make dynamic
+                player_data['season'] = scraper._extract_season_info()
                 
                 # Insert data
                 conn.execute("INSERT INTO analytics_players SELECT * FROM player_data")

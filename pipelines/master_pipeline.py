@@ -211,12 +211,31 @@ class MasterPipeline:
             return True, True
     
     def _should_check_fbref(self) -> bool:
-        """Decide if we should make FBRef request based on recent activity"""
+        """Only check FBRef once per day to avoid unnecessary requests"""
         try:
-            # For now, implement simple time-based logic
-            # TODO: Add more sophisticated logic based on last check timestamp
+            # Check if we've already checked FBRef today
+            today = datetime.now().date()
+            
+            # Look for today's log files to see if we already checked
+            log_pattern = str(pipeline_logger.log_dir / f"master_pipeline_{today.strftime('%Y%m%d')}_*.log")
+            today_logs = glob.glob(log_pattern)
+            
+            # If we have logs from today, check if we already made FBRef request
+            for log_file in today_logs:
+                try:
+                    with open(log_file, 'r') as f:
+                        content = f.read()
+                        if "Checking FBRef for new gameweek" in content:
+                            logger.info("Already checked FBRef today - skipping")
+                            return False
+                except Exception:
+                    continue
+            
+            # No FBRef check found today - ok to check
             return True
+            
         except Exception:
+            # If anything fails, default to checking (safe fallback)
             return True
     
     def _quick_gameweek_check(self) -> int:

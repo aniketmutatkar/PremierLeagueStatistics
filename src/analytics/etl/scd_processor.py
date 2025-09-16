@@ -8,6 +8,8 @@ from typing import List, Dict, Any, Tuple
 
 logger = logging.getLogger(__name__)
 
+from src.scraping.fbref_scraper import FBRefScraper
+
 class SCDType2Processor:
     """Handles SCD Type 2 updates for analytics tables"""
     
@@ -66,6 +68,7 @@ class SCDType2Processor:
     def _prepare_scd_records(self, new_data: pd.DataFrame, gameweek: int) -> pd.DataFrame:
         """Prepare new records with SCD Type 2 metadata"""
         scd_data = new_data.copy()
+        scraper = FBRefScraper()
         
         current_date = datetime.now().date()
         
@@ -74,7 +77,7 @@ class SCDType2Processor:
         scd_data['valid_from'] = current_date
         scd_data['valid_to'] = None
         scd_data['is_current'] = True
-        scd_data['season'] = "2024-25"  # TODO: Make dynamic based on gameweek
+        scd_data['season'] = scraper._extract_season_info()
         
         # Generate business keys (we'll let database handle player_key auto-increment)
         scd_data['player_id'] = scd_data['player_name'] + '_' + scd_data['born_year'].astype(str)

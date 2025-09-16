@@ -18,6 +18,7 @@ if __name__ == "__main__":
 from src.database.analytics_db import AnalyticsDBConnection, AnalyticsDBOperations
 from src.analytics.etl.player_consolidation import PlayerDataConsolidator
 from src.analytics.etl.derived_metrics import DerivedMetricsCalculator
+from src.scraping.fbref_scraper import FBRefScraper
 
 # Configure logging
 logging.basicConfig(
@@ -223,10 +224,11 @@ class AnalyticsETL:
     def _prepare_analytics_data(self, metrics_df: pd.DataFrame, gameweek: int) -> pd.DataFrame:
         """Prepare data for analytics database insertion"""
         analytics_df = metrics_df.copy()
+        scraper = FBRefScraper()
         
         # Add required analytics columns
         current_date = datetime.now().date()
-        analytics_df['season'] = "2024-25"  # TODO: Make dynamic
+        analytics_df['season'] = scraper._extract_season_info()
         analytics_df['gameweek'] = gameweek
         analytics_df['valid_from'] = current_date
         analytics_df['valid_to'] = None
