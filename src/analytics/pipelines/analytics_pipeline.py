@@ -257,13 +257,14 @@ class AnalyticsETLPipeline:
         # Rename columns that have direct mappings
         df = df.rename(columns=column_mapping)
         
-        # CRITICAL: Create required keys with null safety
-        df['player_id'] = df['player_name'] + '_' + df['born_year'].fillna(0).astype(str)  # Business key
+        # Create required keys with null safety
+        df['player_id'] = df['player_name'] + '_' + df['born_year'].fillna(0).astype(str) + '_' + df['squad']
         
-        # Generate player_key for analytics (unique for each player-squad-gameweek combo)
+        # Generate unique player_key for analytics (use existing player_key from consolidation)
+        # The player_key already includes squad, so transfers have unique keys
         import hashlib
         def generate_player_key(row):
-            key_string = f"{row['player_id']}_{row['squad']}_{row['gameweek']}"
+            key_string = f"{row['player_id']}_{row['gameweek']}"
             return int(hashlib.md5(key_string.encode()).hexdigest()[:8], 16)
         
         df['player_key'] = df.apply(generate_player_key, axis=1)
@@ -284,19 +285,24 @@ class AnalyticsETLPipeline:
                     df[col] = ''
         
         return df
-    
+
     def _insert_analytics_data(self, analytics_conn, analytics_data: pd.DataFrame, gameweek: int) -> bool:
         """Insert data into analytics database"""
         try:
             # Use DuckDB's efficient bulk insert with pandas DataFrame
             analytics_conn.execute("BEGIN TRANSACTION")
             
+            # FIX: Convert boolean columns to proper DuckDB boolean format
+            if 'is_current' in analytics_data.columns:
+                analytics_data = analytics_data.copy()  # Don't modify original
+                analytics_data['is_current'] = analytics_data['is_current'].astype('boolean')
+            
             # Register the DataFrame with DuckDB so we can query it
             analytics_conn.register('temp_analytics_data', analytics_data)
             
             # Get the columns that exist in analytics_players table
             table_info = analytics_conn.execute("PRAGMA table_info(analytics_players)").fetchall()
-            table_columns = [col[1] for col in table_info]  # Keep all columns including player_key
+            table_columns = [col[1] for col in table_info]
             
             # Only select columns that exist in both DataFrame and table
             available_columns = [col for col in table_columns if col in analytics_data.columns]

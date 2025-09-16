@@ -16,7 +16,7 @@ class RawDatabaseConnection:
     def __init__(self, config_path: str = "config/database.yaml"):
         self.config = self._load_config(config_path)
         # Use separate database file for raw data
-        self.db_path = self.config["database"]["path"].replace(".duckdb", "_raw.duckdb")
+        self.db_path = self.config["database"]["paths"]["raw"]
         self.connection_settings = self.config["database"]["connection"]
         self._connection: Optional[duckdb.DuckDBPyConnection] = None
         

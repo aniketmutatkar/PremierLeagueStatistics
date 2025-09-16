@@ -118,16 +118,13 @@ class PlayerDataConsolidator:
                 warnings.simplefilter("ignore", UserWarning)
                 df = pd.read_sql(query, raw_conn, params=[gameweek])
             
-            # Create composite key for joining (Player + Born for analytics tracking)
-            df['player_key'] = df['Player'] + '_' + df['Born'].astype(str)
+            # Create unique player_key including squad (handles transfers as separate entities)
+            df['player_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
             
-            # Create deduplication key (Player + Born + Squad to handle transfers)
-            df['dedup_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
-            
-            # CRITICAL: Remove duplicates using dedup_key (handles transfers properly)
+            # Remove duplicates using player_key (should be none now, but safety check)
             initial_count = len(df)
-            duplicates_before_removal = df[df['dedup_key'].duplicated(keep=False)]
-            df = df.drop_duplicates(subset=['dedup_key'], keep='first')
+            duplicates_before_removal = df[df['player_key'].duplicated(keep=False)]
+            df = df.drop_duplicates(subset=['player_key'], keep='first')
             final_count = len(df)
             
             if initial_count != final_count:
@@ -139,7 +136,7 @@ class PlayerDataConsolidator:
         except Exception as e:
             logger.error(f"Error loading base player data: {e}")
             return pd.DataFrame()
-    
+
     def _get_table_data(self, raw_conn, table_name: str, gameweek: int) -> pd.DataFrame:
         """Get data from a specific player stat table"""
         try:
@@ -171,15 +168,12 @@ class PlayerDataConsolidator:
                 df = pd.read_sql(query, raw_conn, params=[gameweek])
             
             if not df.empty:
-                # Create composite key for joining (consistent across all tables)
-                df['player_key'] = df['Player'] + '_' + df['Born'].astype(str)
-
-                # Create deduplication key (Player + Born + Squad to handle transfers)
-                df['dedup_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
+                # Create unique player_key including squad (consistent with base table)
+                df['player_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
                 
-                # CRITICAL: Remove duplicates by dedup_key, keep first occurrence
+                # Remove duplicates using player_key
                 initial_count = len(df)
-                df = df.drop_duplicates(subset=['dedup_key'], keep='first')
+                df = df.drop_duplicates(subset=['player_key'], keep='first')
                 final_count = len(df)
                 
                 if initial_count != final_count:
@@ -190,7 +184,7 @@ class PlayerDataConsolidator:
         except Exception as e:
             logger.error(f"Error loading data from {table_name}: {e}")
             return pd.DataFrame()
-    
+
     def _join_stat_table(self, base_df: pd.DataFrame, stat_df: pd.DataFrame, table_name: str) -> pd.DataFrame:
         """Join a stat table to the base dataframe"""
         try:
@@ -200,7 +194,7 @@ class PlayerDataConsolidator:
                 return base_df
             
             # Identify columns to join (exclude common ones)
-            exclude_cols = ['Player', 'Born', 'current_through_gameweek', 'last_updated', 'Current Date', 'player_key', 'dedup_key']
+            exclude_cols = ['Player', 'Born', 'current_through_gameweek', 'last_updated', 'Current Date', 'player_key']
             stat_cols = [col for col in stat_df.columns if col not in exclude_cols]
             
             # Select only the player_key and stat columns
@@ -211,7 +205,7 @@ class PlayerDataConsolidator:
             rename_dict = {col: f"{table_prefix}_{col}" for col in stat_cols}
             join_df = join_df.rename(columns=rename_dict)
             
-            # Perform left join
+            # Perform left join on player_key
             merged_df = base_df.merge(join_df, on='player_key', how='left')
             
             logger.debug(f"Joined {table_name}: added {len(stat_cols)} columns")
