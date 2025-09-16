@@ -110,16 +110,22 @@ class PlayerDataConsolidator:
                 warnings.simplefilter("ignore", UserWarning)
                 df = pd.read_sql(query, raw_conn, params=[gameweek])
             
-            # Create composite key for joining
+            # Create composite key for joining (Player + Born for analytics tracking)
             df['player_key'] = df['Player'] + '_' + df['Born'].astype(str)
             
-            # CRITICAL: Remove duplicates if they exist
+            # Create deduplication key (Player + Born + Squad to handle transfers)
+            df['dedup_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
+            
+            # CRITICAL: Remove duplicates using dedup_key (handles transfers properly)
             initial_count = len(df)
-            df = df.drop_duplicates(subset=['player_key'], keep='first')
+            duplicates_before_removal = df[df['dedup_key'].duplicated(keep=False)]
+            df = df.drop_duplicates(subset=['dedup_key'], keep='first')
             final_count = len(df)
             
             if initial_count != final_count:
                 logger.warning(f"Removed {initial_count - final_count} duplicate players from base data")
+                if not duplicates_before_removal.empty:
+                    logger.warning(f"Duplicate players were: {duplicates_before_removal[['Player', 'Born', 'Squad']].to_string(index=False)}")
             
             return df
         except Exception as e:
@@ -157,12 +163,12 @@ class PlayerDataConsolidator:
                 df = pd.read_sql(query, raw_conn, params=[gameweek])
             
             if not df.empty:
-                # Create composite key for joining
-                df['player_key'] = df['Player'] + '_' + df['Born'].astype(str)
+                # Create deduplication key (Player + Born + Squad to handle transfers)
+                df['dedup_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
                 
-                # CRITICAL: Remove duplicates by player_key, keep first occurrence
+                # CRITICAL: Remove duplicates by dedup_key, keep first occurrence
                 initial_count = len(df)
-                df = df.drop_duplicates(subset=['player_key'], keep='first')
+                df = df.drop_duplicates(subset=['dedup_key'], keep='first')
                 final_count = len(df)
                 
                 if initial_count != final_count:

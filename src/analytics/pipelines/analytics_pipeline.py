@@ -257,9 +257,20 @@ class AnalyticsETLPipeline:
         # Rename columns that have direct mappings
         df = df.rename(columns=column_mapping)
         
+        # CRITICAL: Create required keys with null safety
+        df['player_id'] = df['player_name'] + '_' + df['born_year'].fillna(0).astype(str)  # Business key
+        
+        # Generate player_key for analytics (unique for each player-squad-gameweek combo)
+        import hashlib
+        def generate_player_key(row):
+            key_string = f"{row['player_id']}_{row['squad']}_{row['gameweek']}"
+            return int(hashlib.md5(key_string.encode()).hexdigest()[:8], 16)
+        
+        df['player_key'] = df.apply(generate_player_key, axis=1)
+        
         # Ensure all required columns exist (fill with defaults if missing)
         required_columns = [
-            'player_name', 'squad', 'position', 'nation', 'age',
+            'player_key', 'player_id', 'player_name', 'squad', 'position', 'nation', 'age',
             'season', 'gameweek', 'valid_from', 'valid_to', 'is_current'
         ]
         
@@ -285,10 +296,14 @@ class AnalyticsETLPipeline:
             
             # Get the columns that exist in analytics_players table
             table_info = analytics_conn.execute("PRAGMA table_info(analytics_players)").fetchall()
-            table_columns = [col[1] for col in table_info if col[1] != 'player_key']  # Exclude auto-increment
+            table_columns = [col[1] for col in table_info]  # Keep all columns including player_key
             
             # Only select columns that exist in both DataFrame and table
             available_columns = [col for col in table_columns if col in analytics_data.columns]
+            
+            if not available_columns:
+                raise Exception("No matching columns found between data and analytics table")
+            
             columns_str = ', '.join(available_columns)
             
             # Bulk insert using DuckDB's efficient method
