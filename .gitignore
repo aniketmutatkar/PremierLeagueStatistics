@@ -8,3 +8,18 @@ __pycache__/
 .DS_Store
 *.html
 *.duckdb
+# Logs
+data/logs/*.log
+# Backups
+data/backups/
+backup_before_cleanup/
+# Data files
+*.duckdb-wal
+*.duckdb-shm
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+# IDE files
+.vscode/
+.idea/
+# OS files
+Thumbs.db

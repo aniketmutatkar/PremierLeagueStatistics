@@ -15,9 +15,9 @@ from pathlib import Path
 if __name__ == "__main__":
     sys.path.append(str(Path(__file__).parent.parent / 'src'))
 
-from database.analytics_db import AnalyticsDBConnection, AnalyticsDBOperations
-from analytics.etl.player_consolidation import PlayerDataConsolidator
-from analytics.etl.derived_metrics import DerivedMetricsCalculator
+from src.database.analytics_db import AnalyticsDBConnection, AnalyticsDBOperations
+from src.analytics.etl.player_consolidation import PlayerDataConsolidator
+from src.analytics.etl.derived_metrics import DerivedMetricsCalculator
 
 # Configure logging
 logging.basicConfig(
@@ -26,7 +26,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class AnalyticsETLPipeline:
+class AnalyticsETL:
     """Production ETL pipeline for analytics layer"""
     
     def __init__(self):
@@ -383,7 +383,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
     
     # Create and run pipeline
-    pipeline = AnalyticsETLPipeline()
+    pipeline = AnalyticsETL()
     success = pipeline.run_full_pipeline(
         target_gameweek=args.gameweek,
         force_refresh=args.force

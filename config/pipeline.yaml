@@ -1,0 +1,69 @@
+# Pipeline Configuration
+pipeline:
+  # Master pipeline settings
+  master:
+    timeout_raw: 1800        # 30 minutes for raw pipeline
+    timeout_analytics: 600   # 10 minutes for analytics pipeline
+    retry_attempts: 2        # Number of retries on failure
+    retry_delay: 300        # 5 minutes between retries
+    
+  # Raw pipeline settings
+  raw:
+    auto_detect_gameweek: true
+    validate_before_insert: true
+    backup_before_update: false
+    max_categories_to_fail: 2  # Allow up to 2 categories to fail
+    
+  # Analytics pipeline settings  
+  analytics:
+    scd_type_2_enabled: true
+    derived_metrics_enabled: true
+    data_validation_enabled: true
+    backup_before_scd_update: false
+    
+  # Scheduling (for future automation)
+  schedule:
+    enabled: false
+    # Run after each gameweek (Mondays at 6 AM)
+    cron: "0 6 * * 1"
+    timezone: "UTC"
+    
+  # Notifications (for future implementation)
+  notifications:
+    enabled: false
+    slack_webhook: null
+    email_recipients: []
+    notify_on_success: false
+    notify_on_failure: true
+    
+  # Logging settings
+  logging:
+    level: "INFO"
+    max_log_files: 10
+    max_log_size_mb: 50
+    log_directory: "data/logs"
+    
+  # Data quality thresholds
+  quality_checks:
+    min_players_per_gameweek: 300
+    max_players_per_gameweek: 500
+    min_teams: 20
+    max_teams: 20
+    required_stat_categories: [
+      "standard", "shooting", "passing", "defense", 
+      "possession", "playingtime", "misc"
+    ]
+    
+  # Error handling
+  error_handling:
+    continue_on_non_critical_errors: true
+    critical_errors: [
+      "database_connection_failed",
+      "scd_type_2_validation_failed", 
+      "data_corruption_detected"
+    ]
+    non_critical_errors: [
+      "single_category_scraping_failed",
+      "derived_metric_calculation_failed",
+      "data_quality_warning"
+    ]
