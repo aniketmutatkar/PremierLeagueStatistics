@@ -1,0 +1,1484 @@
+ANALYTICS DATABASE SCHEMA EXPORT
+============================================================
+Generated: 2025-09-15 22:30:54
+Database: data/premierleague_analytics.duckdb
+Total tables: 38
+
+TABLE: ANALYTICS_PLAYERS
+----------------------------------------
+Rows: 774
+Columns: 144
+
+COLUMN LIST:
+    1. 'player_key' (BIGINT) [PK] [NOT NULL]
+    2. 'player_id' (VARCHAR) [NOT NULL]
+    3. 'player_name' (VARCHAR) [NOT NULL]
+    4. 'squad' (VARCHAR) [NOT NULL]
+    5. 'position' (VARCHAR)
+    6. 'nation' (VARCHAR)
+    7. 'age' (DECIMAL(18,3))
+    8. 'season' (VARCHAR) [NOT NULL]
+    9. 'gameweek' (INTEGER) [NOT NULL]
+   10. 'valid_from' (DATE) [NOT NULL]
+   11. 'valid_to' (DATE)
+   12. 'is_current' (BOOLEAN) [NOT NULL]
+   13. 'matches_played' (INTEGER)
+   14. 'starts' (INTEGER)
+   15. 'minutes_played' (INTEGER)
+   16. 'minutes_90s' (DECIMAL(18,3))
+   17. 'goals' (INTEGER)
+   18. 'assists' (INTEGER)
+   19. 'goals_plus_assists' (INTEGER)
+   20. 'non_penalty_goals' (INTEGER)
+   21. 'penalty_kicks_made' (INTEGER)
+   22. 'penalty_kicks_attempted' (INTEGER)
+   23. 'yellow_cards' (INTEGER)
+   24. 'red_cards' (INTEGER)
+   25. 'expected_goals' (DECIMAL(18,3))
+   26. 'non_penalty_expected_goals' (DECIMAL(18,3))
+   27. 'expected_assisted_goals' (DECIMAL(18,3))
+   28. 'expected_goals_plus_assists' (DECIMAL(18,3))
+   29. 'progressive_carries' (INTEGER)
+   30. 'progressive_passes' (INTEGER)
+   31. 'progressive_passes_received' (INTEGER)
+   32. 'shots' (INTEGER)
+   33. 'shots_on_target' (INTEGER)
+   34. 'shot_accuracy' (DECIMAL(18,3))
+   35. 'shots_per_90' (DECIMAL(18,3))
+   36. 'shots_on_target_per_90' (DECIMAL(18,3))
+   37. 'goals_per_shot' (DECIMAL(18,3))
+   38. 'goals_per_shot_on_target' (DECIMAL(18,3))
+   39. 'average_shot_distance' (DECIMAL(18,3))
+   40. 'free_kick_shots' (INTEGER)
+   41. 'passes_completed' (INTEGER)
+   42. 'passes_attempted' (INTEGER)
+   43. 'pass_accuracy' (DECIMAL(18,3))
+   44. 'total_pass_distance' (DECIMAL(18,3))
+   45. 'progressive_pass_distance' (DECIMAL(18,3))
+   46. 'short_passes_completed' (INTEGER)
+   47. 'short_passes_attempted' (INTEGER)
+   48. 'short_pass_accuracy' (DECIMAL(18,3))
+   49. 'medium_passes_completed' (INTEGER)
+   50. 'medium_passes_attempted' (INTEGER)
+   51. 'medium_pass_accuracy' (DECIMAL(18,3))
+   52. 'long_passes_completed' (INTEGER)
+   53. 'long_passes_attempted' (INTEGER)
+   54. 'long_pass_accuracy' (DECIMAL(18,3))
+   55. 'key_passes' (INTEGER)
+   56. 'final_third_passes' (INTEGER)
+   57. 'penalty_area_passes' (INTEGER)
+   58. 'crosses' (INTEGER)
+   59. 'live_ball_passes' (INTEGER)
+   60. 'dead_ball_passes' (INTEGER)
+   61. 'through_balls' (INTEGER)
+   62. 'switches' (INTEGER)
+   63. 'throw_ins' (INTEGER)
+   64. 'corner_kicks' (INTEGER)
+   65. 'shot_creating_actions' (INTEGER)
+   66. 'shot_creating_actions_per_90' (DECIMAL(18,3))
+   67. 'goal_creating_actions' (INTEGER)
+   68. 'goal_creating_actions_per_90' (DECIMAL(18,3))
+   69. 'tackles' (INTEGER)
+   70. 'tackles_won' (INTEGER)
+   71. 'tackles_def_third' (INTEGER)
+   72. 'tackles_mid_third' (INTEGER)
+   73. 'tackles_att_third' (INTEGER)
+   74. 'tackle_success_rate' (DECIMAL(18,3))
+   75. 'blocks' (INTEGER)
+   76. 'shots_blocked' (INTEGER)
+   77. 'passes_blocked' (INTEGER)
+   78. 'interceptions' (INTEGER)
+   79. 'tackles_plus_interceptions' (INTEGER)
+   80. 'clearances' (INTEGER)
+   81. 'errors' (INTEGER)
+   82. 'possession_percentage' (DECIMAL(18,3))
+   83. 'touches' (INTEGER)
+   84. 'touches_def_penalty' (INTEGER)
+   85. 'touches_def_third' (INTEGER)
+   86. 'touches_mid_third' (INTEGER)
+   87. 'touches_att_third' (INTEGER)
+   88. 'touches_att_penalty' (INTEGER)
+   89. 'take_ons_attempted' (INTEGER)
+   90. 'take_ons_successful' (INTEGER)
+   91. 'take_on_success_rate' (DECIMAL(18,3))
+   92. 'carries' (INTEGER)
+   93. 'carry_distance' (DECIMAL(18,3))
+   94. 'progressive_carry_distance' (DECIMAL(18,3))
+   95. 'carries_final_third' (INTEGER)
+   96. 'carries_penalty_area' (INTEGER)
+   97. 'miscontrols' (INTEGER)
+   98. 'dispossessed' (INTEGER)
+   99. 'fouls_committed' (INTEGER)
+  100. 'fouls_drawn' (INTEGER)
+  101. 'offsides' (INTEGER)
+  102. 'second_yellows' (INTEGER)
+  103. 'penalties_won' (INTEGER)
+  104. 'penalties_conceded' (INTEGER)
+  105. 'own_goals' (INTEGER)
+  106. 'ball_recoveries' (INTEGER)
+  107. 'aerial_duels_won' (INTEGER)
+  108. 'aerial_duels_lost' (INTEGER)
+  109. 'goals_against' (INTEGER)
+  110. 'goals_against_per_90' (DECIMAL(18,3))
+  111. 'shots_on_target_against' (INTEGER)
+  112. 'saves' (INTEGER)
+  113. 'save_percentage' (DECIMAL(18,3))
+  114. 'wins' (INTEGER)
+  115. 'draws' (INTEGER)
+  116. 'losses' (INTEGER)
+  117. 'clean_sheets' (INTEGER)
+  118. 'clean_sheet_percentage' (DECIMAL(18,3))
+  119. 'penalties_faced' (INTEGER)
+  120. 'penalties_saved' (INTEGER)
+  121. 'post_shot_expected_goals' (DECIMAL(18,3))
+  122. 'post_shot_expected_goals_per_shot' (DECIMAL(18,3))
+  123. 'psxg_performance' (DECIMAL(18,3))
+  124. 'cross_stopping_percentage' (DECIMAL(18,3))
+  125. 'sweeper_actions' (INTEGER)
+  126. 'sweeper_actions_per_90' (DECIMAL(18,3))
+  127. 'keeper_pass_accuracy' (DECIMAL(18,3))
+  128. 'goals_vs_expected' (DECIMAL(18,3))
+  129. 'npgoals_vs_expected' (DECIMAL(18,3))
+  130. 'key_pass_conversion' (DECIMAL(18,3))
+  131. 'expected_goal_involvement_per_90' (DECIMAL(18,3))
+  132. 'progressive_actions_per_90' (DECIMAL(18,3))
+  133. 'possession_efficiency' (DECIMAL(18,3))
+  134. 'final_third_involvement' (DECIMAL(18,3))
+  135. 'defensive_actions_per_90' (DECIMAL(18,3))
+  136. 'aerial_duel_success_rate' (DECIMAL(18,3))
+  137. 'goals_last_5gw' (INTEGER)
+  138. 'assists_last_5gw' (INTEGER)
+  139. 'form_score' (DECIMAL(18,3))
+  140. 'goal_share_of_team' (DECIMAL(18,3))
+  141. 'assist_share_of_team' (DECIMAL(18,3))
+  142. 'minutes_percentage_of_team' (DECIMAL(18,3))
+  143. 'created_at' (TIMESTAMP)
+  144. 'updated_at' (TIMESTAMP)
+
+SAMPLE DATA (first 3 rows, first 10 columns):
+    player_key     player_id   player_name         squad      position        nation           age        season      gameweek    valid_from
+  --------------------------------------------------------------------------------------------------------------------------------------------
+    2378307574  Brenden Aaro  Brenden Aaro  Leeds United            FW           USA        24.000     2025-2026             4    2025-09-15
+     932425456  Joshua Achea  Joshua Achea       Chelsea            DF           ENG        19.000     2025-2026             4    2025-09-15
+     156948130  Tyler Adams_   Tyler Adams   Bournemouth            MF           USA        26.000     2025-2026             4    2025-09-15
+
+============================================================
+
+TABLE: ANALYTICS_TEAMS
+----------------------------------------
+Rows: 0
+Columns: 45
+
+COLUMN LIST:
+    1. 'team_key' (BIGINT) [PK] [NOT NULL]
+    2. 'team_id' (VARCHAR) [NOT NULL]
+    3. 'team_name' (VARCHAR) [NOT NULL]
+    4. 'season' (VARCHAR) [NOT NULL]
+    5. 'gameweek' (INTEGER) [NOT NULL]
+    6. 'valid_from' (DATE) [NOT NULL]
+    7. 'valid_to' (DATE)
+    8. 'is_current' (BOOLEAN) [NOT NULL]
+    9. 'matches_played' (INTEGER)
+   10. 'wins' (INTEGER)
+   11. 'draws' (INTEGER)
+   12. 'losses' (INTEGER)
+   13. 'points' (INTEGER)
+   14. 'goals_for' (INTEGER)
+   15. 'goals_against' (INTEGER)
+   16. 'goal_difference' (INTEGER)
+   17. 'expected_goals_for' (DECIMAL(18,3))
+   18. 'expected_goals_against' (DECIMAL(18,3))
+   19. 'goals_vs_expected_for' (DECIMAL(18,3))
+   20. 'goals_vs_expected_against' (DECIMAL(18,3))
+   21. 'shots' (INTEGER)
+   22. 'shots_on_target' (INTEGER)
+   23. 'shot_accuracy' (DECIMAL(18,3))
+   24. 'shots_per_game' (DECIMAL(18,3))
+   25. 'pass_accuracy' (DECIMAL(18,3))
+   26. 'progressive_passes' (INTEGER)
+   27. 'key_passes' (INTEGER)
+   28. 'crosses' (INTEGER)
+   29. 'tackles' (INTEGER)
+   30. 'interceptions' (INTEGER)
+   31. 'blocks' (INTEGER)
+   32. 'clearances' (INTEGER)
+   33. 'clean_sheets' (INTEGER)
+   34. 'clean_sheet_percentage' (DECIMAL(18,3))
+   35. 'possession_percentage' (DECIMAL(18,3))
+   36. 'touches' (INTEGER)
+   37. 'yellow_cards' (INTEGER)
+   38. 'red_cards' (INTEGER)
+   39. 'fouls_committed' (INTEGER)
+   40. 'fouls_drawn' (INTEGER)
+   41. 'points_last_5_games' (INTEGER)
+   42. 'goals_for_last_5_games' (INTEGER)
+   43. 'goals_against_last_5_games' (INTEGER)
+   44. 'created_at' (TIMESTAMP)
+   45. 'updated_at' (TIMESTAMP)
+
+============================================================
+
+TABLE: ANALYTICS_TEAMS_DEFENSE
+----------------------------------------
+Rows: 0
+Columns: 22
+
+COLUMN LIST:
+    1. 'team_defense_key' (BIGINT) [PK] [NOT NULL]
+    2. 'team_id' (VARCHAR) [NOT NULL]
+    3. 'team_name' (VARCHAR) [NOT NULL]
+    4. 'season' (VARCHAR) [NOT NULL]
+    5. 'gameweek' (INTEGER) [NOT NULL]
+    6. 'valid_from' (DATE) [NOT NULL]
+    7. 'valid_to' (DATE)
+    8. 'is_current' (BOOLEAN) [NOT NULL]
+    9. 'opponent_goals' (INTEGER)
+   10. 'opponent_shots' (INTEGER)
+   11. 'opponent_shots_on_target' (INTEGER)
+   12. 'opponent_shot_accuracy' (DECIMAL(18,3))
+   13. 'opponent_expected_goals' (DECIMAL(18,3))
+   14. 'opponent_pass_accuracy' (DECIMAL(18,3))
+   15. 'opponent_progressive_passes' (INTEGER)
+   16. 'opponent_key_passes' (INTEGER)
+   17. 'opponent_final_third_passes' (INTEGER)
+   18. 'opponent_penalty_area_passes' (INTEGER)
+   19. 'defensive_actions_allowed' (INTEGER)
+   20. 'possession_allowed' (DECIMAL(18,3))
+   21. 'created_at' (TIMESTAMP)
+   22. 'updated_at' (TIMESTAMP)
+
+============================================================
+
+TABLE: OPPONENT_DEFENSE
+----------------------------------------
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Tackles Tkl' (BIGINT)
+    5. 'Tackles TklW' (BIGINT)
+    6. 'Tackles Def 3rd' (BIGINT)
+    7. 'Tackles Mid 3rd' (BIGINT)
+    8. 'Tackles Att 3rd' (BIGINT)
+    9. 'Challenges Tkl' (BIGINT)
+   10. 'Challenges Att' (BIGINT)
+   11. 'Challenges Tkl%' (DOUBLE)
+   12. 'Challenges Lost' (BIGINT)
+   13. 'Blocks Blocks' (BIGINT)
+   14. 'Blocks Sh' (BIGINT)
+   15. 'Blocks Pass' (BIGINT)
+   16. 'Int' (BIGINT)
+   17. 'Tkl+Int' (BIGINT)
+   18. 'Clr' (BIGINT)
+   19. 'Err' (BIGINT)
+   20. 'Current Date' (VARCHAR)
+   21. 'current_through_gameweek' (BIGINT)
+   22. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_GOALSHOTCREATION
+----------------------------------------
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'SCA SCA' (BIGINT)
+    5. 'SCA SCA90' (DOUBLE)
+    6. 'SCA Types PassLive' (BIGINT)
+    7. 'SCA Types PassDead' (BIGINT)
+    8. 'SCA Types TO' (BIGINT)
+    9. 'SCA Types Sh' (BIGINT)
+   10. 'SCA Types Fld' (BIGINT)
+   11. 'SCA Types Def' (BIGINT)
+   12. 'GCA GCA' (BIGINT)
+   13. 'GCA GCA90' (DOUBLE)
+   14. 'GCA Types PassLive' (BIGINT)
+   15. 'GCA Types PassDead' (BIGINT)
+   16. 'GCA Types TO' (BIGINT)
+   17. 'GCA Types Sh' (BIGINT)
+   18. 'GCA Types Fld' (BIGINT)
+   19. 'GCA Types Def' (BIGINT)
+   20. 'Current Date' (VARCHAR)
+   21. 'current_through_gameweek' (BIGINT)
+   22. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_KEEPERS
+----------------------------------------
+Rows: 20
+Columns: 24
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. 'Playing Time MP' (BIGINT)
+    4. 'Playing Time Starts' (BIGINT)
+    5. 'Playing Time Min' (BIGINT)
+    6. 'Playing Time 90s' (DOUBLE)
+    7. 'Performance GA' (BIGINT)
+    8. 'Performance GA90' (DOUBLE)
+    9. 'Performance SoTA' (BIGINT)
+   10. 'Performance Saves' (BIGINT)
+   11. 'Performance Save%' (DOUBLE)
+   12. 'Performance W' (BIGINT)
+   13. 'Performance D' (BIGINT)
+   14. 'Performance L' (BIGINT)
+   15. 'Performance CS' (BIGINT)
+   16. 'Performance CS%' (DOUBLE)
+   17. 'Penalty Kicks PKatt' (BIGINT)
+   18. 'Penalty Kicks PKA' (BIGINT)
+   19. 'Penalty Kicks PKsv' (BIGINT)
+   20. 'Penalty Kicks PKm' (BIGINT)
+   21. 'Penalty Kicks Save%' (DOUBLE)
+   22. 'Current Date' (VARCHAR)
+   23. 'current_through_gameweek' (BIGINT)
+   24. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_KEEPERSADV
+----------------------------------------
+Rows: 20
+Columns: 31
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Goals GA' (BIGINT)
+    5. 'Goals PKA' (BIGINT)
+    6. 'Goals FK' (BIGINT)
+    7. 'Goals CK' (BIGINT)
+    8. 'Goals OG' (BIGINT)
+    9. 'Expected PSxG' (DOUBLE)
+   10. 'Expected PSxG/SoT' (DOUBLE)
+   11. 'Expected PSxG+/-' (DOUBLE)
+   12. 'Expected /90' (DOUBLE)
+   13. 'Launched Cmp' (BIGINT)
+   14. 'Launched Att' (BIGINT)
+   15. 'Launched Cmp%' (DOUBLE)
+   16. 'Passes Att (GK)' (BIGINT)
+   17. 'Passes Thr' (BIGINT)
+   18. 'Passes Launch%' (DOUBLE)
+   19. 'Passes AvgLen' (DOUBLE)
+   20. 'Goal Kicks Att' (BIGINT)
+   21. 'Goal Kicks Launch%' (DOUBLE)
+   22. 'Goal Kicks AvgLen' (DOUBLE)
+   23. 'Crosses Opp' (BIGINT)
+   24. 'Crosses Stp' (BIGINT)
+   25. 'Crosses Stp%' (DOUBLE)
+   26. 'Sweeper #OPA' (BIGINT)
+   27. 'Sweeper #OPA/90' (DOUBLE)
+   28. 'Sweeper AvgDist' (DOUBLE)
+   29. 'Current Date' (VARCHAR)
+   30. 'current_through_gameweek' (BIGINT)
+   31. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_MISC
+----------------------------------------
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Performance CrdY' (BIGINT)
+    5. 'Performance CrdR' (BIGINT)
+    6. 'Performance 2CrdY' (BIGINT)
+    7. 'Performance Fls' (BIGINT)
+    8. 'Performance Fld' (BIGINT)
+    9. 'Performance Off' (BIGINT)
+   10. 'Performance Crs' (BIGINT)
+   11. 'Performance Int' (BIGINT)
+   12. 'Performance TklW' (BIGINT)
+   13. 'Performance PKwon' (BIGINT)
+   14. 'Performance PKcon' (BIGINT)
+   15. 'Performance OG' (BIGINT)
+   16. 'Performance Recov' (BIGINT)
+   17. 'Aerial Duels Won' (BIGINT)
+   18. 'Aerial Duels Lost' (BIGINT)
+   19. 'Aerial Duels Won%' (DOUBLE)
+   20. 'Current Date' (VARCHAR)
+   21. 'current_through_gameweek' (BIGINT)
+   22. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_PASSING
+----------------------------------------
+Rows: 20
+Columns: 29
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Total Cmp' (BIGINT)
+    5. 'Total Att' (BIGINT)
+    6. 'Total Cmp%' (DOUBLE)
+    7. 'Total TotDist' (BIGINT)
+    8. 'Total PrgDist' (BIGINT)
+    9. 'Short Cmp' (BIGINT)
+   10. 'Short Att' (BIGINT)
+   11. 'Short Cmp%' (DOUBLE)
+   12. 'Medium Cmp' (BIGINT)
+   13. 'Medium Att' (BIGINT)
+   14. 'Medium Cmp%' (DOUBLE)
+   15. 'Long Cmp' (BIGINT)
+   16. 'Long Att' (BIGINT)
+   17. 'Long Cmp%' (DOUBLE)
+   18. 'Ast' (BIGINT)
+   19. 'xAG' (DOUBLE)
+   20. 'Expected xA' (DOUBLE)
+   21. 'Expected A-xAG' (DOUBLE)
+   22. 'KP' (BIGINT)
+   23. '1/3' (BIGINT)
+   24. 'PPA' (BIGINT)
+   25. 'CrsPA' (BIGINT)
+   26. 'PrgP' (BIGINT)
+   27. 'Current Date' (VARCHAR)
+   28. 'current_through_gameweek' (BIGINT)
+   29. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_PASSINGTYPES
+----------------------------------------
+Rows: 20
+Columns: 21
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Att' (BIGINT)
+    5. 'Pass Types Live' (BIGINT)
+    6. 'Pass Types Dead' (BIGINT)
+    7. 'Pass Types FK' (BIGINT)
+    8. 'Pass Types TB' (BIGINT)
+    9. 'Pass Types Sw' (BIGINT)
+   10. 'Pass Types Crs' (BIGINT)
+   11. 'Pass Types TI' (BIGINT)
+   12. 'Pass Types CK' (BIGINT)
+   13. 'Corner Kicks In' (BIGINT)
+   14. 'Corner Kicks Out' (BIGINT)
+   15. 'Corner Kicks Str' (BIGINT)
+   16. 'Outcomes Cmp' (BIGINT)
+   17. 'Outcomes Off' (BIGINT)
+   18. 'Outcomes Blocks' (BIGINT)
+   19. 'Current Date' (VARCHAR)
+   20. 'current_through_gameweek' (BIGINT)
+   21. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_PLAYINGTIME
+----------------------------------------
+Rows: 20
+Columns: 26
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. 'Age' (DOUBLE)
+    4. 'Playing Time MP' (BIGINT)
+    5. 'Playing Time Min' (BIGINT)
+    6. 'Playing Time Mn/MP' (BIGINT)
+    7. 'Playing Time Min%' (BIGINT)
+    8. 'Playing Time 90s' (DOUBLE)
+    9. 'Starts Starts' (BIGINT)
+   10. 'Starts Mn/Start' (BIGINT)
+   11. 'Starts Compl' (BIGINT)
+   12. 'Subs Subs' (BIGINT)
+   13. 'Subs Mn/Sub' (BIGINT)
+   14. 'Subs unSub' (BIGINT)
+   15. 'Team Success PPM' (DOUBLE)
+   16. 'Team Success onG' (BIGINT)
+   17. 'Team Success onGA' (BIGINT)
+   18. 'Team Success +/-' (BIGINT)
+   19. 'Team Success +/-90' (DOUBLE)
+   20. 'Team Success (xG) onxG' (DOUBLE)
+   21. 'Team Success (xG) onxGA' (DOUBLE)
+   22. 'Team Success (xG) xG+/-' (DOUBLE)
+   23. 'Team Success (xG) xG+/-90' (DOUBLE)
+   24. 'Current Date' (VARCHAR)
+   25. 'current_through_gameweek' (BIGINT)
+   26. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_POSSESSION
+----------------------------------------
+Rows: 20
+Columns: 29
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. 'Poss' (DOUBLE)
+    4. '90s' (DOUBLE)
+    5. 'Touches Touches' (BIGINT)
+    6. 'Touches Def Pen' (BIGINT)
+    7. 'Touches Def 3rd' (BIGINT)
+    8. 'Touches Mid 3rd' (BIGINT)
+    9. 'Touches Att 3rd' (BIGINT)
+   10. 'Touches Att Pen' (BIGINT)
+   11. 'Touches Live' (BIGINT)
+   12. 'Take-Ons Att' (BIGINT)
+   13. 'Take-Ons Succ' (BIGINT)
+   14. 'Take-Ons Succ%' (DOUBLE)
+   15. 'Take-Ons Tkld' (BIGINT)
+   16. 'Take-Ons Tkld%' (DOUBLE)
+   17. 'Carries Carries' (BIGINT)
+   18. 'Carries TotDist' (BIGINT)
+   19. 'Carries PrgDist' (BIGINT)
+   20. 'Carries PrgC' (BIGINT)
+   21. 'Carries 1/3' (BIGINT)
+   22. 'Carries CPA' (BIGINT)
+   23. 'Carries Mis' (BIGINT)
+   24. 'Carries Dis' (BIGINT)
+   25. 'Receiving Rec' (BIGINT)
+   26. 'Receiving PrgR' (BIGINT)
+   27. 'Current Date' (VARCHAR)
+   28. 'current_through_gameweek' (BIGINT)
+   29. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_SHOOTING
+----------------------------------------
+Rows: 20
+Columns: 23
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Standard Gls' (BIGINT)
+    5. 'Standard Sh' (BIGINT)
+    6. 'Standard SoT' (BIGINT)
+    7. 'Standard SoT%' (DOUBLE)
+    8. 'Standard Sh/90' (DOUBLE)
+    9. 'Standard SoT/90' (DOUBLE)
+   10. 'Standard G/Sh' (DOUBLE)
+   11. 'Standard G/SoT' (DOUBLE)
+   12. 'Standard Dist' (DOUBLE)
+   13. 'Standard FK' (BIGINT)
+   14. 'Standard PK' (BIGINT)
+   15. 'Standard PKatt' (BIGINT)
+   16. 'Expected xG' (DOUBLE)
+   17. 'Expected npxG' (DOUBLE)
+   18. 'Expected npxG/Sh' (DOUBLE)
+   19. 'Expected G-xG' (DOUBLE)
+   20. 'Expected np:G-xG' (DOUBLE)
+   21. 'Current Date' (VARCHAR)
+   22. 'current_through_gameweek' (BIGINT)
+   23. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: OPPONENT_STANDARD
+----------------------------------------
+Rows: 20
+Columns: 35
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. 'Age' (DOUBLE)
+    4. 'Poss' (DOUBLE)
+    5. 'Playing Time MP' (BIGINT)
+    6. 'Playing Time Starts' (BIGINT)
+    7. 'Playing Time Min' (BIGINT)
+    8. 'Playing Time 90s' (DOUBLE)
+    9. 'Performance Gls' (BIGINT)
+   10. 'Performance Ast' (BIGINT)
+   11. 'Performance G+A' (BIGINT)
+   12. 'Performance G-PK' (BIGINT)
+   13. 'Performance PK' (BIGINT)
+   14. 'Performance PKatt' (BIGINT)
+   15. 'Performance CrdY' (BIGINT)
+   16. 'Performance CrdR' (BIGINT)
+   17. 'Expected xG' (DOUBLE)
+   18. 'Expected npxG' (DOUBLE)
+   19. 'Expected xAG' (DOUBLE)
+   20. 'Expected npxG+xAG' (DOUBLE)
+   21. 'Progression PrgC' (BIGINT)
+   22. 'Progression PrgP' (BIGINT)
+   23. 'Per 90 Minutes Gls' (DOUBLE)
+   24. 'Per 90 Minutes Ast' (DOUBLE)
+   25. 'Per 90 Minutes G+A' (DOUBLE)
+   26. 'Per 90 Minutes G-PK' (DOUBLE)
+   27. 'Per 90 Minutes G+A-PK' (DOUBLE)
+   28. 'Per 90 Minutes xG' (DOUBLE)
+   29. 'Per 90 Minutes xAG' (DOUBLE)
+   30. 'Per 90 Minutes xG+xAG' (DOUBLE)
+   31. 'Per 90 Minutes npxG' (DOUBLE)
+   32. 'Per 90 Minutes npxG+xAG' (DOUBLE)
+   33. 'Current Date' (VARCHAR)
+   34. 'current_through_gameweek' (BIGINT)
+   35. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_DEFENSE
+----------------------------------------
+Rows: 370
+Columns: 26
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. '90s' (DOUBLE)
+    8. 'Tackles Tkl' (BIGINT)
+    9. 'Tackles TklW' (BIGINT)
+   10. 'Tackles Def 3rd' (BIGINT)
+   11. 'Tackles Mid 3rd' (BIGINT)
+   12. 'Tackles Att 3rd' (BIGINT)
+   13. 'Challenges Tkl' (BIGINT)
+   14. 'Challenges Att' (BIGINT)
+   15. 'Challenges Tkl%' (DOUBLE)
+   16. 'Challenges Lost' (BIGINT)
+   17. 'Blocks Blocks' (BIGINT)
+   18. 'Blocks Sh' (BIGINT)
+   19. 'Blocks Pass' (BIGINT)
+   20. 'Int' (BIGINT)
+   21. 'Tkl+Int' (BIGINT)
+   22. 'Clr' (BIGINT)
+   23. 'Err' (BIGINT)
+   24. 'Current Date' (VARCHAR)
+   25. 'current_through_gameweek' (BIGINT)
+   26. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_GOALSHOTCREATION
+----------------------------------------
+Rows: 370
+Columns: 26
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. '90s' (DOUBLE)
+    8. 'SCA SCA' (BIGINT)
+    9. 'SCA SCA90' (DOUBLE)
+   10. 'SCA Types PassLive' (BIGINT)
+   11. 'SCA Types PassDead' (BIGINT)
+   12. 'SCA Types TO' (BIGINT)
+   13. 'SCA Types Sh' (BIGINT)
+   14. 'SCA Types Fld' (BIGINT)
+   15. 'SCA Types Def' (BIGINT)
+   16. 'GCA GCA' (BIGINT)
+   17. 'GCA GCA90' (DOUBLE)
+   18. 'GCA Types PassLive' (BIGINT)
+   19. 'GCA Types PassDead' (BIGINT)
+   20. 'GCA Types TO' (BIGINT)
+   21. 'GCA Types Sh' (BIGINT)
+   22. 'GCA Types Fld' (BIGINT)
+   23. 'GCA Types Def' (BIGINT)
+   24. 'Current Date' (VARCHAR)
+   25. 'current_through_gameweek' (BIGINT)
+   26. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_KEEPERS
+----------------------------------------
+Rows: 21
+Columns: 28
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. 'Playing Time MP' (BIGINT)
+    8. 'Playing Time Starts' (BIGINT)
+    9. 'Playing Time Min' (BIGINT)
+   10. 'Playing Time 90s' (DOUBLE)
+   11. 'Performance GA' (BIGINT)
+   12. 'Performance GA90' (DOUBLE)
+   13. 'Performance SoTA' (BIGINT)
+   14. 'Performance Saves' (BIGINT)
+   15. 'Performance Save%' (DOUBLE)
+   16. 'Performance W' (BIGINT)
+   17. 'Performance D' (BIGINT)
+   18. 'Performance L' (BIGINT)
+   19. 'Performance CS' (BIGINT)
+   20. 'Performance CS%' (DOUBLE)
+   21. 'Penalty Kicks PKatt' (BIGINT)
+   22. 'Penalty Kicks PKA' (BIGINT)
+   23. 'Penalty Kicks PKsv' (BIGINT)
+   24. 'Penalty Kicks PKm' (BIGINT)
+   25. 'Penalty Kicks Save%' (DOUBLE)
+   26. 'Current Date' (VARCHAR)
+   27. 'current_through_gameweek' (BIGINT)
+   28. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_KEEPERSADV
+----------------------------------------
+Rows: 21
+Columns: 35
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. '90s' (DOUBLE)
+    8. 'Goals GA' (BIGINT)
+    9. 'Goals PKA' (BIGINT)
+   10. 'Goals FK' (BIGINT)
+   11. 'Goals CK' (BIGINT)
+   12. 'Goals OG' (BIGINT)
+   13. 'Expected PSxG' (DOUBLE)
+   14. 'Expected PSxG/SoT' (DOUBLE)
+   15. 'Expected PSxG+/-' (DOUBLE)
+   16. 'Expected /90' (DOUBLE)
+   17. 'Launched Cmp' (BIGINT)
+   18. 'Launched Att' (BIGINT)
+   19. 'Launched Cmp%' (DOUBLE)
+   20. 'Passes Att (GK)' (BIGINT)
+   21. 'Passes Thr' (BIGINT)
+   22. 'Passes Launch%' (DOUBLE)
+   23. 'Passes AvgLen' (DOUBLE)
+   24. 'Goal Kicks Att' (BIGINT)
+   25. 'Goal Kicks Launch%' (DOUBLE)
+   26. 'Goal Kicks AvgLen' (DOUBLE)
+   27. 'Crosses Opp' (BIGINT)
+   28. 'Crosses Stp' (BIGINT)
+   29. 'Crosses Stp%' (DOUBLE)
+   30. 'Sweeper #OPA' (BIGINT)
+   31. 'Sweeper #OPA/90' (DOUBLE)
+   32. 'Sweeper AvgDist' (DOUBLE)
+   33. 'Current Date' (VARCHAR)
+   34. 'current_through_gameweek' (BIGINT)
+   35. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_MISC
+----------------------------------------
+Rows: 370
+Columns: 26
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. '90s' (DOUBLE)
+    8. 'Performance CrdY' (BIGINT)
+    9. 'Performance CrdR' (BIGINT)
+   10. 'Performance 2CrdY' (BIGINT)
+   11. 'Performance Fls' (BIGINT)
+   12. 'Performance Fld' (BIGINT)
+   13. 'Performance Off' (BIGINT)
+   14. 'Performance Crs' (BIGINT)
+   15. 'Performance Int' (BIGINT)
+   16. 'Performance TklW' (BIGINT)
+   17. 'Performance PKwon' (BIGINT)
+   18. 'Performance PKcon' (BIGINT)
+   19. 'Performance OG' (BIGINT)
+   20. 'Performance Recov' (BIGINT)
+   21. 'Aerial Duels Won' (BIGINT)
+   22. 'Aerial Duels Lost' (BIGINT)
+   23. 'Aerial Duels Won%' (DOUBLE)
+   24. 'Current Date' (VARCHAR)
+   25. 'current_through_gameweek' (BIGINT)
+   26. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_PASSING
+----------------------------------------
+Rows: 370
+Columns: 33
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. '90s' (DOUBLE)
+    8. 'Total Cmp' (BIGINT)
+    9. 'Total Att' (BIGINT)
+   10. 'Total Cmp%' (DOUBLE)
+   11. 'Total TotDist' (BIGINT)
+   12. 'Total PrgDist' (BIGINT)
+   13. 'Short Cmp' (BIGINT)
+   14. 'Short Att' (BIGINT)
+   15. 'Short Cmp%' (DOUBLE)
+   16. 'Medium Cmp' (BIGINT)
+   17. 'Medium Att' (BIGINT)
+   18. 'Medium Cmp%' (DOUBLE)
+   19. 'Long Cmp' (BIGINT)
+   20. 'Long Att' (BIGINT)
+   21. 'Long Cmp%' (DOUBLE)
+   22. 'Ast' (BIGINT)
+   23. 'xAG' (DOUBLE)
+   24. 'Expected xA' (DOUBLE)
+   25. 'Expected A-xAG' (DOUBLE)
+   26. 'KP' (BIGINT)
+   27. '1/3' (BIGINT)
+   28. 'PPA' (BIGINT)
+   29. 'CrsPA' (BIGINT)
+   30. 'PrgP' (BIGINT)
+   31. 'Current Date' (VARCHAR)
+   32. 'current_through_gameweek' (BIGINT)
+   33. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_PASSINGTYPES
+----------------------------------------
+Rows: 370
+Columns: 25
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. '90s' (DOUBLE)
+    8. 'Att' (BIGINT)
+    9. 'Pass Types Live' (BIGINT)
+   10. 'Pass Types Dead' (BIGINT)
+   11. 'Pass Types FK' (BIGINT)
+   12. 'Pass Types TB' (BIGINT)
+   13. 'Pass Types Sw' (BIGINT)
+   14. 'Pass Types Crs' (BIGINT)
+   15. 'Pass Types TI' (BIGINT)
+   16. 'Pass Types CK' (BIGINT)
+   17. 'Corner Kicks In' (BIGINT)
+   18. 'Corner Kicks Out' (BIGINT)
+   19. 'Corner Kicks Str' (BIGINT)
+   20. 'Outcomes Cmp' (BIGINT)
+   21. 'Outcomes Off' (BIGINT)
+   22. 'Outcomes Blocks' (BIGINT)
+   23. 'Current Date' (VARCHAR)
+   24. 'current_through_gameweek' (BIGINT)
+   25. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_PLAYINGTIME
+----------------------------------------
+Rows: 456
+Columns: 31
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. 'Playing Time MP' (BIGINT)
+    8. 'Playing Time Min' (BIGINT)
+    9. 'Playing Time Mn/MP' (BIGINT)
+   10. 'Playing Time Min%' (DOUBLE)
+   11. 'Playing Time 90s' (DOUBLE)
+   12. 'Starts Starts' (BIGINT)
+   13. 'Starts Mn/Start' (BIGINT)
+   14. 'Starts Compl' (BIGINT)
+   15. 'Subs Subs' (BIGINT)
+   16. 'Subs Mn/Sub' (BIGINT)
+   17. 'Subs unSub' (BIGINT)
+   18. 'Team Success PPM' (DOUBLE)
+   19. 'Team Success onG' (BIGINT)
+   20. 'Team Success onGA' (BIGINT)
+   21. 'Team Success +/-' (BIGINT)
+   22. 'Team Success +/-90' (DOUBLE)
+   23. 'Team Success On-Off' (DOUBLE)
+   24. 'Team Success (xG) onxG' (DOUBLE)
+   25. 'Team Success (xG) onxGA' (DOUBLE)
+   26. 'Team Success (xG) xG+/-' (DOUBLE)
+   27. 'Team Success (xG) xG+/-90' (DOUBLE)
+   28. 'Team Success (xG) On-Off' (DOUBLE)
+   29. 'Current Date' (VARCHAR)
+   30. 'current_through_gameweek' (BIGINT)
+   31. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_POSSESSION
+----------------------------------------
+Rows: 370
+Columns: 32
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. '90s' (DOUBLE)
+    8. 'Touches Touches' (BIGINT)
+    9. 'Touches Def Pen' (BIGINT)
+   10. 'Touches Def 3rd' (BIGINT)
+   11. 'Touches Mid 3rd' (BIGINT)
+   12. 'Touches Att 3rd' (BIGINT)
+   13. 'Touches Att Pen' (BIGINT)
+   14. 'Touches Live' (BIGINT)
+   15. 'Take-Ons Att' (BIGINT)
+   16. 'Take-Ons Succ' (BIGINT)
+   17. 'Take-Ons Succ%' (DOUBLE)
+   18. 'Take-Ons Tkld' (BIGINT)
+   19. 'Take-Ons Tkld%' (DOUBLE)
+   20. 'Carries Carries' (BIGINT)
+   21. 'Carries TotDist' (BIGINT)
+   22. 'Carries PrgDist' (BIGINT)
+   23. 'Carries PrgC' (BIGINT)
+   24. 'Carries 1/3' (BIGINT)
+   25. 'Carries CPA' (BIGINT)
+   26. 'Carries Mis' (BIGINT)
+   27. 'Carries Dis' (BIGINT)
+   28. 'Receiving Rec' (BIGINT)
+   29. 'Receiving PrgR' (BIGINT)
+   30. 'Current Date' (VARCHAR)
+   31. 'current_through_gameweek' (BIGINT)
+   32. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_SHOOTING
+----------------------------------------
+Rows: 370
+Columns: 27
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. '90s' (DOUBLE)
+    8. 'Standard Gls' (BIGINT)
+    9. 'Standard Sh' (BIGINT)
+   10. 'Standard SoT' (BIGINT)
+   11. 'Standard SoT%' (DOUBLE)
+   12. 'Standard Sh/90' (DOUBLE)
+   13. 'Standard SoT/90' (DOUBLE)
+   14. 'Standard G/Sh' (DOUBLE)
+   15. 'Standard G/SoT' (DOUBLE)
+   16. 'Standard Dist' (DOUBLE)
+   17. 'Standard FK' (BIGINT)
+   18. 'Standard PK' (BIGINT)
+   19. 'Standard PKatt' (BIGINT)
+   20. 'Expected xG' (DOUBLE)
+   21. 'Expected npxG' (DOUBLE)
+   22. 'Expected npxG/Sh' (DOUBLE)
+   23. 'Expected G-xG' (DOUBLE)
+   24. 'Expected np:G-xG' (DOUBLE)
+   25. 'Current Date' (VARCHAR)
+   26. 'current_through_gameweek' (BIGINT)
+   27. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: PLAYER_STANDARD
+----------------------------------------
+Rows: 370
+Columns: 38
+
+COLUMN LIST:
+    1. 'Player' (VARCHAR)
+    2. 'Nation' (VARCHAR)
+    3. 'Pos' (VARCHAR)
+    4. 'Squad' (VARCHAR)
+    5. 'Age' (BIGINT)
+    6. 'Born' (BIGINT)
+    7. 'Playing Time MP' (BIGINT)
+    8. 'Playing Time Starts' (BIGINT)
+    9. 'Playing Time Min' (BIGINT)
+   10. 'Playing Time 90s' (DOUBLE)
+   11. 'Performance Gls' (BIGINT)
+   12. 'Performance Ast' (BIGINT)
+   13. 'Performance G+A' (BIGINT)
+   14. 'Performance G-PK' (BIGINT)
+   15. 'Performance PK' (BIGINT)
+   16. 'Performance PKatt' (BIGINT)
+   17. 'Performance CrdY' (BIGINT)
+   18. 'Performance CrdR' (BIGINT)
+   19. 'Expected xG' (DOUBLE)
+   20. 'Expected npxG' (DOUBLE)
+   21. 'Expected xAG' (DOUBLE)
+   22. 'Expected npxG+xAG' (DOUBLE)
+   23. 'Progression PrgC' (BIGINT)
+   24. 'Progression PrgP' (BIGINT)
+   25. 'Progression PrgR' (BIGINT)
+   26. 'Per 90 Minutes Gls' (DOUBLE)
+   27. 'Per 90 Minutes Ast' (DOUBLE)
+   28. 'Per 90 Minutes G+A' (DOUBLE)
+   29. 'Per 90 Minutes G-PK' (DOUBLE)
+   30. 'Per 90 Minutes G+A-PK' (DOUBLE)
+   31. 'Per 90 Minutes xG' (DOUBLE)
+   32. 'Per 90 Minutes xAG' (DOUBLE)
+   33. 'Per 90 Minutes xG+xAG' (DOUBLE)
+   34. 'Per 90 Minutes npxG' (DOUBLE)
+   35. 'Per 90 Minutes npxG+xAG' (DOUBLE)
+   36. 'Current Date' (VARCHAR)
+   37. 'current_through_gameweek' (BIGINT)
+   38. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: RAW_FIXTURES
+----------------------------------------
+Rows: 380
+Columns: 21
+
+COLUMN LIST:
+    1. 'gameweek' (DOUBLE)
+    2. 'day_of_week' (VARCHAR)
+    3. 'match_date' (TIMESTAMP_NS)
+    4. 'match_time' (VARCHAR)
+    5. 'home_team' (VARCHAR)
+    6. 'xG' (DOUBLE)
+    7. 'score' (VARCHAR)
+    8. 'xG.1' (DOUBLE)
+    9. 'away_team' (VARCHAR)
+   10. 'attendance' (DOUBLE)
+   11. 'venue' (VARCHAR)
+   12. 'referee' (VARCHAR)
+   13. 'Match Report' (VARCHAR)
+   14. 'Notes' (DOUBLE)
+   15. 'home_score' (DOUBLE)
+   16. 'away_score' (DOUBLE)
+   17. 'is_completed' (BOOLEAN)
+   18. 'fixture_id' (VARCHAR)
+   19. 'scraped_date' (DATE)
+   20. 'current_through_gameweek' (BIGINT)
+   21. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_DEFENSE
+----------------------------------------
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Tackles Tkl' (BIGINT)
+    5. 'Tackles TklW' (BIGINT)
+    6. 'Tackles Def 3rd' (BIGINT)
+    7. 'Tackles Mid 3rd' (BIGINT)
+    8. 'Tackles Att 3rd' (BIGINT)
+    9. 'Challenges Tkl' (BIGINT)
+   10. 'Challenges Att' (BIGINT)
+   11. 'Challenges Tkl%' (DOUBLE)
+   12. 'Challenges Lost' (BIGINT)
+   13. 'Blocks Blocks' (BIGINT)
+   14. 'Blocks Sh' (BIGINT)
+   15. 'Blocks Pass' (BIGINT)
+   16. 'Int' (BIGINT)
+   17. 'Tkl+Int' (BIGINT)
+   18. 'Clr' (BIGINT)
+   19. 'Err' (BIGINT)
+   20. 'Current Date' (VARCHAR)
+   21. 'current_through_gameweek' (BIGINT)
+   22. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_GOALSHOTCREATION
+----------------------------------------
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'SCA SCA' (BIGINT)
+    5. 'SCA SCA90' (DOUBLE)
+    6. 'SCA Types PassLive' (BIGINT)
+    7. 'SCA Types PassDead' (BIGINT)
+    8. 'SCA Types TO' (BIGINT)
+    9. 'SCA Types Sh' (BIGINT)
+   10. 'SCA Types Fld' (BIGINT)
+   11. 'SCA Types Def' (BIGINT)
+   12. 'GCA GCA' (BIGINT)
+   13. 'GCA GCA90' (DOUBLE)
+   14. 'GCA Types PassLive' (BIGINT)
+   15. 'GCA Types PassDead' (BIGINT)
+   16. 'GCA Types TO' (BIGINT)
+   17. 'GCA Types Sh' (BIGINT)
+   18. 'GCA Types Fld' (BIGINT)
+   19. 'GCA Types Def' (BIGINT)
+   20. 'Current Date' (VARCHAR)
+   21. 'current_through_gameweek' (BIGINT)
+   22. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_KEEPERS
+----------------------------------------
+Rows: 20
+Columns: 24
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. 'Playing Time MP' (BIGINT)
+    4. 'Playing Time Starts' (BIGINT)
+    5. 'Playing Time Min' (BIGINT)
+    6. 'Playing Time 90s' (DOUBLE)
+    7. 'Performance GA' (BIGINT)
+    8. 'Performance GA90' (DOUBLE)
+    9. 'Performance SoTA' (BIGINT)
+   10. 'Performance Saves' (BIGINT)
+   11. 'Performance Save%' (DOUBLE)
+   12. 'Performance W' (BIGINT)
+   13. 'Performance D' (BIGINT)
+   14. 'Performance L' (BIGINT)
+   15. 'Performance CS' (BIGINT)
+   16. 'Performance CS%' (DOUBLE)
+   17. 'Penalty Kicks PKatt' (BIGINT)
+   18. 'Penalty Kicks PKA' (BIGINT)
+   19. 'Penalty Kicks PKsv' (BIGINT)
+   20. 'Penalty Kicks PKm' (BIGINT)
+   21. 'Penalty Kicks Save%' (DOUBLE)
+   22. 'Current Date' (VARCHAR)
+   23. 'current_through_gameweek' (BIGINT)
+   24. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_KEEPERSADV
+----------------------------------------
+Rows: 20
+Columns: 31
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Goals GA' (BIGINT)
+    5. 'Goals PKA' (BIGINT)
+    6. 'Goals FK' (BIGINT)
+    7. 'Goals CK' (BIGINT)
+    8. 'Goals OG' (BIGINT)
+    9. 'Expected PSxG' (DOUBLE)
+   10. 'Expected PSxG/SoT' (DOUBLE)
+   11. 'Expected PSxG+/-' (DOUBLE)
+   12. 'Expected /90' (DOUBLE)
+   13. 'Launched Cmp' (BIGINT)
+   14. 'Launched Att' (BIGINT)
+   15. 'Launched Cmp%' (DOUBLE)
+   16. 'Passes Att (GK)' (BIGINT)
+   17. 'Passes Thr' (BIGINT)
+   18. 'Passes Launch%' (DOUBLE)
+   19. 'Passes AvgLen' (DOUBLE)
+   20. 'Goal Kicks Att' (BIGINT)
+   21. 'Goal Kicks Launch%' (DOUBLE)
+   22. 'Goal Kicks AvgLen' (DOUBLE)
+   23. 'Crosses Opp' (BIGINT)
+   24. 'Crosses Stp' (BIGINT)
+   25. 'Crosses Stp%' (DOUBLE)
+   26. 'Sweeper #OPA' (BIGINT)
+   27. 'Sweeper #OPA/90' (DOUBLE)
+   28. 'Sweeper AvgDist' (DOUBLE)
+   29. 'Current Date' (VARCHAR)
+   30. 'current_through_gameweek' (BIGINT)
+   31. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_MISC
+----------------------------------------
+Rows: 20
+Columns: 22
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Performance CrdY' (BIGINT)
+    5. 'Performance CrdR' (BIGINT)
+    6. 'Performance 2CrdY' (BIGINT)
+    7. 'Performance Fls' (BIGINT)
+    8. 'Performance Fld' (BIGINT)
+    9. 'Performance Off' (BIGINT)
+   10. 'Performance Crs' (BIGINT)
+   11. 'Performance Int' (BIGINT)
+   12. 'Performance TklW' (BIGINT)
+   13. 'Performance PKwon' (BIGINT)
+   14. 'Performance PKcon' (BIGINT)
+   15. 'Performance OG' (BIGINT)
+   16. 'Performance Recov' (BIGINT)
+   17. 'Aerial Duels Won' (BIGINT)
+   18. 'Aerial Duels Lost' (BIGINT)
+   19. 'Aerial Duels Won%' (DOUBLE)
+   20. 'Current Date' (VARCHAR)
+   21. 'current_through_gameweek' (BIGINT)
+   22. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_PASSING
+----------------------------------------
+Rows: 20
+Columns: 29
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Total Cmp' (BIGINT)
+    5. 'Total Att' (BIGINT)
+    6. 'Total Cmp%' (DOUBLE)
+    7. 'Total TotDist' (BIGINT)
+    8. 'Total PrgDist' (BIGINT)
+    9. 'Short Cmp' (BIGINT)
+   10. 'Short Att' (BIGINT)
+   11. 'Short Cmp%' (DOUBLE)
+   12. 'Medium Cmp' (BIGINT)
+   13. 'Medium Att' (BIGINT)
+   14. 'Medium Cmp%' (DOUBLE)
+   15. 'Long Cmp' (BIGINT)
+   16. 'Long Att' (BIGINT)
+   17. 'Long Cmp%' (DOUBLE)
+   18. 'Ast' (BIGINT)
+   19. 'xAG' (DOUBLE)
+   20. 'Expected xA' (DOUBLE)
+   21. 'Expected A-xAG' (DOUBLE)
+   22. 'KP' (BIGINT)
+   23. '1/3' (BIGINT)
+   24. 'PPA' (BIGINT)
+   25. 'CrsPA' (BIGINT)
+   26. 'PrgP' (BIGINT)
+   27. 'Current Date' (VARCHAR)
+   28. 'current_through_gameweek' (BIGINT)
+   29. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_PASSINGTYPES
+----------------------------------------
+Rows: 20
+Columns: 21
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Att' (BIGINT)
+    5. 'Pass Types Live' (BIGINT)
+    6. 'Pass Types Dead' (BIGINT)
+    7. 'Pass Types FK' (BIGINT)
+    8. 'Pass Types TB' (BIGINT)
+    9. 'Pass Types Sw' (BIGINT)
+   10. 'Pass Types Crs' (BIGINT)
+   11. 'Pass Types TI' (BIGINT)
+   12. 'Pass Types CK' (BIGINT)
+   13. 'Corner Kicks In' (BIGINT)
+   14. 'Corner Kicks Out' (BIGINT)
+   15. 'Corner Kicks Str' (BIGINT)
+   16. 'Outcomes Cmp' (BIGINT)
+   17. 'Outcomes Off' (BIGINT)
+   18. 'Outcomes Blocks' (BIGINT)
+   19. 'Current Date' (VARCHAR)
+   20. 'current_through_gameweek' (BIGINT)
+   21. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_PLAYINGTIME
+----------------------------------------
+Rows: 20
+Columns: 26
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. 'Age' (DOUBLE)
+    4. 'Playing Time MP' (BIGINT)
+    5. 'Playing Time Min' (BIGINT)
+    6. 'Playing Time Mn/MP' (BIGINT)
+    7. 'Playing Time Min%' (BIGINT)
+    8. 'Playing Time 90s' (DOUBLE)
+    9. 'Starts Starts' (BIGINT)
+   10. 'Starts Mn/Start' (BIGINT)
+   11. 'Starts Compl' (BIGINT)
+   12. 'Subs Subs' (BIGINT)
+   13. 'Subs Mn/Sub' (BIGINT)
+   14. 'Subs unSub' (BIGINT)
+   15. 'Team Success PPM' (DOUBLE)
+   16. 'Team Success onG' (BIGINT)
+   17. 'Team Success onGA' (BIGINT)
+   18. 'Team Success +/-' (BIGINT)
+   19. 'Team Success +/-90' (DOUBLE)
+   20. 'Team Success (xG) onxG' (DOUBLE)
+   21. 'Team Success (xG) onxGA' (DOUBLE)
+   22. 'Team Success (xG) xG+/-' (DOUBLE)
+   23. 'Team Success (xG) xG+/-90' (DOUBLE)
+   24. 'Current Date' (VARCHAR)
+   25. 'current_through_gameweek' (BIGINT)
+   26. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_POSSESSION
+----------------------------------------
+Rows: 20
+Columns: 29
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. 'Poss' (DOUBLE)
+    4. '90s' (DOUBLE)
+    5. 'Touches Touches' (BIGINT)
+    6. 'Touches Def Pen' (BIGINT)
+    7. 'Touches Def 3rd' (BIGINT)
+    8. 'Touches Mid 3rd' (BIGINT)
+    9. 'Touches Att 3rd' (BIGINT)
+   10. 'Touches Att Pen' (BIGINT)
+   11. 'Touches Live' (BIGINT)
+   12. 'Take-Ons Att' (BIGINT)
+   13. 'Take-Ons Succ' (BIGINT)
+   14. 'Take-Ons Succ%' (DOUBLE)
+   15. 'Take-Ons Tkld' (BIGINT)
+   16. 'Take-Ons Tkld%' (DOUBLE)
+   17. 'Carries Carries' (BIGINT)
+   18. 'Carries TotDist' (BIGINT)
+   19. 'Carries PrgDist' (BIGINT)
+   20. 'Carries PrgC' (BIGINT)
+   21. 'Carries 1/3' (BIGINT)
+   22. 'Carries CPA' (BIGINT)
+   23. 'Carries Mis' (BIGINT)
+   24. 'Carries Dis' (BIGINT)
+   25. 'Receiving Rec' (BIGINT)
+   26. 'Receiving PrgR' (BIGINT)
+   27. 'Current Date' (VARCHAR)
+   28. 'current_through_gameweek' (BIGINT)
+   29. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_SHOOTING
+----------------------------------------
+Rows: 20
+Columns: 23
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. '90s' (DOUBLE)
+    4. 'Standard Gls' (BIGINT)
+    5. 'Standard Sh' (BIGINT)
+    6. 'Standard SoT' (BIGINT)
+    7. 'Standard SoT%' (DOUBLE)
+    8. 'Standard Sh/90' (DOUBLE)
+    9. 'Standard SoT/90' (DOUBLE)
+   10. 'Standard G/Sh' (DOUBLE)
+   11. 'Standard G/SoT' (DOUBLE)
+   12. 'Standard Dist' (DOUBLE)
+   13. 'Standard FK' (BIGINT)
+   14. 'Standard PK' (BIGINT)
+   15. 'Standard PKatt' (BIGINT)
+   16. 'Expected xG' (DOUBLE)
+   17. 'Expected npxG' (DOUBLE)
+   18. 'Expected npxG/Sh' (DOUBLE)
+   19. 'Expected G-xG' (DOUBLE)
+   20. 'Expected np:G-xG' (DOUBLE)
+   21. 'Current Date' (VARCHAR)
+   22. 'current_through_gameweek' (BIGINT)
+   23. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: SQUAD_STANDARD
+----------------------------------------
+Rows: 20
+Columns: 35
+
+COLUMN LIST:
+    1. 'Squad' (VARCHAR)
+    2. 'Pl' (BIGINT)
+    3. 'Age' (DOUBLE)
+    4. 'Poss' (DOUBLE)
+    5. 'Playing Time MP' (BIGINT)
+    6. 'Playing Time Starts' (BIGINT)
+    7. 'Playing Time Min' (BIGINT)
+    8. 'Playing Time 90s' (DOUBLE)
+    9. 'Performance Gls' (BIGINT)
+   10. 'Performance Ast' (BIGINT)
+   11. 'Performance G+A' (BIGINT)
+   12. 'Performance G-PK' (BIGINT)
+   13. 'Performance PK' (BIGINT)
+   14. 'Performance PKatt' (BIGINT)
+   15. 'Performance CrdY' (BIGINT)
+   16. 'Performance CrdR' (BIGINT)
+   17. 'Expected xG' (DOUBLE)
+   18. 'Expected npxG' (DOUBLE)
+   19. 'Expected xAG' (DOUBLE)
+   20. 'Expected npxG+xAG' (DOUBLE)
+   21. 'Progression PrgC' (BIGINT)
+   22. 'Progression PrgP' (BIGINT)
+   23. 'Per 90 Minutes Gls' (DOUBLE)
+   24. 'Per 90 Minutes Ast' (DOUBLE)
+   25. 'Per 90 Minutes G+A' (DOUBLE)
+   26. 'Per 90 Minutes G-PK' (DOUBLE)
+   27. 'Per 90 Minutes G+A-PK' (DOUBLE)
+   28. 'Per 90 Minutes xG' (DOUBLE)
+   29. 'Per 90 Minutes xAG' (DOUBLE)
+   30. 'Per 90 Minutes xG+xAG' (DOUBLE)
+   31. 'Per 90 Minutes npxG' (DOUBLE)
+   32. 'Per 90 Minutes npxG+xAG' (DOUBLE)
+   33. 'Current Date' (VARCHAR)
+   34. 'current_through_gameweek' (BIGINT)
+   35. 'last_updated' (DATE)
+
+============================================================
+
+TABLE: TEAMS
+----------------------------------------
+Rows: 0
+Columns: 2
+
+COLUMN LIST:
+    1. 'team_name' (VARCHAR) [PK] [NOT NULL]
+    2. 'created_at' (TIMESTAMP)
+
+============================================================
+
