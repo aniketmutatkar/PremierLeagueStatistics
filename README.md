@@ -6,12 +6,12 @@ A production-ready data pipeline and analytics system for Premier League statist
 
 ### Two-Database System
 - **Raw Database** (`premierleague_raw.duckdb`): Preserves original FBRef structure across 33 tables
-- **Analytics Database** (`premierleague_analytics.duckdb`): SCD Type 2 with 144 columns and derived metrics
+- **Analytics Database** (`premierleague_analytics.duckdb`): SCD Type 2 with clean, consolidated statistics
 
 ### Key Features
 - **SCD Type 2 Implementation**: Complete historical tracking with transfer detection
 - **Intelligent Pipeline**: Smart decision-making to avoid unnecessary FBRef requests  
-- **Derived Metrics**: 15 advanced analytics including form scores and efficiency ratings
+- **Separated Player Types**: Dedicated tables for outfield players and goalkeepers
 - **Production Logging**: Timestamped, rotated logs with granular progress tracking
 
 ## 🚀 Quick Start
@@ -71,8 +71,7 @@ PremierLeagueStatistics/
 ├── src/                                # Core library
 │   ├── analytics/etl/                  # Analytics components
 │   │   ├── analytics_etl.py            # Main ETL engine
-│   │   ├── player_consolidation.py     # Data consolidation
-│   │   └── derived_metrics.py          # Metrics calculation
+│   │   └── player_consolidation.py     # Data consolidation
 │   ├── database/                       # Database layer
 │   │   ├── raw_db/                     # Raw database operations
 │   │   └── analytics_db/               # Analytics database operations
@@ -97,8 +96,8 @@ PremierLeagueStatistics/
 FBRef Website → Raw Pipeline → Analytics ETL → Applications
      ↓              ↓              ↓              ↓
   Live Data    33 Stat Tables  SCD Type 2    ML Models
-                Archive Pattern  144 Columns  Dashboards
-                Rate Limited    15 Metrics    Notebooks
+                Archive Pattern  Clean Stats   Dashboards
+                Rate Limited    Two Tables    Notebooks
 ```
 
 ## 📈 Data Architecture Details
@@ -110,11 +109,13 @@ FBRef Website → Raw Pipeline → Analytics ETL → Applications
 **Infrastructure**: `raw_fixtures`, `teams`, `data_scraping_log`
 
 ### Analytics Database (SCD Type 2)
-**Core Table**: `analytics_players` (144 columns)
-- **Dimensions**: player_name, squad, position, nation, age
-- **Time Tracking**: gameweek, valid_from, valid_to, is_current
-- **Stats**: 127 consolidated statistics from all 11 FBRef categories
-- **Derived Metrics**: 15 calculated analytics (goals_vs_expected, form_score, etc.)
+**Core Tables**: 
+- **`analytics_players`** (~160 columns): Outfield players (DF, MF, FW) with comprehensive statistics
+- **`analytics_keepers`** (~60 columns): Goalkeepers with specialized metrics including advanced shot-stopping data
+
+**Dimensions**: player_name, squad, position, nation, age  
+**Time Tracking**: gameweek, valid_from, valid_to, is_current  
+**Stats**: Raw FBRef statistics with explicit column mapping
 
 ### SCD Type 2 Example
 ```sql
@@ -162,112 +163,38 @@ python validate_analytics_system.py
 **Validates**:
 - SCD Type 2 integrity (only current gameweek marked as current)
 - Player tracking across gameweeks and transfers
-- Derived metrics calculation and coverage
+- Data consolidation quality and column mapping success
 - Data quality checks (duplicates, missing data, logical consistency)
-- System health and performance metrics
+- Statistical sanity checks (players have touches > 0, etc.)
 
-### Manual Data Exploration
-```python
-import duckdb
+## 🎯 Current Status
+- **Raw Pipeline**: ✅ Stable, scrapes all 33 FBRef stat tables
+- **Analytics Pipeline**: ✅ Clean consolidation with explicit column mapping
+- **Data Quality**: ✅ 160+ columns for outfield players, 60+ for goalkeepers
+- **Historical Tracking**: ✅ SCD Type 2 implementation working
+- **Transfer Detection**: ✅ Players tracked across team changes
 
-# Connect to analytics database
-conn = duckdb.connect('data/premierleague_analytics.duckdb')
+## 🔮 Future Development
 
-# View current players
-current_players = conn.execute("""
-    SELECT player_name, squad, goals, assists, minutes_played 
-    FROM analytics_players 
-    WHERE is_current = true 
-    ORDER BY goals DESC 
-    LIMIT 10
-""").fetchdf()
+1. **Advanced Analytics**: 
+   - **Data Science Notebooks**: Player analysis, team comparisons, trend identification
+   - **Machine Learning Models**: Performance prediction, transfer value assessment
+   - **Advanced Analytics**: Tactical analysis, formation effectiveness, player development
+   - **Automation**: Scheduled runs, monitoring alerts, backup automation
 
-# Track player history
-player_history = conn.execute("""
-    SELECT gameweek, squad, goals, assists, is_current
-    FROM analytics_players 
-    WHERE player_name = 'Erling Haaland'
-    ORDER BY gameweek
-""").fetchdf()
-```
-
-## 🔍 System Monitoring
-
-### Pipeline Intelligence
-The master pipeline automatically:
-- Checks local gameweek status
-- Makes minimal FBRef requests only when needed
-- Skips unnecessary work when data is current
-- Handles analytics-only updates when raw is current
-
-### Logging
-- **Timestamped logs**: `data/logs/master_pipeline_20250915_213045.log`
-- **Automatic rotation**: Keeps last 5 logs
-- **Granular tracking**: Progress through scraping categories, ETL steps
-- **Error handling**: Comprehensive error capture and reporting
-
-### Health Checks
-```bash
-# System status overview
-python pipelines/master_pipeline.py --status
-
-# Detailed validation
-python validate_analytics_system.py
-
-# Individual component status  
-python pipelines/raw_pipeline.py --status
-python pipelines/analytics_pipeline.py --status
-```
-
-## 🚦 System Status
-
-### Current State (as of latest run)
-- **Raw Database**: Gameweek 5, 404 players across 33 tables
-- **Analytics Database**: Gameweek 5, 774 total records (370 historical + 404 current)
-- **SCD Type 2**: Working perfectly with transfer detection
-- **Derived Metrics**: 15 metrics calculated with 100% coverage
-- **Data Quality**: All validation checks passing
-
-### Transfer Tracking Example
-System successfully tracks mid-gameweek transfers:
-- **Eberechi Eze**: Crystal Palace → Arsenal (tracked in both GW4 and GW5)
-- **Harvey Elliott**: Liverpool ↔ Aston Villa (loan tracking)
-
-## 🔮 Ready for Next Phase
-
-### Current Capabilities
-- ✅ Production-ready data pipeline
-- ✅ Complete historical tracking with SCD Type 2
-- ✅ 144-column analytics with derived metrics
-- ✅ Transfer impact analysis capabilities
-- ✅ Comprehensive data validation
-- ✅ Intelligent pipeline orchestration
-
-### Ready for Machine Learning
-- **774 training examples** and growing each gameweek
-- **144 features** per player per gameweek
-- **Complete historical context** for time series modeling
-- **Transfer impact data** for specialized ML models
-- **Data quality assured** through comprehensive validation
-
-### Potential Next Steps
-1. **Data Science Notebooks**: Player analysis, team comparisons, trend identification
-2. **Machine Learning Models**: Performance prediction, transfer value assessment
-3. **Advanced Analytics**: Tactical analysis, formation effectiveness, player development
-4. **Automation**: Scheduled runs, monitoring alerts, backup automation
+2. **Enhanced Features**:
+   - Real-time dashboard integration
+   - Custom derived metrics (when needed)
+   - Multi-season historical analysis
+   - Advanced statistical modeling
 
 ## 🛠️ Development
-
-### Adding New Derived Metrics
-1. Edit `src/analytics/etl/derived_metrics.py`
-2. Add calculation logic to `calculate_derived_metrics()`
-3. Update analytics schema if needed
-4. Test with `python validate_analytics_system.py`
 
 ### Extending Scraping
 1. Add new stat category to `config/sources.yaml`
 2. Raw pipeline automatically includes new categories
 3. Update consolidation logic in `player_consolidation.py` if needed
+4. Test with `python validate_analytics_system.py`
 
 ### Database Queries
 ```python
@@ -276,11 +203,27 @@ top_scorers = conn.execute("""
     SELECT gameweek, player_name, squad, goals,
            RANK() OVER (PARTITION BY gameweek ORDER BY goals DESC) as rank
     FROM analytics_players 
-    WHERE goals > 0
+    WHERE goals > 0 AND is_current = true
     QUALIFY rank <= 5
     ORDER BY gameweek, rank
 """).fetchdf()
+
+# Example: Goalkeeper performance
+keeper_stats = conn.execute("""
+    SELECT player_name, squad, saves, save_percentage, clean_sheets,
+           post_shot_expected_goals, post_shot_xg_performance
+    FROM analytics_keepers 
+    WHERE is_current = true AND minutes_played > 270
+    ORDER BY save_percentage DESC
+""").fetchdf()
 ```
+
+### Schema Management
+The analytics database uses explicit column mapping from raw FBRef data:
+- **No prefixes**: Clean column names like `touches`, `tackles`, `shots`
+- **No derived metrics**: Only raw FBRef statistics (can add calculated metrics later)
+- **Type separation**: Outfield players and goalkeepers in separate tables
+- **Full coverage**: ~220 out of 327 raw columns mapped (67% utilization)
 
 ## 📚 Additional Resources
 

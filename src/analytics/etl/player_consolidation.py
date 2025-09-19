@@ -1,177 +1,218 @@
 """
-Player Data Consolidation - Joins all 11 player stat tables into wide format
+Player Data Consolidation - REBUILT FROM SCRATCH
+Clean implementation using explicit column mappings
+
+NO PREFIXES. NO BROKEN MAPPINGS. NO FUCKSHIT.
+Just clean, explicit mapping from raw FBRef columns to analytics columns.
 """
+
 import pandas as pd
 import logging
-from typing import Optional
+from typing import Dict, List, Optional, Tuple
+import hashlib
+from datetime import datetime
+
+# Import our explicit mapping dictionary
+from .column_mappings import (
+    OUTFIELD_PLAYER_MAPPINGS,
+    GOALKEEPER_MAPPINGS,
+    COLUMN_PRIORITIES,
+    EXCLUDED_COLUMNS
+)
 
 logger = logging.getLogger(__name__)
 
 class PlayerDataConsolidator:
-    """Consolidates player data from all 11 raw stat tables"""
+    """
+    Clean player data consolidation using explicit column mappings
+    
+    Separates outfield players and goalkeepers into different flows
+    Maps raw FBRef columns directly to analytics column names
+    No prefixes, no broken mappings, no unnecessary complexity
+    """
     
     def __init__(self):
-        # Define all 11 player stat tables
+        # Define all 11 player stat tables in processing order
         self.player_tables = [
-            'player_standard',      # Base table - all players exist here
-            'player_keepers',
-            'player_keepersadv', 
-            'player_shooting',
-            'player_passing',
-            'player_passingtypes',
-            'player_goalshotcreation',
-            'player_defense',
-            'player_possession',
-            'player_playingtime',
-            'player_misc'
+            'player_standard',      # PRIMARY - base for all players
+            'player_shooting',      # Outfield only - shooting stats
+            'player_passing',       # Outfield only - passing stats  
+            'player_passingtypes',  # Outfield only - pass types
+            'player_goalshotcreation', # Outfield only - creation stats
+            'player_defense',       # Outfield only - defensive stats
+            'player_possession',    # Outfield only - possession stats
+            'player_misc',          # Outfield only - miscellaneous stats
+            'player_keepers',       # Goalkeepers only - basic keeper stats
+            'player_keepersadv'     # Goalkeepers only - advanced keeper stats
+        ]
+        
+        # Tables that apply to outfield players only
+        self.outfield_tables = [
+            'player_standard', 'player_shooting', 'player_passing',
+            'player_passingtypes', 'player_goalshotcreation', 
+            'player_defense', 'player_possession', 'player_misc'
+        ]
+        
+        # Tables that apply to goalkeepers only
+        self.goalkeeper_tables = [
+            'player_standard', 'player_keepers', 'player_keepersadv'
         ]
     
-    def consolidate_players(self, raw_conn, gameweek: int) -> pd.DataFrame:
+    def consolidate_players(self, raw_conn, gameweek: int) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Consolidate all player data from 11 tables into wide format
+        Consolidate player data for both outfield players and goalkeepers
         
         Args:
             raw_conn: Connection to raw database
             gameweek: Target gameweek to consolidate
             
         Returns:
-            DataFrame with consolidated player stats
+            Tuple of (outfield_df, goalkeepers_df)
         """
         logger.info(f"Starting player consolidation for gameweek {gameweek}")
         
-        # Step 1: Get base player data from player_standard
-        base_df = self._get_base_player_data(raw_conn, gameweek)
-        if base_df.empty:
-            logger.error("No base player data found")
-            return pd.DataFrame()
+        # Step 1: Get all players from player_standard (the base table)
+        all_players_df = self._get_base_players(raw_conn, gameweek)
+        if all_players_df.empty:
+            logger.error("No players found in player_standard")
+            return pd.DataFrame(), pd.DataFrame()
         
-        logger.info(f"Base data loaded: {len(base_df)} players")
+        # Step 2: Separate players by position
+        # Handle multi-position players (e.g., 'MF,FW', 'DF,MF') 
+        is_goalkeeper = all_players_df['Pos'].str.contains('GK', na=False)
+        outfield_players = all_players_df[~is_goalkeeper].copy()
+        goalkeepers = all_players_df[is_goalkeeper].copy()
         
-        # Step 2: Join each additional stat table
-        consolidated_df = base_df.copy()
+        logger.info(f"Found {len(outfield_players)} outfield players and {len(goalkeepers)} goalkeepers")
         
-        for table in self.player_tables[1:]:  # Skip player_standard (already loaded)
-            try:
-                stat_df = self._get_table_data(raw_conn, table, gameweek)
-                if not stat_df.empty:
-                    # Filter out players with 0 playing time for player_playingtime table
-                    if table == 'player_playingtime':
-                        initial_count = len(stat_df)
-                        stat_df = stat_df[stat_df['Playing Time Min'] > 0]
-                        filtered_count = len(stat_df)
-                        if initial_count != filtered_count:
-                            logger.info(f"Filtered out {initial_count - filtered_count} zero-minute players from {table}")
-                    
-                    consolidated_df = self._join_stat_table(consolidated_df, stat_df, table)
-                    logger.debug(f"Joined {table}: {len(stat_df)} records")
-                else:
-                    logger.warning(f"No data found in {table} for gameweek {gameweek}")
-                    
-            except Exception as e:
-                logger.error(f"Error processing {table}: {e}")
-                # Continue with other tables even if one fails
-                continue
+        # Step 3: Process outfield players
+        outfield_df = self._consolidate_outfield_players(raw_conn, outfield_players, gameweek)
         
-        # Step 3: Clean and standardize column names
-        consolidated_df = self._standardize_columns(consolidated_df)
+        # Step 4: Process goalkeepers
+        goalkeepers_df = self._consolidate_goalkeepers(raw_conn, goalkeepers, gameweek)
         
-        logger.info(f"Consolidation complete: {len(consolidated_df)} players, {len(consolidated_df.columns)} columns")
-        return consolidated_df
+        return outfield_df, goalkeepers_df
     
-    def _get_base_player_data(self, raw_conn, gameweek: int) -> pd.DataFrame:
-        """Get base player data from player_standard table"""
-        query = """
-        SELECT 
-            Player,
-            Born,
-            Nation,
-            Pos as position,
-            Squad,
-            Age,
-            "Playing Time MP" as matches_played,
-            "Playing Time Starts" as starts, 
-            "Playing Time Min" as minutes_played,
-            "Playing Time 90s" as minutes_90s,
-            "Performance Gls" as goals,
-            "Performance Ast" as assists,
-            "Performance G+A" as goals_plus_assists,
-            "Performance G-PK" as non_penalty_goals,
-            "Performance PK" as penalty_kicks_made,
-            "Performance PKatt" as penalty_kicks_attempted,
-            "Performance CrdY" as yellow_cards,
-            "Performance CrdR" as red_cards,
-            "Expected xG" as expected_goals,
-            "Expected npxG" as non_penalty_expected_goals,
-            "Expected xAG" as expected_assisted_goals,
-            "Expected npxG+xAG" as expected_goals_plus_assists,
-            "Progression PrgC" as progressive_carries,
-            "Progression PrgP" as progressive_passes,
-            current_through_gameweek
-        FROM player_standard 
-        WHERE current_through_gameweek = ?
-        """
-        
+    def _get_base_players(self, raw_conn, gameweek: int) -> pd.DataFrame:
+        """Get all players from player_standard as the base"""
         try:
-            # Suppress pandas warning
-            import warnings
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", UserWarning)
-                df = pd.read_sql(query, raw_conn, params=[gameweek])
+            query = """
+            SELECT * FROM player_standard 
+            WHERE current_through_gameweek = ?
+            """
             
-            # Create unique player_key including squad (handles transfers as separate entities)
-            df['player_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
+            df = pd.read_sql(query, raw_conn, params=[gameweek])
             
-            # Remove duplicates using player_key (should be none now, but safety check)
-            initial_count = len(df)
-            duplicates_before_removal = df[df['player_key'].duplicated(keep=False)]
-            df = df.drop_duplicates(subset=['player_key'], keep='first')
-            final_count = len(df)
+            if not df.empty:
+                # Create player_key for joining (player_name + born + squad)
+                df['player_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
+                
+                # Remove any duplicates
+                initial_count = len(df)
+                df = df.drop_duplicates(subset=['player_key'], keep='first')
+                final_count = len(df)
+                
+                if initial_count != final_count:
+                    logger.warning(f"Removed {initial_count - final_count} duplicate players from base data")
             
-            if initial_count != final_count:
-                logger.warning(f"Removed {initial_count - final_count} duplicate players from base data")
-                if not duplicates_before_removal.empty:
-                    logger.warning(f"Duplicate players were: {duplicates_before_removal[['Player', 'Born', 'Squad']].to_string(index=False)}")
-            
+            logger.info(f"Loaded {len(df)} total players from player_standard")
             return df
+            
         except Exception as e:
             logger.error(f"Error loading base player data: {e}")
             return pd.DataFrame()
-
+    
+    def _consolidate_outfield_players(self, raw_conn, base_players: pd.DataFrame, gameweek: int) -> pd.DataFrame:
+        """Consolidate data for outfield players (DF, MF, FW)"""
+        logger.info(f"Consolidating {len(base_players)} outfield players")
+        
+        # Start with base players and apply standard table mappings
+        result_df = self._apply_table_mappings(
+            base_players, 'player_standard', 'outfield'
+        )
+        
+        # Process each additional outfield table
+        for table_name in self.outfield_tables[1:]:  # Skip player_standard (already processed)
+            try:
+                # Get raw data from this table
+                table_df = self._get_table_data(raw_conn, table_name, gameweek)
+                
+                if table_df.empty:
+                    logger.warning(f"No data found in {table_name} for gameweek {gameweek}")
+                    continue
+                
+                # Apply mappings to get analytics column names
+                mapped_df = self._apply_table_mappings(table_df, table_name, 'outfield')
+                
+                # Merge with main result
+                result_df = self._merge_table_data(result_df, mapped_df, table_name)
+                
+                logger.debug(f"Successfully processed {table_name}: {len(mapped_df)} records")
+                
+            except Exception as e:
+                logger.error(f"Error processing {table_name}: {e}")
+                # Continue with other tables even if one fails
+                continue
+        
+        # Add SCD Type 2 metadata
+        result_df = self._add_scd_metadata(result_df, gameweek)
+        
+        logger.info(f"Outfield consolidation complete: {len(result_df)} players, {len(result_df.columns)} columns")
+        return result_df
+    
+    def _consolidate_goalkeepers(self, raw_conn, base_goalkeepers: pd.DataFrame, gameweek: int) -> pd.DataFrame:
+        """Consolidate data for goalkeepers (GK)"""
+        logger.info(f"Consolidating {len(base_goalkeepers)} goalkeepers")
+        
+        # Start with base goalkeepers and apply standard table mappings
+        result_df = self._apply_table_mappings(
+            base_goalkeepers, 'player_standard', 'goalkeeper'
+        )
+        
+        # Process each goalkeeper-specific table
+        for table_name in self.goalkeeper_tables[1:]:  # Skip player_standard (already processed)
+            try:
+                # Get raw data from this table
+                table_df = self._get_table_data(raw_conn, table_name, gameweek)
+                
+                if table_df.empty:
+                    logger.warning(f"No data found in {table_name} for gameweek {gameweek}")
+                    continue
+                
+                # Apply mappings to get analytics column names
+                mapped_df = self._apply_table_mappings(table_df, table_name, 'goalkeeper')
+                
+                # Merge with main result
+                result_df = self._merge_table_data(result_df, mapped_df, table_name)
+                
+                logger.debug(f"Successfully processed {table_name}: {len(mapped_df)} records")
+                
+            except Exception as e:
+                logger.error(f"Error processing {table_name}: {e}")
+                # Continue with other tables even if one fails
+                continue
+        
+        # Add SCD Type 2 metadata
+        result_df = self._add_scd_metadata(result_df, gameweek)
+        
+        logger.info(f"Goalkeeper consolidation complete: {len(result_df)} players, {len(result_df.columns)} columns")
+        return result_df
+    
     def _get_table_data(self, raw_conn, table_name: str, gameweek: int) -> pd.DataFrame:
         """Get data from a specific player stat table"""
         try:
-            # Get all columns for this table
-            columns_query = f"PRAGMA table_info({table_name})"
-            
-            # Suppress pandas warning
-            import warnings
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", UserWarning)
-                columns_info = pd.read_sql(columns_query, raw_conn)
-            
-            columns = columns_info['name'].tolist()
-            
-            # Build query - always include Player, Born for joining
-            if 'Player' not in columns or 'Born' not in columns:
-                logger.warning(f"Table {table_name} missing Player or Born columns")
-                return pd.DataFrame()
-            
-            # Select all columns from the table
             query = f"""
             SELECT * FROM {table_name} 
             WHERE current_through_gameweek = ?
             """
             
-            # Suppress pandas warning
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", UserWarning)
-                df = pd.read_sql(query, raw_conn, params=[gameweek])
+            df = pd.read_sql(query, raw_conn, params=[gameweek])
             
             if not df.empty:
-                # Create unique player_key including squad (consistent with base table)
+                # Create player_key for joining
                 df['player_key'] = df['Player'] + '_' + df['Born'].astype(str) + '_' + df['Squad']
                 
-                # Remove duplicates using player_key
+                # Remove duplicates
                 initial_count = len(df)
                 df = df.drop_duplicates(subset=['player_key'], keep='first')
                 final_count = len(df)
@@ -184,77 +225,159 @@ class PlayerDataConsolidator:
         except Exception as e:
             logger.error(f"Error loading data from {table_name}: {e}")
             return pd.DataFrame()
-
-    def _join_stat_table(self, base_df: pd.DataFrame, stat_df: pd.DataFrame, table_name: str) -> pd.DataFrame:
-        """Join a stat table to the base dataframe"""
+    
+    def _apply_table_mappings(self, df: pd.DataFrame, table_name: str, player_type: str) -> pd.DataFrame:
+        """
+        Apply explicit column mappings to transform raw columns to analytics columns
+        
+        This is the core function that replaces the broken prefix system
+        """
+        if df.empty:
+            return df
+        
+        # Get the appropriate mapping dictionary
+        if player_type == 'outfield':
+            mappings_dict = OUTFIELD_PLAYER_MAPPINGS
+        else:
+            mappings_dict = GOALKEEPER_MAPPINGS
+        
+        # Get mappings for this specific table
+        if table_name not in mappings_dict:
+            logger.warning(f"No mappings defined for {table_name} in {player_type} mappings")
+            return df[['player_key']].copy()  # Return empty with just player_key
+        
+        table_mappings = mappings_dict[table_name]
+        
+        # Build rename dictionary for columns that exist and are mapped
+        rename_dict = {}
+        unmapped_columns = []
+        missing_columns = []
+        
+        for raw_col, analytics_col in table_mappings.items():
+            if raw_col in df.columns:
+                rename_dict[raw_col] = analytics_col
+            else:
+                missing_columns.append(raw_col)
+        
+        # Check for unmapped statistical columns (excluding metadata and basic info)
+        for col in df.columns:
+            if (col not in table_mappings and 
+                col not in EXCLUDED_COLUMNS and 
+                col != 'player_key'):
+                unmapped_columns.append(col)
+        
+        # Log any issues
+        if missing_columns:
+            logger.warning(f"Expected columns missing from {table_name}: {missing_columns}")
+        
+        if unmapped_columns:
+            logger.info(f"Unmapped columns in {table_name}: {unmapped_columns}")
+        
+        # Apply the mapping
+        columns_to_keep = ['player_key'] + list(rename_dict.keys())
+        mapped_df = df[columns_to_keep].copy()
+        mapped_df = mapped_df.rename(columns=rename_dict)
+        
+        logger.debug(f"Applied mappings to {table_name}: {len(rename_dict)} columns mapped")
+        return mapped_df
+    
+    def _merge_table_data(self, main_df: pd.DataFrame, new_df: pd.DataFrame, table_name: str) -> pd.DataFrame:
+        """Merge new table data with main dataframe"""
         try:
-            # Check if player_key exists in stat_df
-            if 'player_key' not in stat_df.columns:
-                logger.error(f"Error joining {table_name}: player_key column missing")
-                return base_df
-            
-            # Identify columns to join (exclude common ones)
-            exclude_cols = ['Player', 'Born', 'current_through_gameweek', 'last_updated', 'Current Date', 'player_key']
-            stat_cols = [col for col in stat_df.columns if col not in exclude_cols]
-            
-            # Select only the player_key and stat columns
-            join_df = stat_df[['player_key'] + stat_cols].copy()
-            
-            # Add table prefix to avoid column name conflicts
-            table_prefix = table_name.replace('player_', '')
-            rename_dict = {col: f"{table_prefix}_{col}" for col in stat_cols}
-            join_df = join_df.rename(columns=rename_dict)
-            
             # Perform left join on player_key
-            merged_df = base_df.merge(join_df, on='player_key', how='left')
+            merged_df = main_df.merge(new_df, on='player_key', how='left')
             
-            logger.debug(f"Joined {table_name}: added {len(stat_cols)} columns")
+            # Check for any column conflicts (shouldn't happen with our explicit mappings)
+            original_cols = set(main_df.columns)
+            new_cols = set(new_df.columns) - {'player_key'}
+            conflicts = original_cols & new_cols
+            
+            if conflicts:
+                logger.error(f"Column conflicts detected when merging {table_name}: {conflicts}")
+                # This should not happen with our explicit mappings!
+                # If it does, we have a bug in our mapping dictionary
+            
+            logger.debug(f"Merged {table_name}: added {len(new_cols)} columns")
             return merged_df
             
         except Exception as e:
-            logger.error(f"Error joining {table_name}: {e}")
-            return base_df  # Return original if join fails
+            logger.error(f"Error merging {table_name}: {e}")
+            return main_df  # Return original if merge fails
     
-    def _standardize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Standardize column names and data types"""
-        try:
-            # Fill NaN values appropriately
-            numeric_columns = df.select_dtypes(include=['number']).columns
-            df[numeric_columns] = df[numeric_columns].fillna(0)
-            
-            # Clean player name (remove any extra whitespace)
-            if 'Player' in df.columns:
-                df['Player'] = df['Player'].str.strip()
-                df = df.rename(columns={'Player': 'player_name'})
-            
-            if 'Squad' in df.columns:
-                df['Squad'] = df['Squad'].str.strip()
-                df = df.rename(columns={'Squad': 'squad'})
-            
-            # Ensure required columns exist
-            required_cols = ['player_name', 'squad', 'Born', 'player_key']
-            missing_cols = [col for col in required_cols if col not in df.columns]
-            if missing_cols:
-                logger.error(f"Missing required columns: {missing_cols}")
-            
-            logger.info(f"Column standardization complete: {len(df.columns)} total columns")
-            return df
-            
-        except Exception as e:
-            logger.error(f"Error standardizing columns: {e}")
-            return df
-    
-    def get_consolidation_summary(self, df: pd.DataFrame) -> dict:
-        """Get summary statistics about the consolidated data"""
+    def _add_scd_metadata(self, df: pd.DataFrame, gameweek: int) -> pd.DataFrame:
+        """Add SCD Type 2 metadata columns"""
         if df.empty:
-            return {"error": "No data to summarize"}
+            return df
         
+        # Create player_id (composite key: player_name + born_year + squad)
+        # This handles transfers - same player, different squad = different player_id
+        df['player_id'] = df['player_name'] + '_' + df['born_year'].astype(str) + '_' + df['squad']
+        
+        # Create unique analytics player_key (hash of player_id + gameweek)
+        # This creates unique keys for each player-gameweek combination
+        def generate_analytics_player_key(row):
+            key_string = f"{row['player_id']}_{gameweek}"
+            return int(hashlib.md5(key_string.encode()).hexdigest()[:8], 16)
+        
+        df['player_key'] = df.apply(generate_analytics_player_key, axis=1)
+        
+        # Add SCD Type 2 metadata
+        df['season'] = '2025-2026'  # TODO: Make this dynamic
+        df['gameweek'] = gameweek
+        df['valid_from'] = datetime.now().date()
+        df['valid_to'] = None
+        df['is_current'] = True
+        
+        return df
+    
+    def get_consolidation_summary(self, outfield_df: pd.DataFrame, goalkeepers_df: pd.DataFrame) -> Dict:
+        """Get summary statistics about the consolidated data"""
         return {
-            "total_players": len(df),
-            "total_columns": len(df.columns), 
-            "teams": df['squad'].nunique() if 'squad' in df.columns else 0,
-            "positions": df['position'].nunique() if 'position' in df.columns else 0,
-            "total_goals": df['goals'].sum() if 'goals' in df.columns else 0,
-            "avg_minutes": df['minutes_played'].mean() if 'minutes_played' in df.columns else 0,
-            "missing_values": df.isnull().sum().sum()
+            'outfield_players': len(outfield_df),
+            'goalkeepers': len(goalkeepers_df),
+            'total_players': len(outfield_df) + len(goalkeepers_df),
+            'outfield_columns': len(outfield_df.columns) if not outfield_df.empty else 0,
+            'goalkeeper_columns': len(goalkeepers_df.columns) if not goalkeepers_df.empty else 0,
+            'outfield_teams': outfield_df['squad'].nunique() if not outfield_df.empty else 0,
+            'goalkeeper_teams': goalkeepers_df['squad'].nunique() if not goalkeepers_df.empty else 0,
+            'total_goals': (
+                outfield_df['goals'].sum() if 'goals' in outfield_df.columns else 0
+            ) + (
+                goalkeepers_df['goals'].sum() if 'goals' in goalkeepers_df.columns else 0
+            ),
+            'outfield_missing_values': outfield_df.isnull().sum().sum() if not outfield_df.empty else 0,
+            'goalkeeper_missing_values': goalkeepers_df.isnull().sum().sum() if not goalkeepers_df.empty else 0,
         }
+    
+    def validate_consolidation(self, outfield_df: pd.DataFrame, goalkeepers_df: pd.DataFrame) -> Dict:
+        """Validate the consolidation results"""
+        validation_results = {
+            'success': True,
+            'errors': [],
+            'warnings': []
+        }
+        
+        # Check outfield players
+        if outfield_df.empty:
+            validation_results['errors'].append("No outfield players consolidated")
+            validation_results['success'] = False
+        else:
+            # Check for key columns
+            required_outfield_cols = ['player_key', 'player_name', 'squad', 'position', 'goals', 'assists']
+            missing_cols = [col for col in required_outfield_cols if col not in outfield_df.columns]
+            if missing_cols:
+                validation_results['errors'].append(f"Missing required outfield columns: {missing_cols}")
+                validation_results['success'] = False
+        
+        # Check goalkeepers
+        if goalkeepers_df.empty:
+            validation_results['warnings'].append("No goalkeepers consolidated")
+        else:
+            # Check for key columns
+            required_keeper_cols = ['player_key', 'player_name', 'squad', 'saves', 'goals_against']
+            missing_cols = [col for col in required_keeper_cols if col not in goalkeepers_df.columns]
+            if missing_cols:
+                validation_results['errors'].append(f"Missing required goalkeeper columns: {missing_cols}")
+                validation_results['success'] = False
+        
+        return validation_results
