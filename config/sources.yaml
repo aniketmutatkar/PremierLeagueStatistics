@@ -103,6 +103,7 @@ fixtures_sources:
     # Will be populated with URLs for historical seasons
     base_pattern: "https://fbref.com/en/comps/9/{season}/schedule/"
     seasons:
+      - "2024-2025"
       - "2023-2024"
       - "2022-2023" 
       - "2021-2022"
