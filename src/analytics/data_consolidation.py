@@ -478,11 +478,3 @@ class DataConsolidator:
                 validation_results['success'] = False
         
         return validation_results
-
-
-# =====================================================
-# BACKWARD COMPATIBILITY
-# =====================================================
-
-# Alias for backward compatibility with existing code
-PlayerDataConsolidator = DataConsolidator

@@ -1,10 +1,10 @@
 """
 Analytics Package
-Analytics components for player consolidation and ETL processing
+Unified analytics components for all entity types
 """
 
-from .player_consolidation import PlayerDataConsolidator
+from .data_consolidation import DataConsolidator
 from .analytics_etl import AnalyticsETL
 from .scd_processor import SCDType2Processor
 
-__all__ = ['PlayerDataConsolidator', 'AnalyticsETL', 'SCDType2Processor']
+__all__ = ['DataConsolidator', 'AnalyticsETL', 'SCDType2Processor']
