@@ -172,10 +172,9 @@ def validate_analytics_data():
         
         with AnalyticsValidator() as validator:
             # Run core validations
-            scd_valid = validator.validate_scd_type_2()
-            quality_valid = validator.validate_data_quality()
+            validation = validator.run_complete_validation()
             
-            if all([scd_valid, quality_valid]):
+            if validation:
                 print("✅ All validation checks passed")
                 return True
             else:

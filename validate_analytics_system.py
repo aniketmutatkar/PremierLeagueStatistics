@@ -12,7 +12,7 @@ from pathlib import Path
 import sys
 from typing import List, Dict, Any, Tuple
 
-class UnifiedAnalyticsValidator:
+class AnalyticsValidator:
     """Validates the complete analytics system with all entity types"""
     
     def __init__(self, db_path: str = "data/premierleague_analytics.duckdb"):
@@ -496,7 +496,7 @@ if __name__ == "__main__":
         print(f"❌ Analytics database not found: {db_path}")
         sys.exit(1)
     
-    with UnifiedAnalyticsValidator(db_path) as validator:
+    with AnalyticsValidator(db_path) as validator:
         success = validator.run_complete_validation()
         
         if success:
