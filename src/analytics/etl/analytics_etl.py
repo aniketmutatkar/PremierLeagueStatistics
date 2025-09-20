@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
 from src.database.analytics_db import AnalyticsDBConnection, AnalyticsDBOperations
 from src.analytics.etl.player_consolidation import PlayerDataConsolidator
-from src.scraping.fbref_scraper import FBRefScraper
+from src.analytics.etl.scd_processor import SCDType2Processor
 
 # Configure logging
 logging.basicConfig(
@@ -91,29 +91,15 @@ class AnalyticsETL:
                 # Step 4: Handle SCD Type 2 updates
                 logger.info("🕐 Processing SCD Type 2 updates...")
                 
-                # Mark existing records as historical
-                if not self.ops.mark_records_as_historical(target_gameweek):
-                    logger.error("Failed to mark records as historical")
+                scd_processor = SCDType2Processor(analytics_conn)
+                # Process both tables with clean, consistent SCD logic
+                if not scd_processor.process_all_updates(outfield_df, goalkeepers_df, target_gameweek):
+                    logger.error("SCD Type 2 processing failed")
                     return False
                 
-                # Step 5: Insert into analytics database
-                logger.info("💾 Inserting data into analytics database...")
+                logger.info(f"✅ SCD Type 2 processing completed for {len(outfield_df)} outfield + {len(goalkeepers_df)} goalkeepers")
                 
-                # Insert outfield players
-                if not outfield_df.empty:
-                    if not self._insert_outfield_data(analytics_conn, outfield_df, target_gameweek):
-                        logger.error("Failed to insert outfield player data")
-                        return False
-                    logger.info(f"✅ Inserted {len(outfield_df)} outfield players")
-                
-                # Insert goalkeepers
-                if not goalkeepers_df.empty:
-                    if not self._insert_goalkeeper_data(analytics_conn, goalkeepers_df, target_gameweek):
-                        logger.error("Failed to insert goalkeeper data")
-                        return False
-                    logger.info(f"✅ Inserted {len(goalkeepers_df)} goalkeepers")
-                
-                # Step 6: Final validation
+                # Step 5: Final validation
                 if not self._validate_analytics_data(analytics_conn, target_gameweek):
                     logger.error("Analytics data validation failed")
                     return False
@@ -174,62 +160,6 @@ class AnalyticsETL:
             logger.error(f"Error checking data currency: {e}")
             return False
     
-    def _insert_outfield_data(self, analytics_conn, outfield_df: pd.DataFrame, gameweek: int) -> bool:
-        """Insert outfield player data into analytics_players table using named columns"""
-        try:
-            analytics_conn.execute("BEGIN TRANSACTION")
-            
-            # Register the DataFrame with DuckDB
-            analytics_conn.register('outfield_data', outfield_df)
-            
-            # Get the actual columns from the DataFrame (excluding created_at/updated_at)
-            df_columns = list(outfield_df.columns)
-            
-            # Create the named INSERT statement
-            columns_str = ', '.join(df_columns)
-            
-            analytics_conn.execute(f"""
-                INSERT INTO analytics_players ({columns_str})
-                SELECT {columns_str} FROM outfield_data
-            """)
-            
-            analytics_conn.execute("COMMIT")
-            logger.debug(f"Successfully inserted {len(outfield_df)} outfield players using named columns")
-            return True
-            
-        except Exception as e:
-            analytics_conn.execute("ROLLBACK")
-            logger.error(f"Error inserting outfield data: {e}")
-            return False
-
-    def _insert_goalkeeper_data(self, analytics_conn, goalkeepers_df: pd.DataFrame, gameweek: int) -> bool:
-        """Insert goalkeeper data into analytics_keepers table using named columns"""
-        try:
-            analytics_conn.execute("BEGIN TRANSACTION")
-            
-            # Register the DataFrame with DuckDB
-            analytics_conn.register('goalkeeper_data', goalkeepers_df)
-            
-            # Get the actual columns from the DataFrame (excluding created_at/updated_at)
-            df_columns = list(goalkeepers_df.columns)
-            
-            # Create the named INSERT statement
-            columns_str = ', '.join(df_columns)
-            
-            analytics_conn.execute(f"""
-                INSERT INTO analytics_keepers ({columns_str})
-                SELECT {columns_str} FROM goalkeeper_data
-            """)
-            
-            analytics_conn.execute("COMMIT")
-            logger.debug(f"Successfully inserted {len(goalkeepers_df)} goalkeepers using named columns")
-            return True
-            
-        except Exception as e:
-            analytics_conn.execute("ROLLBACK")
-            logger.error(f"Error inserting goalkeeper data: {e}")
-            return False
-
     def _validate_analytics_data(self, analytics_conn, gameweek: int) -> bool:
         """Validate inserted analytics data"""
         try:

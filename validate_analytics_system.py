@@ -130,10 +130,10 @@ class AnalyticsValidatorV2:
             # Check for overlapping valid periods (SCD integrity)
             overlaps = self.conn.execute("""
                 SELECT COUNT(*) FROM (
-                    SELECT player_name, COUNT(*) as versions
+                    SELECT player_id, COUNT(*) as versions
                     FROM analytics_players 
                     WHERE is_current = true
-                    GROUP BY player_name
+                    GROUP BY player_id
                     HAVING COUNT(*) > 1
                 )
             """).fetchone()[0]

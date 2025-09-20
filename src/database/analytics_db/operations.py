@@ -30,57 +30,6 @@ class AnalyticsDBOperations:
             logger.error(f"Error getting analytics gameweek: {e}")
             return None
     
-    def mark_records_as_historical(self, gameweek: int) -> bool:
-        """Mark all current records as historical for SCD Type 2"""
-        try:
-            with self.db.get_analytics_connection() as conn:
-                current_date = datetime.now().date()
-                
-                # First count current records
-                current_count = conn.execute("""
-                    SELECT COUNT(*) FROM analytics_players WHERE is_current = true
-                """).fetchone()[0]
-                
-                # Mark current records as historical
-                conn.execute("""
-                    UPDATE analytics_players 
-                    SET is_current = false,
-                        valid_to = ?
-                    WHERE is_current = true
-                """, [current_date])
-                
-                logger.info(f"Marked {current_count} records as historical for gameweek {gameweek}")
-                return True
-                
-        except Exception as e:
-            logger.error(f"Error marking records as historical: {e}")
-            return False
-    
-    def insert_analytics_players(self, player_data: pd.DataFrame, gameweek: int) -> bool:
-        """Insert new player records into analytics_players"""
-        try:
-            with self.db.get_analytics_connection() as conn:
-                current_date = datetime.now().date()
-                scraper = FBRefScraper()
-                
-                # Add SCD Type 2 columns
-                player_data['gameweek'] = gameweek
-                player_data['valid_from'] = current_date
-                player_data['valid_to'] = None
-                player_data['is_current'] = True
-                player_data['season'] = scraper._extract_season_info()
-                
-                # Insert data
-                conn.execute("INSERT INTO analytics_players SELECT * FROM player_data")
-                
-                rows_inserted = len(player_data)
-                logger.info(f"Inserted {rows_inserted} player records for gameweek {gameweek}")
-                return True
-                
-        except Exception as e:
-            logger.error(f"Error inserting analytics players: {e}")
-            return False
-    
     def get_analytics_player_count(self, gameweek: Optional[int] = None) -> int:
         """Get count of players in analytics for specific gameweek"""
         try:
