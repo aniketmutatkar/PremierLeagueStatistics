@@ -13,6 +13,7 @@ A production-ready data pipeline and analytics system for Premier League statist
 - **Intelligent Pipeline**: Smart decision-making to avoid unnecessary FBRef requests  
 - **Separated Player Types**: Dedicated tables for outfield players and goalkeepers
 - **Production Logging**: Timestamped, rotated logs with granular progress tracking
+- **Dynamic Season Detection**: Automatically adapts to new seasons
 
 ## 🚀 Quick Start
 
@@ -69,9 +70,11 @@ PremierLeagueStatistics/
 │   ├── raw_pipeline.py                 # FBRef scraping
 │   └── analytics_pipeline.py           # SCD Type 2 ETL
 ├── src/                                # Core library
-│   ├── analytics/etl/                  # Analytics components
+│   ├── analytics/                      # Analytics components
 │   │   ├── analytics_etl.py            # Main ETL engine
-│   │   └── player_consolidation.py     # Data consolidation
+│   │   ├── player_consolidation.py     # Data consolidation
+│   │   ├── scd_processor.py            # SCD Type 2 processor
+│   │   └── column_mappings.py          # FBRef → Analytics mapping
 │   ├── database/                       # Database layer
 │   │   ├── raw_db/                     # Raw database operations
 │   │   └── analytics_db/               # Analytics database operations
@@ -114,16 +117,16 @@ FBRef Website → Raw Pipeline → Analytics ETL → Applications
 - **`analytics_keepers`** (~60 columns): Goalkeepers with specialized metrics including advanced shot-stopping data
 
 **Dimensions**: player_name, squad, position, nation, age  
-**Time Tracking**: gameweek, valid_from, valid_to, is_current  
+**Time Tracking**: gameweek, valid_from, valid_to, is_current, season  
 **Stats**: Raw FBRef statistics with explicit column mapping
 
 ### SCD Type 2 Example
 ```sql
 -- Eze's transfer tracking
-player_key | player_name | squad   | gameweek | is_current | goals | assists
-----------|-------------|---------|----------|------------|-------|--------
-1001      | Eze         | Palace  | 4        | false      | 0     | 0      (Historical)
-1002      | Eze         | Arsenal | 5        | true       | 0     | 1      (Current)
+player_key | player_name | squad   | gameweek | is_current | goals | assists | season
+----------|-------------|---------|----------|------------|-------|---------|--------
+1001      | Eze         | Palace  | 4        | false      | 0     | 0       | 2024-25
+1002      | Eze         | Arsenal | 5        | true       | 0     | 1       | 2024-25
 ```
 
 ## 🔧 Configuration
@@ -173,6 +176,7 @@ python validate_analytics_system.py
 - **Data Quality**: ✅ 160+ columns for outfield players, 60+ for goalkeepers
 - **Historical Tracking**: ✅ SCD Type 2 implementation working
 - **Transfer Detection**: ✅ Players tracked across team changes
+- **Season Detection**: ✅ Dynamic season identification (no hardcoded values)
 
 ## 🔮 Future Development
 
@@ -193,7 +197,7 @@ python validate_analytics_system.py
 ### Extending Scraping
 1. Add new stat category to `config/sources.yaml`
 2. Raw pipeline automatically includes new categories
-3. Update consolidation logic in `player_consolidation.py` if needed
+3. Update column mappings in `src/analytics/column_mappings.py` if needed
 4. Test with `python validate_analytics_system.py`
 
 ### Database Queries
@@ -223,14 +227,15 @@ The analytics database uses explicit column mapping from raw FBRef data:
 - **No prefixes**: Clean column names like `touches`, `tackles`, `shots`
 - **No derived metrics**: Only raw FBRef statistics (can add calculated metrics later)
 - **Type separation**: Outfield players and goalkeepers in separate tables
-- **Full coverage**: ~220 out of 327 raw columns mapped (67% utilization)
+- **Dynamic processing**: Centralized SCD Type 2 processor handles all historical tracking
 
 ## 📚 Additional Resources
 
 - **`PIPELINE_USAGE.md`**: Detailed pipeline usage examples
 - **`validate_analytics_system.py`**: Comprehensive system validation
 - **`config/`**: All configuration files with inline documentation
-- **`notebooks/`**: Data science and analysis examples (to be created)
+- **`src/analytics/column_mappings.py`**: Complete FBRef column mapping reference
+- **`notebooks/`**: Data science and analysis examples
 
 ---
 
