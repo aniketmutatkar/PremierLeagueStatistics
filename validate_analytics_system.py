@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Analytics System Validation Script
-Comprehensive testing of SCD Type 2, player tracking, and data quality
+Analytics System Validation Script v2.0
+Comprehensive validation for the rebuilt analytics system with proper schema checks
 """
 
 import duckdb
@@ -9,9 +9,10 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 import sys
+from typing import List, Dict, Any, Tuple
 
-class AnalyticsValidator:
-    """Validates the complete analytics system functionality"""
+class AnalyticsValidatorV2:
+    """Validates the complete analytics system with current schema"""
     
     def __init__(self, db_path: str = "data/premierleague_analytics.duckdb"):
         self.db_path = db_path
@@ -25,303 +26,445 @@ class AnalyticsValidator:
         if self.conn:
             self.conn.close()
     
-    def validate_scd_type_2(self):
-        """Test SCD Type 2 implementation"""
-        print("🔍 VALIDATING SCD TYPE 2 IMPLEMENTATION")
+    def validate_schema_integrity(self) -> bool:
+        """Validate database schema matches expected structure"""
+        print("🏗️ VALIDATING SCHEMA INTEGRITY")
         print("=" * 50)
         
-        # Basic counts
-        current_count = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE is_current = true").fetchone()[0]
-        historical_count = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE is_current = false").fetchone()[0]
-        total_count = self.conn.execute("SELECT COUNT(*) FROM analytics_players").fetchone()[0]
-        
-        print(f"📊 Record Counts:")
-        print(f"   Current records: {current_count:,}")
-        print(f"   Historical records: {historical_count:,}")
-        print(f"   Total records: {total_count:,}")
-        print(f"   ✅ Total = Current + Historical: {total_count == current_count + historical_count}")
-        
-        # Gameweek distribution
-        gameweeks = self.conn.execute("SELECT DISTINCT gameweek FROM analytics_players ORDER BY gameweek").fetchall()
-        gameweeks = [gw[0] for gw in gameweeks]
-        print(f"\n🗓️ Gameweeks Present: {gameweeks}")
-        
-        # Records per gameweek
-        gw_distribution = self.conn.execute("""
-            SELECT gameweek, is_current, COUNT(*) as records
-            FROM analytics_players 
-            GROUP BY gameweek, is_current 
-            ORDER BY gameweek, is_current
-        """).fetchdf()
-        
-        print(f"\n📈 Records by Gameweek:")
-        for _, row in gw_distribution.iterrows():
-            status = "Current" if row['is_current'] else "Historical"
-            print(f"   GW{row['gameweek']}: {row['records']:,} {status} records")
-        
-        # Validate only current gameweek has is_current=true
-        current_gameweeks = self.conn.execute("SELECT DISTINCT gameweek FROM analytics_players WHERE is_current = true").fetchall()
-        if len(current_gameweeks) == 1:
-            current_gw = current_gameweeks[0][0]
-            print(f"   ✅ Only GW{current_gw} marked as current")
-        else:
-            print(f"   ❌ Multiple gameweeks marked as current: {current_gameweeks}")
+        try:
+            # Check if both tables exist
+            tables = self.conn.execute("SHOW TABLES").fetchall()
+            table_names = [table[0] for table in tables]
             
-        return True
+            expected_tables = ['analytics_players', 'analytics_keepers']
+            missing_tables = [t for t in expected_tables if t not in table_names]
+            
+            if missing_tables:
+                print(f"❌ Missing tables: {missing_tables}")
+                return False
+            
+            print(f"✅ Found required tables: {expected_tables}")
+            
+            # Check analytics_players structure
+            players_info = self.conn.execute("PRAGMA table_info(analytics_players)").fetchall()
+            players_columns = [col[1] for col in players_info]
+            players_count = len(players_columns)
+            
+            # Check analytics_keepers structure  
+            keepers_info = self.conn.execute("PRAGMA table_info(analytics_keepers)").fetchall()
+            keepers_columns = [col[1] for col in keepers_info]
+            keepers_count = len(keepers_columns)
+            
+            print(f"📊 Table Structure:")
+            print(f"   analytics_players: {players_count} columns")
+            print(f"   analytics_keepers: {keepers_count} columns")
+            
+            # Validate key columns exist
+            required_player_cols = [
+                'player_key', 'player_name', 'squad', 'position', 'gameweek',
+                'is_current', 'valid_from', 'valid_to', 'minutes_played', 'touches'
+            ]
+            
+            missing_cols = [col for col in required_player_cols if col not in players_columns]
+            if missing_cols:
+                print(f"❌ Missing required columns in analytics_players: {missing_cols}")
+                return False
+            
+            print(f"✅ All required columns present")
+            
+            # Check for SCD Type 2 columns
+            scd_columns = ['gameweek', 'is_current', 'valid_from', 'valid_to']
+            scd_present = all(col in players_columns for col in scd_columns)
+            print(f"✅ SCD Type 2 columns present: {scd_present}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Schema validation failed: {e}")
+            return False
     
-    def validate_player_tracking(self):
+    def validate_scd_type_2(self) -> bool:
+        """Test SCD Type 2 implementation"""
+        print("\n🔍 VALIDATING SCD TYPE 2 IMPLEMENTATION")
+        print("=" * 50)
+        
+        try:
+            # Basic counts
+            current_count = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE is_current = true").fetchone()[0]
+            historical_count = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE is_current = false").fetchone()[0]
+            total_count = self.conn.execute("SELECT COUNT(*) FROM analytics_players").fetchone()[0]
+            
+            print(f"📊 Record Counts:")
+            print(f"   Current records: {current_count:,}")
+            print(f"   Historical records: {historical_count:,}")
+            print(f"   Total records: {total_count:,}")
+            print(f"   ✅ Total = Current + Historical: {total_count == current_count + historical_count}")
+            
+            # Gameweek distribution
+            gameweeks = self.conn.execute("SELECT DISTINCT gameweek FROM analytics_players ORDER BY gameweek").fetchall()
+            gameweeks = [gw[0] for gw in gameweeks]
+            print(f"\n🗓️ Gameweeks Present: {gameweeks}")
+            
+            # Records per gameweek
+            gw_distribution = self.conn.execute("""
+                SELECT gameweek, is_current, COUNT(*) as records
+                FROM analytics_players 
+                GROUP BY gameweek, is_current 
+                ORDER BY gameweek, is_current DESC
+            """).fetchall()
+            
+            print(f"\n📈 Records by Gameweek:")
+            for gw, is_current, count in gw_distribution:
+                status = "Current" if is_current else "Historical"
+                print(f"   GW{gw}: {count:,} {status} records")
+            
+            # Validate only current gameweek has is_current=true
+            current_gameweeks = self.conn.execute("SELECT DISTINCT gameweek FROM analytics_players WHERE is_current = true").fetchall()
+            if len(current_gameweeks) == 1:
+                current_gw = current_gameweeks[0][0]
+                print(f"   ✅ Only GW{current_gw} marked as current")
+            else:
+                print(f"   ❌ Multiple gameweeks marked as current: {current_gameweeks}")
+                return False
+            
+            # Check for overlapping valid periods (SCD integrity)
+            overlaps = self.conn.execute("""
+                SELECT COUNT(*) FROM (
+                    SELECT player_name, COUNT(*) as versions
+                    FROM analytics_players 
+                    WHERE is_current = true
+                    GROUP BY player_name
+                    HAVING COUNT(*) > 1
+                )
+            """).fetchone()[0]
+            
+            if overlaps > 0:
+                print(f"   ❌ {overlaps} players have multiple current records")
+                return False
+            else:
+                print(f"   ✅ No overlapping current records")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ SCD Type 2 validation failed: {e}")
+            return False
+    
+    def validate_player_tracking(self) -> bool:
         """Test individual player tracking across gameweeks"""
         print("\n🏃 VALIDATING PLAYER TRACKING")
         print("=" * 50)
         
-        # Find players who appear in multiple gameweeks
-        multi_gw_players = self.conn.execute("""
-            SELECT player_name, COUNT(DISTINCT gameweek) as gameweeks
-            FROM analytics_players 
-            GROUP BY player_name 
-            HAVING COUNT(DISTINCT gameweek) > 1
-            ORDER BY gameweeks DESC, player_name
-            LIMIT 10
-        """).fetchdf()
-        
-        print(f"🔄 Players Tracked Across Multiple Gameweeks:")
-        for _, player in multi_gw_players.iterrows():
-            print(f"   {player['player_name']}: {player['gameweeks']} gameweeks")
-        
-        # Detailed tracking for a specific player (Eze as example)
-        print(f"\n🎯 Detailed Player Tracking Example:")
-        eze_tracking = self.conn.execute("""
-            SELECT gameweek, is_current, squad, position, 
-                   goals, assists, minutes_played, progressive_carries,
-                   goals_vs_expected, form_score
-            FROM analytics_players 
-            WHERE player_name LIKE '%Eze%'
-            ORDER BY gameweek, squad
-        """).fetchdf()
-        
-        if not eze_tracking.empty:
-            print(f"   Eberechi Eze tracking ({len(eze_tracking)} records):")
-            for _, record in eze_tracking.iterrows():
-                status = "CURRENT" if record['is_current'] else "historical"
-                print(f"     GW{record['gameweek']} @ {record['squad']}: {record['goals']}G/{record['assists']}A, {record['minutes_played']}min ({status})")
-        
-        # Check for transfer detection
-        transfers = self.conn.execute("""
-            SELECT player_name, gameweek, squad
-            FROM analytics_players 
-            WHERE player_name IN (
-                SELECT player_name 
+        try:
+            # Find players who appear in multiple gameweeks
+            multi_gw_players = self.conn.execute("""
+                SELECT player_name, COUNT(DISTINCT gameweek) as gameweeks,
+                       COUNT(DISTINCT squad) as teams
                 FROM analytics_players 
-                GROUP BY player_name, gameweek 
-                HAVING COUNT(DISTINCT squad) > 1
-            )
-            ORDER BY player_name, gameweek, squad
-        """).fetchdf()
-        
-        if not transfers.empty:
-            print(f"\n🔄 Transfer Activity Detected:")
-            current_player = None
-            for _, transfer in transfers.iterrows():
-                if transfer['player_name'] != current_player:
-                    current_player = transfer['player_name']
-                    print(f"   {current_player}:")
-                print(f"     GW{transfer['gameweek']}: {transfer['squad']}")
-        
-        return True
+                GROUP BY player_name 
+                HAVING COUNT(DISTINCT gameweek) > 1
+                ORDER BY gameweeks DESC, player_name
+                LIMIT 10
+            """).fetchall()
+            
+            print(f"🔄 Players Tracked Across Multiple Gameweeks:")
+            transfers_detected = 0
+            for player_name, gameweeks, teams in multi_gw_players:
+                status = f"({teams} teams)" if teams > 1 else ""
+                print(f"   {player_name}: {gameweeks} gameweeks {status}")
+                if teams > 1:
+                    transfers_detected += 1
+            
+            if transfers_detected > 0:
+                print(f"   🔄 Transfer detection: {transfers_detected} players changed teams")
+            
+            # Test a specific player's progression (take first multi-gameweek player)
+            if multi_gw_players:
+                test_player = multi_gw_players[0][0]
+                print(f"\n🎯 Detailed Tracking Example - {test_player}:")
+                
+                player_history = self.conn.execute("""
+                    SELECT gameweek, is_current, squad, position, 
+                           minutes_played, touches, goals, assists
+                    FROM analytics_players 
+                    WHERE player_name = ?
+                    ORDER BY gameweek
+                """, [test_player]).fetchall()
+                
+                for gw, is_current, squad, pos, mins, touches, goals, assists in player_history:
+                    status = "Current" if is_current else "Historical"
+                    print(f"   GW{gw}: {squad} ({pos}) - {mins}min, {touches}touches, {goals}G/{assists}A [{status}]")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Player tracking validation failed: {e}")
+            return False
     
-    def validate_derived_metrics(self):
-        """Test derived metrics calculation"""
-        print("\n🧮 VALIDATING DERIVED METRICS")
-        print("=" * 50)
-        
-        # Check for non-null derived metrics in current data
-        current_metrics = self.conn.execute("""
-            SELECT 
-                COUNT(*) as total_players,
-                COUNT(goals_vs_expected) as has_goals_vs_exp,
-                COUNT(progressive_actions_per_90) as has_prog_actions,
-                COUNT(possession_efficiency) as has_poss_efficiency,
-                COUNT(final_third_involvement) as has_final_third,
-                COUNT(form_score) as has_form_score
-            FROM analytics_players 
-            WHERE is_current = true
-        """).fetchdf().iloc[0]
-        
-        print(f"📊 Derived Metrics Coverage (Current Players):")
-        print(f"   Total players: {current_metrics['total_players']:,}")
-        print(f"   Goals vs Expected: {current_metrics['has_goals_vs_exp']:,} ({current_metrics['has_goals_vs_exp']/current_metrics['total_players']*100:.1f}%)")
-        print(f"   Progressive Actions/90: {current_metrics['has_prog_actions']:,} ({current_metrics['has_prog_actions']/current_metrics['total_players']*100:.1f}%)")
-        print(f"   Possession Efficiency: {current_metrics['has_poss_efficiency']:,} ({current_metrics['has_poss_efficiency']/current_metrics['total_players']*100:.1f}%)")
-        print(f"   Final Third Involvement: {current_metrics['has_final_third']:,} ({current_metrics['has_final_third']/current_metrics['total_players']*100:.1f}%)")
-        print(f"   Form Score: {current_metrics['has_form_score']:,} ({current_metrics['has_form_score']/current_metrics['total_players']*100:.1f}%)")
-        
-        # Sample derived metrics values
-        sample_metrics = self.conn.execute("""
-            SELECT player_name, squad, goals_vs_expected, progressive_actions_per_90, 
-                   possession_efficiency, final_third_involvement, form_score
-            FROM analytics_players 
-            WHERE is_current = true 
-              AND minutes_played > 90
-              AND (goals_vs_expected IS NOT NULL OR progressive_actions_per_90 IS NOT NULL)
-            ORDER BY form_score DESC 
-            LIMIT 5
-        """).fetchdf()
-        
-        print(f"\n🌟 Top Performers by Form Score:")
-        for _, player in sample_metrics.iterrows():
-            print(f"   {player['player_name']} ({player['squad']}): Form={player['form_score']:.2f}, Goals+xG={player['goals_vs_expected']:.2f}")
-        
-        return True
-    
-    def validate_data_quality(self):
+    def validate_data_quality(self) -> bool:
         """Test data quality and consistency"""
         print("\n✅ VALIDATING DATA QUALITY")
         print("=" * 50)
         
-        # Check for data consistency issues
-        issues = []
-        
-        # 1. Check for true duplicates (same player, same team, same gameweek)
-        true_duplicates = self.conn.execute("""
-            SELECT COUNT(*) FROM (
-                SELECT player_name, squad, gameweek 
+        try:
+            issues = []
+            
+            # 1. Check for duplicate current records
+            duplicates = self.conn.execute("""
+                SELECT COUNT(*) FROM (
+                    SELECT player_name, squad, gameweek 
+                    FROM analytics_players 
+                    WHERE is_current = true
+                    GROUP BY player_name, squad, gameweek 
+                    HAVING COUNT(*) > 1
+                )
+            """).fetchone()[0]
+            
+            if duplicates > 0:
+                issues.append(f"{duplicates} duplicate current records")
+            
+            # 2. Check for missing player keys
+            missing_keys = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE player_key IS NULL").fetchone()[0]
+            if missing_keys > 0:
+                issues.append(f"{missing_keys} records with missing player_key")
+            
+            # 3. Check for invalid gameweeks
+            invalid_gw = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE gameweek < 1 OR gameweek > 38").fetchone()[0]
+            if invalid_gw > 0:
+                issues.append(f"{invalid_gw} records with invalid gameweeks")
+            
+            # 4. Check for negative minutes
+            negative_minutes = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE minutes_played < 0").fetchone()[0]
+            if negative_minutes > 0:
+                issues.append(f"{negative_minutes} records with negative minutes")
+            
+            # 5. Check for logical inconsistencies (goals > shots, if shots column exists)
+            columns = [col[1] for col in self.conn.execute("PRAGMA table_info(analytics_players)").fetchall()]
+            if 'shots' in columns:
+                illogical_stats = self.conn.execute("""
+                    SELECT COUNT(*) FROM analytics_players 
+                    WHERE goals > shots AND shots > 0
+                """).fetchone()[0]
+                if illogical_stats > 0:
+                    issues.append(f"{illogical_stats} records where goals > shots")
+            
+            # 6. Check for players with zero touches but significant minutes (data quality flag)
+            zero_touches = self.conn.execute("""
+                SELECT COUNT(*) FROM analytics_players 
+                WHERE touches = 0 AND minutes_played > 90 AND is_current = true
+            """).fetchone()[0]
+            
+            print(f"🔍 Data Quality Checks:")
+            if not issues:
+                print("   ✅ All data quality checks passed")
+            else:
+                print("   ❌ Issues found:")
+                for issue in issues:
+                    print(f"      - {issue}")
+            
+            # Data quality insights
+            quality_stats = self.conn.execute("""
+                SELECT 
+                    COUNT(*) as total_current,
+                    SUM(CASE WHEN touches > 0 THEN 1 ELSE 0 END) as with_touches,
+                    SUM(CASE WHEN minutes_played > 0 THEN 1 ELSE 0 END) as with_minutes,
+                    AVG(minutes_played) as avg_minutes,
+                    MAX(minutes_played) as max_minutes
                 FROM analytics_players 
                 WHERE is_current = true
-                GROUP BY player_name, squad, gameweek 
-                HAVING COUNT(*) > 1
-            )
-        """).fetchone()[0]
-        
-        if true_duplicates > 0:
-            issues.append(f"True duplicate records for {true_duplicates} player-team-gameweek combinations")
-        
-        # Also track transfer activity as a positive feature
-        transfer_activity = self.conn.execute("""
-            SELECT COUNT(*) FROM (
-                SELECT player_name, gameweek 
-                FROM analytics_players 
-                WHERE is_current = true
-                GROUP BY player_name, gameweek 
-                HAVING COUNT(DISTINCT squad) > 1
-            )
-        """).fetchone()[0]
-        
-        # 2. Check for missing player keys
-        missing_keys = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE player_key IS NULL").fetchone()[0]
-        if missing_keys > 0:
-            issues.append(f"{missing_keys} records with missing player_key")
-        
-        # 3. Check for invalid gameweeks
-        invalid_gw = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE gameweek < 1 OR gameweek > 38").fetchone()[0]
-        if invalid_gw > 0:
-            issues.append(f"{invalid_gw} records with invalid gameweeks")
-        
-        # 4. Check for negative minutes
-        negative_minutes = self.conn.execute("SELECT COUNT(*) FROM analytics_players WHERE minutes_played < 0").fetchone()[0]
-        if negative_minutes > 0:
-            issues.append(f"{negative_minutes} records with negative minutes")
-        
-        # 5. Check for logical inconsistencies (goals > shots)
-        illogical_stats = self.conn.execute("""
-            SELECT COUNT(*) FROM analytics_players 
-            WHERE goals > shots AND shots > 0
-        """).fetchone()[0]
-        if illogical_stats > 0:
-            issues.append(f"{illogical_stats} records where goals > shots")
-        
-        print(f"🔍 Data Quality Checks:")
-        if not issues:
-            print("   ✅ All data quality checks passed")
-        else:
-            print("   ❌ Issues found:")
-            for issue in issues:
-                print(f"      - {issue}")
-        
-        # Report transfer activity as positive feature
-        if transfer_activity > 0:
-            print(f"   🔄 Transfer tracking: {transfer_activity} players with mid-gameweek transfers detected")
-        
-        # Summary statistics
-        summary = self.conn.execute("""
-            SELECT 
-                COUNT(DISTINCT player_name) as unique_players,
-                COUNT(DISTINCT squad) as unique_teams,
-                MIN(gameweek) as min_gameweek,
-                MAX(gameweek) as max_gameweek,
-                SUM(CASE WHEN minutes_played > 0 THEN 1 ELSE 0 END) as players_with_minutes
-            FROM analytics_players
-        """).fetchdf().iloc[0]
-        
-        print(f"\n📈 System Summary:")
-        print(f"   Unique players tracked: {summary['unique_players']:,}")
-        print(f"   Teams in database: {summary['unique_teams']}")
-        print(f"   Gameweek range: {summary['min_gameweek']} - {summary['max_gameweek']}")
-        print(f"   Players with playing time: {summary['players_with_minutes']:,}")
-        
-        return len(issues) == 0
+            """).fetchall()[0]
+            
+            total, with_touches, with_mins, avg_mins, max_mins = quality_stats
+            touch_pct = (with_touches / total * 100) if total > 0 else 0
+            
+            print(f"\n📊 Data Quality Summary:")
+            print(f"   Current players: {total:,}")
+            print(f"   Players with touches: {with_touches:,} ({touch_pct:.1f}%)")
+            print(f"   Players with minutes: {with_mins:,}")
+            print(f"   Average minutes: {avg_mins:.1f}")
+            print(f"   Maximum minutes: {max_mins}")
+            
+            if zero_touches > 0:
+                print(f"   ⚠️  {zero_touches} players with 0 touches but >90 minutes (possible data issue)")
+            
+            return len(issues) == 0
+            
+        except Exception as e:
+            print(f"❌ Data quality validation failed: {e}")
+            return False
     
-    def generate_insights(self):
-        """Generate insights from the analytics system"""
-        print("\n🎯 SYSTEM INSIGHTS & CAPABILITIES")
+    def validate_column_mapping(self) -> bool:
+        """Validate that column mapping worked correctly"""
+        print("\n🗂️ VALIDATING COLUMN MAPPING")
         print("=" * 50)
         
-        # Player development tracking
-        player_progression = self.conn.execute("""
-            WITH player_stats AS (
-                SELECT player_name, gameweek, goals, assists, minutes_played,
-                       LAG(goals) OVER (PARTITION BY player_name ORDER BY gameweek) as prev_goals,
-                       LAG(assists) OVER (PARTITION BY player_name ORDER BY gameweek) as prev_assists
+        try:
+            # Check that we have the expected core columns with realistic data
+            core_stats = self.conn.execute("""
+                SELECT 
+                    COUNT(*) as total_players,
+                    SUM(CASE WHEN touches > 0 THEN 1 ELSE 0 END) as has_touches,
+                    SUM(CASE WHEN minutes_played > 0 THEN 1 ELSE 0 END) as has_minutes,
+                    SUM(CASE WHEN goals >= 0 THEN 1 ELSE 0 END) as has_goals,
+                    SUM(CASE WHEN assists >= 0 THEN 1 ELSE 0 END) as has_assists
                 FROM analytics_players 
-                WHERE player_name IN (
-                    SELECT player_name FROM analytics_players 
-                    GROUP BY player_name HAVING COUNT(DISTINCT gameweek) > 1
-                )
-            )
-            SELECT player_name, 
-                   SUM(goals - COALESCE(prev_goals, 0)) as goals_gained,
-                   SUM(assists - COALESCE(prev_assists, 0)) as assists_gained
-            FROM player_stats 
-            WHERE prev_goals IS NOT NULL
-            GROUP BY player_name
-            HAVING SUM(goals - COALESCE(prev_goals, 0)) > 0 OR SUM(assists - COALESCE(prev_assists, 0)) > 0
-            ORDER BY (SUM(goals - COALESCE(prev_goals, 0)) + SUM(assists - COALESCE(prev_assists, 0))) DESC
-            LIMIT 5
-        """).fetchdf()
+                WHERE is_current = true
+            """).fetchall()[0]
+            
+            total, touches, minutes, goals, assists = core_stats
+            
+            print(f"📈 Core Statistics Coverage:")
+            print(f"   Total current players: {total:,}")
+            print(f"   Players with touches: {touches:,} ({touches/total*100:.1f}%)")
+            print(f"   Players with minutes: {minutes:,} ({minutes/total*100:.1f}%)")
+            print(f"   Players with goals data: {goals:,} ({goals/total*100:.1f}%)")
+            print(f"   Players with assists data: {assists:,} ({assists/total*100:.1f}%)")
+            
+            # Check that our explicit column mapping worked
+            success_threshold = 0.95  # 95% of players should have realistic data
+            
+            mapping_success = True
+            if touches / total < success_threshold:
+                print(f"   ❌ Touch data coverage below threshold ({touches/total*100:.1f}% < {success_threshold*100}%)")
+                mapping_success = False
+            
+            if mapping_success:
+                print(f"   ✅ Column mapping successful - realistic data distribution")
+            
+            # Sample some actual values to verify mapping worked
+            sample_data = self.conn.execute("""
+                SELECT player_name, squad, minutes_played, touches, goals, assists, position
+                FROM analytics_players 
+                WHERE is_current = true AND minutes_played > 0
+                ORDER BY touches DESC
+                LIMIT 5
+            """).fetchall()
+            
+            print(f"\n🎯 Sample Player Data (Top by Touches):")
+            for name, squad, mins, touches, goals, assists, pos in sample_data:
+                print(f"   {name} ({squad}, {pos}): {mins}min, {touches}touches, {goals}G/{assists}A")
+            
+            return mapping_success
+            
+        except Exception as e:
+            print(f"❌ Column mapping validation failed: {e}")
+            return False
+    
+    def validate_goalkeepers(self) -> bool:
+        """Validate goalkeeper data separately"""
+        print("\n🥅 VALIDATING GOALKEEPER DATA")
+        print("=" * 50)
         
-        print(f"🚀 Top Improving Players (GW4 → GW5):")
-        for _, player in player_progression.iterrows():
-            print(f"   {player['player_name']}: +{player['goals_gained']}G / +{player['assists_gained']}A")
+        try:
+            # Check keeper counts
+            total_keepers = self.conn.execute("SELECT COUNT(*) FROM analytics_keepers WHERE is_current = true").fetchone()[0]
+            print(f"📊 Current Goalkeepers: {total_keepers}")
+            
+            if total_keepers == 0:
+                print("   ⚠️  No current goalkeeper data found")
+                return False
+            
+            # Check keeper-specific stats
+            keeper_stats = self.conn.execute("""
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN saves >= 0 THEN 1 ELSE 0 END) as has_saves,
+                    SUM(CASE WHEN goals_against >= 0 THEN 1 ELSE 0 END) as has_ga,
+                    AVG(saves) as avg_saves,
+                    AVG(goals_against) as avg_ga
+                FROM analytics_keepers 
+                WHERE is_current = true
+            """).fetchall()[0]
+            
+            total, saves, ga, avg_saves, avg_ga = keeper_stats
+            
+            print(f"📈 Goalkeeper Statistics:")
+            print(f"   Keepers with saves data: {saves}/{total} ({saves/total*100:.1f}%)")
+            print(f"   Keepers with GA data: {ga}/{total} ({ga/total*100:.1f}%)")
+            print(f"   Average saves: {avg_saves:.1f}")
+            print(f"   Average goals against: {avg_ga:.1f}")
+            
+            # Sample keeper data
+            sample_keepers = self.conn.execute("""
+                SELECT player_name, squad, minutes_played, saves, goals_against, clean_sheets
+                FROM analytics_keepers 
+                WHERE is_current = true AND minutes_played > 0
+                ORDER BY saves DESC
+                LIMIT 3
+            """).fetchall()
+            
+            print(f"\n🌟 Top Goalkeepers by Saves:")
+            for name, squad, mins, saves, ga, cs in sample_keepers:
+                print(f"   {name} ({squad}): {mins}min, {saves}saves, {ga}GA, {cs}CS")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Goalkeeper validation failed: {e}")
+            return False
+    
+    def generate_system_insights(self) -> bool:
+        """Generate insights about the analytics system"""
+        print("\n🔮 ANALYTICS SYSTEM INSIGHTS")
+        print("=" * 50)
         
-        # Team comparison
-        team_stats = self.conn.execute("""
-            SELECT squad, 
-                   COUNT(*) as squad_size,
-                   SUM(goals) as total_goals,
-                   SUM(assists) as total_assists,
-                   AVG(minutes_played) as avg_minutes
-            FROM analytics_players 
-            WHERE is_current = true
-            GROUP BY squad
-            ORDER BY total_goals + total_assists DESC
-            LIMIT 5
-        """).fetchdf()
-        
-        print(f"\n🏆 Top Attacking Teams (Current GW):")
-        for _, team in team_stats.iterrows():
-            print(f"   {team['squad']}: {team['total_goals']}G/{team['total_assists']}A ({team['squad_size']} players)")
-        
-        print(f"\n🔮 Machine Learning Ready:")
-        print(f"   ✅ Historical player performance tracking")
-        print(f"   ✅ Transfer impact analysis capabilities") 
-        print(f"   ✅ Team formation and tactics analysis")
-        print(f"   ✅ Player development trajectory modeling")
-        print(f"   ✅ Performance prediction features")
-        
-        return True
+        try:
+            # Overall system summary
+            summary = self.conn.execute("""
+                SELECT 
+                    COUNT(DISTINCT player_name) as unique_players,
+                    COUNT(DISTINCT squad) as unique_teams,
+                    MIN(gameweek) as min_gameweek,
+                    MAX(gameweek) as max_gameweek,
+                    COUNT(*) as total_records
+                FROM analytics_players
+            """).fetchall()[0]
+            
+            unique_players, teams, min_gw, max_gw, total_records = summary
+            
+            print(f"📊 System Overview:")
+            print(f"   Unique players tracked: {unique_players:,}")
+            print(f"   Teams in database: {teams}")
+            print(f"   Gameweek range: {min_gw} - {max_gw}")
+            print(f"   Total player records: {total_records:,}")
+            print(f"   Historical depth: {max_gw - min_gw + 1} gameweeks")
+            
+            # Top performing teams by current stats
+            team_stats = self.conn.execute("""
+                SELECT squad,
+                       COUNT(*) as squad_size,
+                       SUM(goals) as total_goals,
+                       SUM(assists) as total_assists,
+                       AVG(minutes_played) as avg_minutes
+                FROM analytics_players 
+                WHERE is_current = true
+                GROUP BY squad
+                ORDER BY total_goals + total_assists DESC
+                LIMIT 5
+            """).fetchall()
+            
+            print(f"\n🏆 Top Attacking Teams (Current GW):")
+            for squad, size, goals, assists, avg_mins in team_stats:
+                print(f"   {squad}: {goals}G/{assists}A ({size} players, {avg_mins:.0f}min avg)")
+            
+            print(f"\n✅ SYSTEM READY FOR:")
+            print(f"   🔬 Advanced player analysis")
+            print(f"   📈 Performance tracking over time")
+            print(f"   🔄 Transfer impact analysis")
+            print(f"   🤖 Machine learning model training")
+            print(f"   📊 Team formation analysis")
+            print(f"   🎯 Tactical pattern recognition")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ System insights failed: {e}")
+            return False
+
 
 def main():
     """Run complete analytics system validation"""
-    print("🏆 PREMIER LEAGUE ANALYTICS SYSTEM VALIDATION")
+    print("🏆 PREMIER LEAGUE ANALYTICS SYSTEM VALIDATION v2.0")
     print("=" * 70)
     print(f"📅 Validation run: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
@@ -331,28 +474,47 @@ def main():
         return False
     
     try:
-        with AnalyticsValidator(db_path) as validator:
+        with AnalyticsValidatorV2(db_path) as validator:
             # Run all validation tests
             tests = [
-                validator.validate_scd_type_2(),
-                validator.validate_player_tracking(),
-                validator.validate_derived_metrics(),
-                validator.validate_data_quality(),
-                validator.generate_insights()
+                ("Schema Integrity", validator.validate_schema_integrity()),
+                ("SCD Type 2", validator.validate_scd_type_2()),
+                ("Player Tracking", validator.validate_player_tracking()),
+                ("Data Quality", validator.validate_data_quality()),
+                ("Column Mapping", validator.validate_column_mapping()),
+                ("Goalkeeper Data", validator.validate_goalkeepers()),
+                ("System Insights", validator.generate_system_insights())
             ]
             
-            if all(tests):
+            # Summary
+            print(f"\n📋 VALIDATION SUMMARY")
+            print("=" * 50)
+            
+            passed = 0
+            for test_name, result in tests:
+                status = "✅ PASS" if result else "❌ FAIL"
+                print(f"   {test_name}: {status}")
+                if result:
+                    passed += 1
+            
+            print(f"\n🎯 Overall Result: {passed}/{len(tests)} tests passed")
+            
+            if passed == len(tests):
                 print(f"\n🎉 ALL VALIDATION TESTS PASSED!")
                 print(f"✅ Your analytics system is production-ready")
-                print(f"🚀 Ready for machine learning and advanced analytics")
+                print(f"🚀 Ready for advanced analytics and machine learning")
                 return True
             else:
-                print(f"\n❌ Some validation tests failed")
+                print(f"\n⚠️  {len(tests) - passed} validation test(s) failed")
+                print(f"🔧 Review failed tests and fix issues before proceeding")
                 return False
                 
     except Exception as e:
         print(f"❌ Validation failed with error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = main()

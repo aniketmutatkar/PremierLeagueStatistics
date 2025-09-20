@@ -11,6 +11,7 @@ import logging
 from typing import Dict, List, Optional, Tuple
 import hashlib
 from datetime import datetime
+from src.scraping.fbref_scraper import FBRefScraper
 
 # Import our explicit mapping dictionary
 from .column_mappings import (
@@ -320,9 +321,10 @@ class PlayerDataConsolidator:
             return int(hashlib.md5(key_string.encode()).hexdigest()[:8], 16)
         
         df['player_key'] = df.apply(generate_analytics_player_key, axis=1)
-        
+        scraper = FBRefScraper()
+
         # Add SCD Type 2 metadata
-        df['season'] = '2025-2026'  # TODO: Make this dynamic
+        df['season'] = scraper._extract_season_info()
         df['gameweek'] = gameweek
         df['valid_from'] = datetime.now().date()
         df['valid_to'] = None
