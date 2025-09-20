@@ -18,6 +18,7 @@ if __name__ == "__main__":
 from src.database.analytics_db import AnalyticsDBConnection, AnalyticsDBOperations
 from src.analytics.data_consolidation import DataConsolidator
 from src.analytics.scd_processor import SCDType2Processor
+from .fixtures import FixturesProcessor
 
 # Configure logging
 logging.basicConfig(
@@ -68,7 +69,13 @@ class AnalyticsETL:
                     logger.info("✅ Data is already current, skipping ETL")
                     return True
                 
-                # Step 3: Consolidate player data
+                logger.info("🏈 Step 3: Processing fixtures...")
+                fixtures_processor = FixturesProcessor()
+                fixtures_success = fixtures_processor.process_fixtures(raw_conn, analytics_conn, target_gameweek, force_refresh)
+                if not fixtures_success:
+                    logger.warning("⚠️ Fixtures processing failed, continuing with entity analytics")
+
+                # Step 4: Consolidate player data
                 logger.info("🔄 Consolidating player data...")
                 outfield_df, goalkeepers_df = self.consolidator.consolidate_players(raw_conn, target_gameweek)
 
@@ -106,7 +113,7 @@ class AnalyticsETL:
                     logger.error(f"Consolidation validation failed: {validation['errors']}")
                     return False
                 
-                # Step 4: Handle SCD Type 2 updates
+                # Step 5: Handle SCD Type 2 updates
                 logger.info("🕐 Processing SCD Type 2 updates...")
                 
                 scd_processor = SCDType2Processor(analytics_conn)
@@ -117,7 +124,7 @@ class AnalyticsETL:
                 
                 logger.info(f"✅ SCD Type 2 processing completed for {len(outfield_df)} outfield + {len(goalkeepers_df)} goalkeepers")
                 
-                # Step 5: Final validation
+                # Step 6: Final validation
                 if not self._validate_analytics_data(analytics_conn, target_gameweek):
                     logger.error("Analytics data validation failed")
                     return False
