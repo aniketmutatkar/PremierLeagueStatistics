@@ -9,9 +9,8 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 import sys
-from typing import List, Dict, Any, Tuple
 
-class AnalyticsValidatorV2:
+class AnalyticsValidator:
     """Validates the complete analytics system with current schema"""
     
     def __init__(self, db_path: str = "data/premierleague_analytics.duckdb"):
@@ -474,7 +473,7 @@ def main():
         return False
     
     try:
-        with AnalyticsValidatorV2(db_path) as validator:
+        with AnalyticsValidator(db_path) as validator:
             # Run all validation tests
             tests = [
                 ("Schema Integrity", validator.validate_schema_integrity()),

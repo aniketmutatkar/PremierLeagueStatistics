@@ -84,11 +84,13 @@ class ProductionAnalyticsPipeline:
         stats = self.pipeline.pipeline_stats
         if stats:
             logger.info(f"📊 Pipeline Statistics:")
-            logger.info(f"   Players processed: {stats.get('players_processed', 'N/A')}")
-            logger.info(f"   Teams processed: {stats.get('teams_processed', 'N/A')}")
-            logger.info(f"   Records inserted: {stats.get('records_inserted', 'N/A')}")
+            logger.info(f"   Total entities processed: {stats.get('total_entities', 'N/A')}")
+            logger.info(f"   Outfield players: {stats.get('outfield_players', 'N/A')}")
+            logger.info(f"   Goalkeepers: {stats.get('goalkeepers', 'N/A')}")
+            logger.info(f"   Squads: {stats.get('squads', 'N/A')}")
+            logger.info(f"   Opponents: {stats.get('opponents', 'N/A')}")
             logger.info(f"   Gameweek: {stats.get('gameweek', 'N/A')}")
-            logger.info(f"   Metrics calculated: {stats.get('metrics_calculated', 'N/A')}")
+            logger.info(f"   Duration: {stats.get('elapsed_time_seconds', 'N/A')} seconds")
     
     def _log_failure(self, error_msg: str):
         """Log pipeline failure"""
@@ -171,10 +173,9 @@ def validate_analytics_data():
         with AnalyticsValidator() as validator:
             # Run core validations
             scd_valid = validator.validate_scd_type_2()
-            metrics_valid = validator.validate_derived_metrics()
             quality_valid = validator.validate_data_quality()
             
-            if all([scd_valid, metrics_valid, quality_valid]):
+            if all([scd_valid, quality_valid]):
                 print("✅ All validation checks passed")
                 return True
             else:

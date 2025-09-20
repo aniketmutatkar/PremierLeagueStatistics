@@ -128,7 +128,10 @@ class AnalyticsETL:
                     'gameweek': target_gameweek,
                     'outfield_players': len(outfield_df),
                     'goalkeepers': len(goalkeepers_df),
+                    'squads': len(squad_df),
+                    'opponents': len(opponent_df),
                     'total_players': len(outfield_df) + len(goalkeepers_df),
+                    'total_entities': len(outfield_df) + len(goalkeepers_df) + len(squad_df) + len(opponent_df),
                     'elapsed_time_seconds': elapsed_time,
                     'success': True
                 }
