@@ -47,14 +47,49 @@ class SCDType2Processor:
             logger.error(f"SCD Type 2 processing failed for {table}: {e}")
             return False
     
-    def process_all_updates(self, outfield_df: pd.DataFrame, goalkeepers_df: pd.DataFrame, gameweek: int) -> bool:
+    def process_entity_updates(self, new_data: pd.DataFrame, gameweek: int, table: str, entity_type: str) -> bool:
         """
-        Process SCD Type 2 updates for both outfield players and goalkeepers
+        Process SCD Type 2 updates for squad/opponent data
+        
+        Args:
+            new_data: New entity data for current gameweek
+            gameweek: Current gameweek number
+            table: Target table ('analytics_squads' or 'analytics_opponents')
+            entity_type: 'squad' or 'opponent'
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            logger.info(f"Processing SCD Type 2 updates for {len(new_data)} {entity_type}s in {table}")
+            
+            # Step 1: Mark existing current records as historical
+            self._mark_current_as_historical(table)
+            
+            # Step 2: Prepare new records with SCD Type 2 metadata (adapt for entity type)
+            scd_data = self._prepare_entity_scd_records(new_data, gameweek, entity_type)
+            
+            # Step 3: Insert new current records
+            self._insert_new_current_records(scd_data, table)
+            
+            logger.info(f"✅ SCD Type 2 processing completed successfully for {table}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"SCD Type 2 processing failed for {table}: {e}")
+            return False
+
+    def process_all_updates(self, outfield_df: pd.DataFrame, goalkeepers_df: pd.DataFrame, 
+                       gameweek: int, squad_df: pd.DataFrame = None, opponent_df: pd.DataFrame = None) -> bool:
+        """
+        Process SCD Type 2 updates for all entity types
         
         Args:
             outfield_df: Outfield player data
             goalkeepers_df: Goalkeeper data  
             gameweek: Current gameweek number
+            squad_df: Squad data (optional)
+            opponent_df: Opponent data (optional)
             
         Returns:
             True if successful, False otherwise
@@ -72,6 +107,16 @@ class SCDType2Processor:
                 if not self.process_player_updates(goalkeepers_df, gameweek, 'analytics_keepers'):
                     return False
             
+            # Process squads (if provided)
+            if squad_df is not None and not squad_df.empty:
+                if not self.process_entity_updates(squad_df, gameweek, 'analytics_squads', 'squad'):
+                    return False
+            
+            # Process opponents (if provided)
+            if opponent_df is not None and not opponent_df.empty:
+                if not self.process_entity_updates(opponent_df, gameweek, 'analytics_opponents', 'opponent'):
+                    return False
+            
             # Validate overall SCD integrity
             if not self.validate_complete_scd_integrity(gameweek):
                 logger.error("SCD integrity validation failed")
@@ -83,7 +128,7 @@ class SCDType2Processor:
         except Exception as e:
             logger.error(f"Complete SCD Type 2 processing failed: {e}")
             return False
-    
+
     def _mark_current_as_historical(self, table: str) -> None:
         """Mark all current records as historical for specified table"""
         current_date = datetime.now().date()
@@ -122,6 +167,28 @@ class SCDType2Processor:
         
         return scd_data
     
+    def _prepare_entity_scd_records(self, new_data: pd.DataFrame, gameweek: int, entity_type: str) -> pd.DataFrame:
+        """Prepare new entity records with SCD Type 2 metadata"""
+        scd_data = new_data.copy()
+        scraper = FBRefScraper()
+        
+        current_date = datetime.now().date()
+        
+        # Add SCD Type 2 columns
+        scd_data['gameweek'] = gameweek
+        scd_data['valid_from'] = current_date
+        scd_data['valid_to'] = None
+        scd_data['is_current'] = True
+        scd_data['season'] = scraper._extract_season_info()
+        
+        # Generate business keys based on entity type
+        if entity_type == 'squad':
+            scd_data['squad_id'] = scd_data['squad_name']
+        elif entity_type == 'opponent':
+            scd_data['opponent_id'] = scd_data['squad_name']  # opponents are still squad names
+        
+        return scd_data
+
     def _insert_new_current_records(self, scd_data: pd.DataFrame, table: str) -> None:
         """Insert new current records into specified analytics table"""
         
@@ -169,6 +236,20 @@ class SCDType2Processor:
         issues = []
         
         try:
+            if 'player' in table:
+                id_column = 'player_id'
+                entity_type = 'players'
+            elif 'squad' in table:
+                id_column = 'squad_id'
+                entity_type = 'squads'
+            elif 'opponent' in table:
+                id_column = 'opponent_id' 
+                entity_type = 'opponents'
+            else:
+                # Fallback for unknown table types
+                id_column = 'player_id'
+                entity_type = 'entities'
+
             # Check 1: All current records have same gameweek
             current_gameweeks = self.conn.execute(f"""
                 SELECT DISTINCT gameweek 
@@ -181,22 +262,22 @@ class SCDType2Processor:
             
             # Check 2: No overlapping valid periods for same player
             duplicates = self.conn.execute(f"""
-                SELECT player_id, COUNT(*) as duplicate_count
+                SELECT {id_column}, COUNT(*) as duplicate_count
                 FROM {table} 
                 WHERE is_current = true
-                GROUP BY player_id
+                GROUP BY {id_column}
                 HAVING COUNT(*) > 1
             """).fetchall()
 
             if duplicates:
                 issues.append(f"{table}: Found {len(duplicates)} players with duplicate current records")
             
-            # Check 3: All players have current record
-            current_players = self.conn.execute(f"SELECT COUNT(DISTINCT player_id) FROM {table} WHERE is_current = true").fetchone()[0]
+            # Check 3: All entities have current record
+            current_entities = self.conn.execute(f"SELECT COUNT(DISTINCT {id_column}) FROM {table} WHERE is_current = true").fetchone()[0]
             current_records = self.conn.execute(f"SELECT COUNT(*) FROM {table} WHERE is_current = true").fetchone()[0]
 
-            if current_records != current_players:
-                issues.append(f"{table}: Current records ({current_records}) don't match current players ({current_players})")
+            if current_records != current_entities:
+                issues.append(f"{table}: Current records ({current_records}) don't match current {entity_type} ({current_entities})")
             
             return len(issues) == 0, issues
             
@@ -204,27 +285,32 @@ class SCDType2Processor:
             return False, [f"{table} SCD validation error: {str(e)}"]
     
     def validate_complete_scd_integrity(self, gameweek: int) -> bool:
-        """Validate SCD Type 2 integrity for both tables"""
+        """Validate SCD Type 2 integrity for all tables"""
         try:
-            # Validate players table
-            players_valid, players_issues = self.validate_scd_integrity(gameweek, 'analytics_players')
+            all_tables = ['analytics_players', 'analytics_keepers', 'analytics_squads', 'analytics_opponents']
             
-            # Validate keepers table
-            keepers_valid, keepers_issues = self.validate_scd_integrity(gameweek, 'analytics_keepers')
+            for table in all_tables:
+                # Check if table exists and has data
+                try:
+                    count = self.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                    if count == 0:
+                        logger.info(f"Skipping validation for empty table: {table}")
+                        continue
+                except:
+                    logger.info(f"Skipping validation for non-existent table: {table}")
+                    continue
+                
+                # Validate this table
+                is_valid, issues = self.validate_scd_integrity(gameweek, table)
+                if not is_valid:
+                    logger.error(f"SCD validation failed for {table}: {issues}")
+                    return False
             
-            all_issues = players_issues + keepers_issues
-            
-            if all_issues:
-                logger.error("SCD integrity issues found:")
-                for issue in all_issues:
-                    logger.error(f"  - {issue}")
-                return False
-            
-            logger.info("✅ SCD integrity validation passed for both tables")
+            logger.info("✅ SCD integrity validation passed for all tables")
             return True
             
         except Exception as e:
-            logger.error(f"SCD integrity validation failed: {e}")
+            logger.error(f"Complete SCD validation failed: {e}")
             return False
     
     def get_scd_summary(self) -> Dict[str, Any]:

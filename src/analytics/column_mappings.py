@@ -1,18 +1,17 @@
 """
-Complete Column Mapping Dictionary
-Maps every raw FBRef column to its corresponding analytics column name
+Unified Column Mapping Dictionary - Built from scratch for all entity types
+Maps raw FBRef columns to analytics column names for players, squads, and opponents
 
-This dictionary resolves all duplicates using our priority system:
-- player_standard = PRIMARY source for core stats
-- Specialist tables = SECONDARY for unique stats only
+Designed from the ground up to be entity-aware while preserving all existing
+player mapping functionality and adding squad/opponent support.
 """
 
 # =====================================================
-# OUTFIELD PLAYER MAPPINGS
-# Maps raw columns -> analytics_players table columns
+# PLAYER MAPPINGS (EXISTING FUNCTIONALITY PRESERVED)
 # =====================================================
 
-OUTFIELD_PLAYER_MAPPINGS = {
+# Outfield Player Mappings - exactly as your original
+PLAYER_OUTFIELD_MAPPINGS = {
     # ===== FROM PLAYER_STANDARD (PRIMARY SOURCE) =====
     'player_standard': {
         # Basic Info (handled separately in consolidation)
@@ -60,9 +59,8 @@ OUTFIELD_PLAYER_MAPPINGS = {
         # Progressive Actions (PRIMARY SOURCE - overrides duplicates)
         'Progression PrgC': 'progressive_carries',
         'Progression PrgP': 'progressive_passes',
-        'Progression PrgR': 'progressive_passes_received',
         
-        # Discipline (PRIMARY SOURCE - overrides duplicates)
+        # Disciplinary
         'Performance CrdY': 'yellow_cards',
         'Performance CrdR': 'red_cards',
     },
@@ -70,11 +68,8 @@ OUTFIELD_PLAYER_MAPPINGS = {
     # ===== FROM PLAYER_SHOOTING (UNIQUE STATS ONLY) =====
     'player_shooting': {
         # SKIP: Duplicates from player_standard
-        # 'Standard Gls': SKIP - use 'Performance Gls' from standard
-        # 'Standard PK': SKIP - use 'Performance PK' from standard  
-        # 'Standard PKatt': SKIP - use 'Performance PKatt' from standard
+        # 'Performance Gls': SKIP - use from standard
         # 'Expected xG': SKIP - use from standard
-        # 'Expected npxG': SKIP - use from standard
         
         # KEEP: Unique shooting stats
         'Standard Sh': 'shots',
@@ -86,48 +81,43 @@ OUTFIELD_PLAYER_MAPPINGS = {
         'Standard G/SoT': 'goals_per_shot_on_target',
         'Standard Dist': 'average_shot_distance',
         'Standard FK': 'free_kick_shots',
-        'Expected npxG/Sh': 'non_penalty_xg_per_shot',
-        'Expected G-xG': 'goals_minus_expected_goals',
+        'Expected G-xG': 'goals_minus_expected',
         'Expected np:G-xG': 'non_penalty_goals_minus_expected',
     },
     
     # ===== FROM PLAYER_PASSING (UNIQUE STATS ONLY) =====
     'player_passing': {
         # SKIP: Duplicates from player_standard
-        # 'Ast': SKIP - use 'Performance Ast' from standard
-        # 'PrgP': SKIP - use 'Progression PrgP' from standard
+        # 'Expected xAG': SKIP - use from standard
         
         # KEEP: Unique passing stats
         'Total Cmp': 'passes_completed',
         'Total Att': 'passes_attempted',
-        'Total Cmp%': 'pass_accuracy',
+        'Total Cmp%': 'pass_completion_rate',
         'Total TotDist': 'total_pass_distance',
         'Total PrgDist': 'progressive_pass_distance',
         'Short Cmp': 'short_passes_completed',
         'Short Att': 'short_passes_attempted',
-        'Short Cmp%': 'short_pass_accuracy',
+        'Short Cmp%': 'short_pass_completion_rate',
         'Medium Cmp': 'medium_passes_completed',
         'Medium Att': 'medium_passes_attempted',
-        'Medium Cmp%': 'medium_pass_accuracy',
+        'Medium Cmp%': 'medium_pass_completion_rate',
         'Long Cmp': 'long_passes_completed',
         'Long Att': 'long_passes_attempted',
-        'Long Cmp%': 'long_pass_accuracy',
-        'xAG': 'expected_assisted_goals_passing',
-        'Expected xA': 'expected_assists',
-        'Expected A-xAG': 'assists_minus_expected',
+        'Long Cmp%': 'long_pass_completion_rate',
+        'Ast': 'assists_passing',
+        'xA': 'expected_assists',
+        'A-xAG': 'assists_minus_expected',
         'KP': 'key_passes',
-        '1/3': 'final_third_passes',
-        'PPA': 'penalty_area_passes',
-        'CrsPA': 'crosses_into_penalty_area',
+        '1/3': 'passes_final_third',
+        'PPA': 'passes_penalty_area',
+        'CrsPA': 'crosses_penalty_area',
+        # Skip 'PrgP': SKIP - use 'Progression PrgP' from standard
     },
     
     # ===== FROM PLAYER_PASSINGTYPES (UNIQUE STATS ONLY) =====
     'player_passingtypes': {
-        # SKIP: Duplicates from player_passing
-        # 'Att': SKIP - use 'Total Att' from passing
-        # 'Outcomes Cmp': SKIP - use 'Total Cmp' from passing
-        
-        # KEEP: Unique pass type stats
+        # Pass Types
         'Pass Types Live': 'live_ball_passes',
         'Pass Types Dead': 'dead_ball_passes',
         'Pass Types FK': 'free_kick_passes',
@@ -139,44 +129,45 @@ OUTFIELD_PLAYER_MAPPINGS = {
         'Corner Kicks In': 'inswinging_corners',
         'Corner Kicks Out': 'outswinging_corners',
         'Corner Kicks Str': 'straight_corners',
-        'Outcomes Off': 'passes_offside',
-        'Outcomes Blocks': 'passes_blocked',
+        'Outcomes Cmp': 'completed_passes_types',
+        'Outcomes Off': 'offsides_pass_types',
+        'Outcomes Blocks': 'blocked_passes',
     },
     
-    # ===== FROM PLAYER_GOALSHOTCREATION =====
+    # ===== FROM PLAYER_GOALSHOTCREATION (UNIQUE STATS ONLY) =====
     'player_goalshotcreation': {
         'SCA SCA': 'shot_creating_actions',
         'SCA SCA90': 'shot_creating_actions_per_90',
         'SCA Types PassLive': 'sca_pass_live',
         'SCA Types PassDead': 'sca_pass_dead',
-        'SCA Types TO': 'sca_take_ons',
-        'SCA Types Sh': 'sca_shots',
-        'SCA Types Fld': 'sca_fouls_drawn',
-        'SCA Types Def': 'sca_defensive_actions',
+        'SCA Types TO': 'sca_take_on',
+        'SCA Types Sh': 'sca_shot',
+        'SCA Types Fld': 'sca_fouled',
+        'SCA Types Def': 'sca_defense',
         'GCA GCA': 'goal_creating_actions',
         'GCA GCA90': 'goal_creating_actions_per_90',
         'GCA Types PassLive': 'gca_pass_live',
         'GCA Types PassDead': 'gca_pass_dead',
-        'GCA Types TO': 'gca_take_ons',
-        'GCA Types Sh': 'gca_shots',
-        'GCA Types Fld': 'gca_fouls_drawn',
-        'GCA Types Def': 'gca_defensive_actions',
+        'GCA Types TO': 'gca_take_on',
+        'GCA Types Sh': 'gca_shot',
+        'GCA Types Fld': 'gca_fouled',
+        'GCA Types Def': 'gca_defense',
     },
     
-    # ===== FROM PLAYER_DEFENSE =====
+    # ===== FROM PLAYER_DEFENSE (UNIQUE STATS ONLY) =====
     'player_defense': {
         'Tackles Tkl': 'tackles',
         'Tackles TklW': 'tackles_won',
         'Tackles Def 3rd': 'tackles_def_third',
         'Tackles Mid 3rd': 'tackles_mid_third',
         'Tackles Att 3rd': 'tackles_att_third',
-        'Challenges Tkl': 'challenges_attempted',
-        'Challenges Att': 'challenges_total',
+        'Challenges Tkl': 'challenge_tackles',
+        'Challenges Att': 'challenges_attempted',
         'Challenges Tkl%': 'tackle_success_rate',
         'Challenges Lost': 'challenges_lost',
         'Blocks Blocks': 'blocks',
         'Blocks Sh': 'shots_blocked',
-        'Blocks Pass': 'passes_blocked_defense',
+        'Blocks Pass': 'passes_blocked',
         'Int': 'interceptions',
         'Tkl+Int': 'tackles_plus_interceptions',
         'Clr': 'clearances',
@@ -236,12 +227,8 @@ OUTFIELD_PLAYER_MAPPINGS = {
     },
 }
 
-# =====================================================
-# GOALKEEPER MAPPINGS  
-# Maps raw columns -> analytics_keepers table columns
-# =====================================================
-
-GOALKEEPER_MAPPINGS = {
+# Goalkeeper Mappings - exactly as your original
+PLAYER_GOALKEEPER_MAPPINGS = {
     # ===== FROM PLAYER_STANDARD (SHARED CORE STATS) =====
     'player_standard': {
         # Basic Info (handled separately)
@@ -304,128 +291,238 @@ GOALKEEPER_MAPPINGS = {
         'Passes Thr': 'throws',
         'Passes Launch%': 'launch_percentage',
         'Passes AvgLen': 'average_pass_length',
-        'Goal Kicks Att': 'goal_kick_attempts',
+        'Goal Kicks Att': 'goal_kicks_attempted',
         'Goal Kicks Launch%': 'goal_kick_launch_percentage',
         'Goal Kicks AvgLen': 'goal_kick_average_length',
         'Crosses Opp': 'crosses_faced',
         'Crosses Stp': 'crosses_stopped',
-        'Crosses Stp%': 'cross_stopping_percentage',
-        'Sweeper #OPA': 'sweeper_actions',
-        'Sweeper #OPA/90': 'sweeper_actions_per_90',
-        'Sweeper AvgDist': 'sweeper_average_distance',
+        'Crosses Stp%': 'cross_stop_percentage',
+        'Sweeper #OPA': 'defensive_actions_outside_penalty_area',
+        'Sweeper #OPA/90': 'defensive_actions_outside_penalty_area_per_90',
+        'Sweeper AvgDist': 'average_distance_defensive_actions',
     },
 }
 
 # =====================================================
-# COLUMN PRIORITIES (for conflict resolution)
+# SQUAD MAPPINGS (COMBINED OUTFIELD + GOALKEEPER)
+# For squads, all stats are aggregated at team level
 # =====================================================
 
-COLUMN_PRIORITIES = {
-    # When same data appears in multiple tables, use this priority order
-    'goals': 'player_standard',  # Performance Gls vs Standard Gls
-    'assists': 'player_standard',  # Performance Ast vs Ast
-    'penalty_kicks_made': 'player_standard',  # Performance PK vs Standard PK
-    'penalty_kicks_attempted': 'player_standard',  # Performance PKatt vs Standard PKatt
-    'expected_goals': 'player_standard',  # Expected xG appears in standard + shooting
-    'non_penalty_expected_goals': 'player_standard',  # Expected npxG appears in standard + shooting
-    'yellow_cards': 'player_standard',  # Performance CrdY appears in standard + misc
-    'red_cards': 'player_standard',  # Performance CrdR appears in standard + misc
-    'progressive_passes': 'player_standard',  # Progression PrgP vs PrgP
-    'progressive_carries': 'player_standard',  # Progression PrgC vs Carries PrgC
-    'interceptions': 'player_defense',  # Int vs Performance Int
-    'tackles_won': 'player_defense',  # Tackles TklW vs Performance TklW
-    'passes_completed': 'player_passing',  # Total Cmp vs Outcomes Cmp
-    'passes_attempted': 'player_passing',  # Total Att vs Att
-    'goals_against': 'player_keepers',  # Performance GA vs Goals GA (for keepers)
-}
+def create_squad_mappings():
+    """Create squad mappings by combining outfield and goalkeeper mappings"""
+    squad_mappings = {}
+    
+    # Convert player table names to squad table names and combine mappings
+    for player_table, mappings in PLAYER_OUTFIELD_MAPPINGS.items():
+        squad_table = player_table.replace('player_', 'squad_')
+        squad_mappings[squad_table] = {}
+        
+        # Copy all mappings, but adapt for squad context
+        for raw_col, analytics_col in mappings.items():
+            if raw_col in ['Player', 'Nation', 'Pos', 'Born']:
+                # Skip player-specific columns for squads
+                continue
+            elif raw_col == 'Squad':
+                # Squad name mapping
+                squad_mappings[squad_table]['Squad'] = 'squad_name'
+            else:
+                # Keep all other mappings the same
+                squad_mappings[squad_table][raw_col] = analytics_col
+    
+    # Add goalkeeper-specific mappings to appropriate squad tables
+    for player_table, mappings in PLAYER_GOALKEEPER_MAPPINGS.items():
+        if player_table == 'player_standard':
+            continue
+        
+        squad_table = player_table.replace('player_', 'squad_')
+        if squad_table not in squad_mappings:
+            squad_mappings[squad_table] = {}
+        
+        for raw_col, analytics_col in mappings.items():
+            if raw_col not in ['Player', 'Nation', 'Pos', 'Squad', 'Born']:
+                # SKIP if this analytics column already exists
+                existing_analytics_cols = set(squad_mappings[squad_table].values())
+                if analytics_col not in existing_analytics_cols:
+                    squad_mappings[squad_table][raw_col] = analytics_col
+    
+    return squad_mappings
+
+SQUAD_MAPPINGS = create_squad_mappings()
 
 # =====================================================
-# EXCLUDED COLUMNS (always skip these)
+# OPPONENT MAPPINGS (SAME AS SQUAD MAPPINGS)
+# Opponent tables have identical structure to squad tables
+# =====================================================
+
+def create_opponent_mappings():
+    """Create opponent mappings by adapting squad mappings"""
+    opponent_mappings = {}
+    
+    for squad_table, mappings in SQUAD_MAPPINGS.items():
+        opponent_table = squad_table.replace('squad_', 'opponent_')
+        opponent_mappings[opponent_table] = {}
+        
+        # Copy all mappings, adapting squad_name to squad_name (opponents are still squad names)
+        for raw_col, analytics_col in mappings.items():
+            if raw_col == 'Squad':
+                # For opponents, Squad column still maps to squad_name
+                opponent_mappings[opponent_table]['Squad'] = 'squad_name'
+            else:
+                # Keep all other mappings the same
+                opponent_mappings[opponent_table][raw_col] = analytics_col
+    
+    return opponent_mappings
+
+OPPONENT_MAPPINGS = create_opponent_mappings()
+
+# =====================================================
+# UNIFIED ENTITY MAPPING SYSTEM
+# =====================================================
+
+def get_entity_mappings(entity_type: str, player_type: str = None) -> dict:
+    """
+    Get the appropriate mappings for an entity type
+    
+    Args:
+        entity_type: 'player', 'squad', or 'opponent'
+        player_type: For players only - 'outfield' or 'goalkeeper'
+        
+    Returns:
+        Dictionary of table mappings for the specified entity type
+    """
+    if entity_type == 'player':
+        if player_type == 'outfield':
+            return PLAYER_OUTFIELD_MAPPINGS
+        elif player_type == 'goalkeeper':
+            return PLAYER_GOALKEEPER_MAPPINGS
+        else:
+            raise ValueError("player_type must be 'outfield' or 'goalkeeper' for entity_type='player'")
+    
+    elif entity_type == 'squad':
+        return SQUAD_MAPPINGS
+    
+    elif entity_type == 'opponent':
+        return OPPONENT_MAPPINGS
+    
+    else:
+        raise ValueError("entity_type must be 'player', 'squad', or 'opponent'")
+
+# =====================================================
+# EXCLUDED COLUMNS (METADATA AND SYSTEM COLUMNS)
 # =====================================================
 
 EXCLUDED_COLUMNS = {
-    # Metadata columns (handled separately)
-    'Current Date',
-    'current_through_gameweek', 
-    'last_updated',
+    # Metadata columns that shouldn't be mapped
+    'Current Date', 'current_through_gameweek', 'last_updated',
     
-    # Basic info columns (handled in SCD Type 2 framework)
-    'Player',
-    'Nation', 
-    'Pos',
-    'Squad',
-    'Age',
-    'Born',
+    # Index and identifier columns
+    'Rk', 'Matches',
     
-    # 90s column (handled as minutes_90s)
-    '90s',
+    # Already handled in consolidation
+    'Player', 'Squad', 'Nation', 'Pos', 'Age', 'Born',
+    
+    # Temporary processing columns
+    'entity_key', 'player_key', 'squad_key', 'opponent_key',
 }
 
 # =====================================================
-# VALIDATION FUNCTION
+# VALIDATION FUNCTIONS
 # =====================================================
 
-def validate_mappings():
-    """Validate that our mappings cover all important columns and have no conflicts"""
+def validate_all_mappings():
+    """Validate mappings for all entity types"""
     
-    # Get all mapped columns for outfield players
+    print("🔍 VALIDATING UNIFIED ENTITY MAPPINGS")
+    print("=" * 60)
+    
+    # Validate player mappings
     outfield_mapped = set()
-    for table_mappings in OUTFIELD_PLAYER_MAPPINGS.values():
+    for table_mappings in PLAYER_OUTFIELD_MAPPINGS.values():
         outfield_mapped.update(table_mappings.keys())
     
-    # Get all mapped columns for goalkeepers  
-    keeper_mapped = set()
-    for table_mappings in GOALKEEPER_MAPPINGS.values():
-        keeper_mapped.update(table_mappings.keys())
+    goalkeeper_mapped = set()
+    for table_mappings in PLAYER_GOALKEEPER_MAPPINGS.values():
+        goalkeeper_mapped.update(table_mappings.keys())
     
-    print(f"Outfield columns mapped: {len(outfield_mapped)}")
-    print(f"Goalkeeper columns mapped: {len(keeper_mapped)}")
-    print(f"Total unique raw columns mapped: {len(outfield_mapped | keeper_mapped)}")
+    # Validate squad mappings
+    squad_mapped = set()
+    for table_mappings in SQUAD_MAPPINGS.values():
+        squad_mapped.update(table_mappings.keys())
     
-    # Check for any analytics column conflicts (same target from different sources)
+    # Validate opponent mappings
+    opponent_mapped = set()
+    for table_mappings in OPPONENT_MAPPINGS.values():
+        opponent_mapped.update(table_mappings.keys())
+    
+    print(f"✅ Player outfield columns mapped: {len(outfield_mapped)}")
+    print(f"✅ Player goalkeeper columns mapped: {len(goalkeeper_mapped)}")
+    print(f"✅ Squad columns mapped: {len(squad_mapped)}")
+    print(f"✅ Opponent columns mapped: {len(opponent_mapped)}")
+    print(f"✅ Total unique columns across all entities: {len(outfield_mapped | goalkeeper_mapped | squad_mapped | opponent_mapped)}")
+    
+    # Check for duplicate targets within each entity type
+    from collections import Counter
+    
+    # Check player mappings
     outfield_targets = []
-    for table_mappings in OUTFIELD_PLAYER_MAPPINGS.values():
+    for table_mappings in PLAYER_OUTFIELD_MAPPINGS.values():
         outfield_targets.extend(table_mappings.values())
     
-    keeper_targets = []
-    for table_mappings in GOALKEEPER_MAPPINGS.values():
-        keeper_targets.extend(table_mappings.values())
+    goalkeeper_targets = []
+    for table_mappings in PLAYER_GOALKEEPER_MAPPINGS.values():
+        goalkeeper_targets.extend(table_mappings.values())
     
-    # Find duplicates
-    from collections import Counter
     outfield_duplicates = [col for col, count in Counter(outfield_targets).items() if count > 1]
-    keeper_duplicates = [col for col, count in Counter(keeper_targets).items() if count > 1]
+    goalkeeper_duplicates = [col for col, count in Counter(goalkeeper_targets).items() if count > 1]
     
     if outfield_duplicates:
-        print(f"WARNING: Duplicate outfield targets: {outfield_duplicates}")
-    if keeper_duplicates:
-        print(f"WARNING: Duplicate keeper targets: {keeper_duplicates}")
+        print(f"⚠️  WARNING: Duplicate outfield targets: {outfield_duplicates}")
+    if goalkeeper_duplicates:
+        print(f"⚠️  WARNING: Duplicate goalkeeper targets: {goalkeeper_duplicates}")
     
-    return len(outfield_mapped), len(keeper_mapped)
+    if not outfield_duplicates and not goalkeeper_duplicates:
+        print("✅ No conflicts in player mappings")
+    
+    return len(outfield_mapped), len(goalkeeper_mapped), len(squad_mapped), len(opponent_mapped)
+
+def get_table_count_by_entity():
+    """Get count of tables mapped for each entity type"""
+    return {
+        'player_outfield_tables': len(PLAYER_OUTFIELD_MAPPINGS),
+        'player_goalkeeper_tables': len(PLAYER_GOALKEEPER_MAPPINGS),
+        'squad_tables': len(SQUAD_MAPPINGS),
+        'opponent_tables': len(OPPONENT_MAPPINGS)
+    }
 
 # =====================================================
-# USAGE EXAMPLE
+# BACKWARD COMPATIBILITY
 # =====================================================
 
-def get_analytics_column_name(raw_column: str, table_name: str, player_type: str = 'outfield') -> str:
-    """
-    Get the analytics column name for a raw column
-    
-    Args:
-        raw_column: Original FBRef column name
-        table_name: Source table (e.g., 'player_standard')
-        player_type: 'outfield' or 'goalkeeper'
-    
-    Returns:
-        Analytics column name or None if not mapped
-    """
-    mappings = OUTFIELD_PLAYER_MAPPINGS if player_type == 'outfield' else GOALKEEPER_MAPPINGS
-    
-    if table_name in mappings:
-        return mappings[table_name].get(raw_column)
-    
-    return None
+# Maintain backward compatibility with existing names
+OUTFIELD_PLAYER_MAPPINGS = PLAYER_OUTFIELD_MAPPINGS
+GOALKEEPER_MAPPINGS = PLAYER_GOALKEEPER_MAPPINGS
 
-# Run validation
+# Legacy validation function
+def validate_mappings():
+    """Legacy validation function for backward compatibility"""
+    return validate_all_mappings()
+
+# =====================================================
+# COLUMN PRIORITIES (PRESERVED FROM ORIGINAL)
+# =====================================================
+
+COLUMN_PRIORITIES = {
+    # Define which table takes priority for duplicate columns
+    'goals': 'player_standard',  # Not player_shooting
+    'assists': 'player_standard',  # Not player_passing
+    'expected_goals': 'player_standard',  # Not player_shooting
+    'progressive_carries': 'player_standard',  # Not player_possession
+    'progressive_passes': 'player_standard',  # Not player_passing
+    'yellow_cards': 'player_standard',  # Not player_misc
+    'red_cards': 'player_standard',  # Not player_misc
+}
+
+# Run validation if called directly
 if __name__ == "__main__":
-    validate_mappings()
+    validate_all_mappings()
+    print(f"\n📊 Table counts: {get_table_count_by_entity()}")

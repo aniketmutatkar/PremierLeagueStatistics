@@ -16,7 +16,7 @@ if __name__ == "__main__":
     sys.path.append(str(Path(__file__).parent.parent / 'src'))
 
 from src.database.analytics_db import AnalyticsDBConnection, AnalyticsDBOperations
-from src.analytics.player_consolidation import PlayerDataConsolidator
+from src.analytics.data_consolidation import DataConsolidator
 from src.analytics.scd_processor import SCDType2Processor
 
 # Configure logging
@@ -32,7 +32,7 @@ class AnalyticsETL:
     def __init__(self):
         self.db = AnalyticsDBConnection()
         self.ops = AnalyticsDBOperations()
-        self.consolidator = PlayerDataConsolidator()
+        self.consolidator = DataConsolidator()
         
         self.pipeline_start_time = None
         self.pipeline_stats = {}
@@ -71,19 +71,37 @@ class AnalyticsETL:
                 # Step 3: Consolidate player data
                 logger.info("🔄 Consolidating player data...")
                 outfield_df, goalkeepers_df = self.consolidator.consolidate_players(raw_conn, target_gameweek)
+
+                logger.info("🔄 Consolidating squad data...")
+                squad_df = self.consolidator.consolidate_squads(raw_conn, target_gameweek)
+
+                logger.info("🔄 Consolidating opponent data...")
+                opponent_df = self.consolidator.consolidate_opponents(raw_conn, target_gameweek)
                 
                 if outfield_df.empty and goalkeepers_df.empty:
                     logger.error("No player data consolidated")
                     return False
                 
                 # Log consolidation results
-                summary = self.consolidator.get_consolidation_summary(outfield_df, goalkeepers_df)
-                logger.info(f"✅ Consolidated {summary['total_players']} players")
-                logger.info(f"   - Outfield: {summary['outfield_players']} players, {summary['outfield_columns']} columns")
-                logger.info(f"   - Goalkeepers: {summary['goalkeepers']} players, {summary['goalkeeper_columns']} columns")
-                
+                summary = self.consolidator.get_consolidation_summary(
+                    outfield=outfield_df, 
+                    goalkeepers=goalkeepers_df,
+                    squads=squad_df,
+                    opponents=opponent_df
+                )
+                logger.info(f"✅ Consolidated {summary.get('total_entities', 0)} total entities")
+                logger.info(f"   - Outfield: {summary.get('outfield_count', 0)} players")
+                logger.info(f"   - Goalkeepers: {summary.get('goalkeepers_count', 0)} players") 
+                logger.info(f"   - Squads: {summary.get('squads_count', 0)} squads")
+                logger.info(f"   - Opponents: {summary.get('opponents_count', 0)} opponents")
+
                 # Validate consolidation
-                validation = self.consolidator.validate_consolidation(outfield_df, goalkeepers_df)
+                validation = self.consolidator.validate_consolidation(
+                    outfield=outfield_df,
+                    goalkeepers=goalkeepers_df, 
+                    squads=squad_df,
+                    opponents=opponent_df
+                )
                 if not validation['success']:
                     logger.error(f"Consolidation validation failed: {validation['errors']}")
                     return False
@@ -93,7 +111,7 @@ class AnalyticsETL:
                 
                 scd_processor = SCDType2Processor(analytics_conn)
                 # Process both tables with clean, consistent SCD logic
-                if not scd_processor.process_all_updates(outfield_df, goalkeepers_df, target_gameweek):
+                if not scd_processor.process_all_updates(outfield_df, goalkeepers_df, target_gameweek, squad_df, opponent_df):
                     logger.error("SCD Type 2 processing failed")
                     return False
                 
@@ -161,7 +179,7 @@ class AnalyticsETL:
             return False
     
     def _validate_analytics_data(self, analytics_conn, gameweek: int) -> bool:
-        """Validate inserted analytics data"""
+        """Validate inserted analytics data for all entity types"""
         try:
             # Check outfield players
             outfield_count = analytics_conn.execute("""
@@ -175,12 +193,32 @@ class AnalyticsETL:
                 WHERE gameweek = ? AND is_current = true
             """, [gameweek]).fetchone()[0]
             
-            logger.info(f"Validation: {outfield_count} outfield players, {goalkeeper_count} goalkeepers")
+            # Check squads
+            squad_count = analytics_conn.execute("""
+                SELECT COUNT(*) FROM analytics_squads 
+                WHERE gameweek = ? AND is_current = true
+            """, [gameweek]).fetchone()[0]
+            
+            # Check opponents
+            opponent_count = analytics_conn.execute("""
+                SELECT COUNT(*) FROM analytics_opponents 
+                WHERE gameweek = ? AND is_current = true
+            """, [gameweek]).fetchone()[0]
+            
+            logger.info(f"Validation: {outfield_count} outfield, {goalkeeper_count} goalkeepers, {squad_count} squads, {opponent_count} opponents")
             
             # Basic validation - should have some players
             if outfield_count == 0:
                 logger.error("No outfield players found after insertion")
                 return False
+            
+            # Check expected squad count (should be around 20 teams)
+            if squad_count < 15 or squad_count > 25:
+                logger.warning(f"Unexpected squad count: {squad_count} (expected 15-25)")
+            
+            # Check expected opponent count (should match squad count)
+            if opponent_count != squad_count:
+                logger.warning(f"Opponent count ({opponent_count}) doesn't match squad count ({squad_count})")
             
             # Check for realistic data (players should have some touches, etc.)
             realistic_data = analytics_conn.execute("""
@@ -198,16 +236,16 @@ class AnalyticsETL:
         except Exception as e:
             logger.error(f"Error validating analytics data: {e}")
             return False
-    
+
     def get_pipeline_stats(self) -> Dict[str, Any]:
         """Get pipeline execution statistics"""
         return self.pipeline_stats.copy()
     
     def get_pipeline_status(self) -> Dict[str, Any]:
-        """Get current pipeline status"""
+        """Get current pipeline status for all entity types"""
         try:
             with self.db.get_analytics_connection() as conn:
-                # Get latest gameweek
+                # Get latest gameweek from players table
                 latest_gw = conn.execute("""
                     SELECT MAX(gameweek) FROM analytics_players WHERE is_current = true
                 """).fetchone()[0]
@@ -215,7 +253,7 @@ class AnalyticsETL:
                 if latest_gw is None:
                     return {'status': 'empty', 'message': 'No analytics data found'}
                 
-                # Get record counts
+                # Get record counts for all entity types
                 outfield_count = conn.execute("""
                     SELECT COUNT(*) FROM analytics_players 
                     WHERE gameweek = ? AND is_current = true
@@ -226,17 +264,36 @@ class AnalyticsETL:
                     WHERE gameweek = ? AND is_current = true
                 """, [latest_gw]).fetchone()[0]
                 
+                # Check if squad/opponent tables exist and have data
+                try:
+                    squad_count = conn.execute("""
+                        SELECT COUNT(*) FROM analytics_squads 
+                        WHERE gameweek = ? AND is_current = true
+                    """, [latest_gw]).fetchone()[0]
+                except:
+                    squad_count = 0
+                
+                try:
+                    opponent_count = conn.execute("""
+                        SELECT COUNT(*) FROM analytics_opponents 
+                        WHERE gameweek = ? AND is_current = true
+                    """, [latest_gw]).fetchone()[0]
+                except:
+                    opponent_count = 0
+                
                 return {
                     'status': 'ready',
                     'latest_gameweek': latest_gw,
                     'outfield_players': outfield_count,
                     'goalkeepers': goalkeeper_count,
-                    'total_players': outfield_count + goalkeeper_count
+                    'squads': squad_count,
+                    'opponents': opponent_count,
+                    'total_players': outfield_count + goalkeeper_count,
+                    'total_entities': outfield_count + goalkeeper_count + squad_count + opponent_count
                 }
                 
         except Exception as e:
             return {'status': 'error', 'message': str(e)}
-
 
 # CLI interface for running the pipeline
 if __name__ == "__main__":
