@@ -16,8 +16,8 @@ if __name__ == "__main__":
     sys.path.append(str(Path(__file__).parent.parent / 'src'))
 
 from src.database.analytics_db import AnalyticsDBConnection, AnalyticsDBOperations
-from src.analytics.etl.player_consolidation import PlayerDataConsolidator
-from src.analytics.etl.scd_processor import SCDType2Processor
+from src.analytics.player_consolidation import PlayerDataConsolidator
+from src.analytics.scd_processor import SCDType2Processor
 
 # Configure logging
 logging.basicConfig(
