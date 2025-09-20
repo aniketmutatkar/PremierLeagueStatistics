@@ -1,19 +1,20 @@
 # Premier League Analytics Platform
 
-A production-ready data pipeline and analytics system for Premier League statistics, featuring intelligent scraping, historical tracking, and comprehensive player/team analysis.
+A production-ready data pipeline and analytics system for Premier League statistics, featuring intelligent scraping, unified data consolidation, and comprehensive player/team analysis with full historical tracking.
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
-### Two-Database System
-- **Raw Database** (`premierleague_raw.duckdb`): Preserves original FBRef structure across 33 tables
-- **Analytics Database** (`premierleague_analytics.duckdb`): SCD Type 2 with clean, consolidated statistics
+### Two-Database Design
+- **Raw Database** (`premierleague_raw.duckdb`): Preserves original FBRef structure across 33 stat tables
+- **Analytics Database** (`premierleague_analytics.duckdb`): Unified analytics with SCD Type 2 historical tracking
 
 ### Key Features
-- **SCD Type 2 Implementation**: Complete historical tracking with transfer detection
-- **Intelligent Pipeline**: Smart decision-making to avoid unnecessary FBRef requests  
-- **Separated Player Types**: Dedicated tables for outfield players and goalkeepers
-- **Production Logging**: Timestamped, rotated logs with granular progress tracking
-- **Dynamic Season Detection**: Automatically adapts to new seasons
+- **Unified Data Processing**: Single system handles players, teams, and opponents
+- **SCD Type 2 Implementation**: Complete historical tracking with automatic transfer detection
+- **Intelligent Pipeline**: Smart decision-making to avoid unnecessary FBRef requests
+- **100% Data Coverage**: Processes all scraped data (not just players)
+- **Production Logging**: Timestamped, rotated logs with comprehensive validation
+- **Entity-Aware Processing**: Consistent handling across all data types
 
 ## 🚀 Quick Start
 
@@ -30,13 +31,13 @@ python pipelines/master_pipeline.py
 # Check system status
 python pipelines/master_pipeline.py --status
 
-# Validate data quality
+# Validate entire system
 python validate_analytics_system.py
 ```
 
 ## 📊 Pipeline Commands
 
-### Master Pipeline (Orchestration)
+### Master Pipeline (Recommended)
 ```bash
 python pipelines/master_pipeline.py                    # Smart run (only if needed)
 python pipelines/master_pipeline.py --force-all        # Force both pipelines
@@ -68,11 +69,11 @@ PremierLeagueStatistics/
 ├── pipelines/                          # Production pipeline scripts
 │   ├── master_pipeline.py              # Intelligent orchestration
 │   ├── raw_pipeline.py                 # FBRef scraping
-│   └── analytics_pipeline.py           # SCD Type 2 ETL
+│   └── analytics_pipeline.py           # Unified analytics ETL
 ├── src/                                # Core library
 │   ├── analytics/                      # Analytics components
 │   │   ├── analytics_etl.py            # Main ETL engine
-│   │   ├── player_consolidation.py     # Data consolidation
+│   │   ├── data_consolidation.py       # Unified data consolidator
 │   │   ├── scd_processor.py            # SCD Type 2 processor
 │   │   └── column_mappings.py          # FBRef → Analytics mapping
 │   ├── database/                       # Database layer
@@ -88,7 +89,7 @@ PremierLeagueStatistics/
 │   ├── logs/                           # Timestamped pipeline logs
 │   ├── backups/                        # Database backups
 │   ├── premierleague_raw.duckdb        # Raw FBRef data
-│   └── premierleague_analytics.duckdb  # Analytics with SCD Type 2
+│   └── premierleague_analytics.duckdb  # Unified analytics with SCD Type 2
 ├── notebooks/                          # Data science notebooks
 ├── validate_analytics_system.py        # Comprehensive system validation
 └── PIPELINE_USAGE.md                   # Detailed usage guide
@@ -96,11 +97,11 @@ PremierLeagueStatistics/
 
 ### Data Flow
 ```
-FBRef Website → Raw Pipeline → Analytics ETL → Applications
-     ↓              ↓              ↓              ↓
-  Live Data    33 Stat Tables  SCD Type 2    ML Models
-                Archive Pattern  Clean Stats   Dashboards
-                Rate Limited    Two Tables    Notebooks
+FBRef Website → Raw Pipeline → Unified Analytics ETL → Applications
+     ↓              ↓                 ↓                      ↓
+  Live Data    33 Stat Tables    4 Analytics Tables     ML Models
+             Archive Pattern     SCD Type 2 Tracking    Dashboards
+             Rate Limited       100% Data Coverage      Notebooks
 ```
 
 ## 📈 Data Architecture Details
@@ -108,132 +109,121 @@ FBRef Website → Raw Pipeline → Analytics ETL → Applications
 ### Raw Database (33 Tables)
 **Squad Tables (11)**: `squad_standard`, `squad_shooting`, `squad_passing`, etc.  
 **Opponent Tables (11)**: `opponent_standard`, `opponent_shooting`, etc.  
-**Player Tables (11)**: `player_standard`, `player_shooting`, etc.  
-**Infrastructure**: `raw_fixtures`, `teams`, `data_scraping_log`
+**Player Tables (11)**: `player_standard`, `player_shooting`, etc.
 
-### Analytics Database (SCD Type 2)
-**Core Tables**: 
-- **`analytics_players`** (~160 columns): Outfield players (DF, MF, FW) with comprehensive statistics
-- **`analytics_keepers`** (~60 columns): Goalkeepers with specialized metrics including advanced shot-stopping data
+### Analytics Database (4 Tables) - NEW UNIFIED SYSTEM
+**Complete Entity Coverage:**
+- **`analytics_players`** (154 columns): Outfield player statistics with SCD Type 2
+- **`analytics_keepers`** (64 columns): Goalkeeper-specific metrics with SCD Type 2  
+- **`analytics_squads`** (185 columns): Team-level analytics with SCD Type 2
+- **`analytics_opponents`** (185 columns): Opposition analysis with SCD Type 2
 
-**Dimensions**: player_name, squad, position, nation, age  
-**Time Tracking**: gameweek, valid_from, valid_to, is_current, season  
-**Stats**: Raw FBRef statistics with explicit column mapping
+**Key Features:**
+- **100% Data Processing**: All 33 raw tables consolidated into 4 analytics tables
+- **Unified Consolidation**: Single `DataConsolidator` handles all entity types
+- **Historical Tracking**: Complete SCD Type 2 across all entities
+- **Entity-Aware Processing**: Consistent logic for players, teams, and opponents
 
-### SCD Type 2 Example
-```sql
--- Eze's transfer tracking
-player_key | player_name | squad   | gameweek | is_current | goals | assists | season
-----------|-------------|---------|----------|------------|-------|---------|--------
-1001      | Eze         | Palace  | 4        | false      | 0     | 0       | 2024-25
-1002      | Eze         | Arsenal | 5        | true       | 0     | 1       | 2024-25
+### Current System Status (Example)
+```
+📋 SYSTEM SUMMARY:
+  analytics_players: 380 current, 349 historical (GW 5)
+  analytics_keepers: 24 current, 21 historical (GW 5)  
+  analytics_squads: 20 current, 20 historical (GW 5)
+  analytics_opponents: 20 current, 20 historical (GW 5)
 ```
 
-## 🔧 Configuration
+## 🔍 System Validation
 
-### Key Configuration Files
-
-**`config/sources.yaml`**: FBRef URL mappings
-```yaml
-stats_sources:
-  standard:
-    url: "https://fbref.com/en/comps/9/stats/Premier-League-Stats"
-    tables: ["squad_standard", "opponent_standard", "player_standard"]
-```
-
-**`config/scraping.yaml`**: Rate limiting and scraping behavior
-```yaml
-scraping:
-  delays:
-    between_requests: 10  # Respectful to FBRef
-```
-
-**`config/database.yaml`**: Database paths and settings
-```yaml
-database:
-  paths:
-    raw: "data/premierleague_raw.duckdb"
-    analytics: "data/premierleague_analytics.duckdb"
-```
-
-## 🧪 Data Quality & Validation
-
-### Automated Validation
+### Comprehensive Validation
 ```bash
 python validate_analytics_system.py
 ```
 
-**Validates**:
-- SCD Type 2 integrity (only current gameweek marked as current)
-- Player tracking across gameweeks and transfers
-- Data consolidation quality and column mapping success
-- Data quality checks (duplicates, missing data, logical consistency)
-- Statistical sanity checks (players have touches > 0, etc.)
+**Validation Coverage:**
+- **Schema Validation**: All 4 analytics tables structure verification
+- **SCD Type 2 Integrity**: Historical tracking correctness across all entities
+- **Data Quality**: Missing data and consistency checks
+- **Cross-Entity Relationships**: Squad/opponent/player relationship validation
+- **Business Logic**: Statistical sanity checks and Premier League constraints
 
-## 🎯 Current Status
-- **Raw Pipeline**: ✅ Stable, scrapes all 33 FBRef stat tables
-- **Analytics Pipeline**: ✅ Clean consolidation with explicit column mapping
-- **Data Quality**: ✅ 160+ columns for outfield players, 60+ for goalkeepers
-- **Historical Tracking**: ✅ SCD Type 2 implementation working
-- **Transfer Detection**: ✅ Players tracked across team changes
-- **Season Detection**: ✅ Dynamic season identification (no hardcoded values)
+## 💡 Usage Examples
 
-## 🔮 Future Development
-
-1. **Advanced Analytics**: 
-   - **Data Science Notebooks**: Player analysis, team comparisons, trend identification
-   - **Machine Learning Models**: Performance prediction, transfer value assessment
-   - **Advanced Analytics**: Tactical analysis, formation effectiveness, player development
-   - **Automation**: Scheduled runs, monitoring alerts, backup automation
-
-2. **Enhanced Features**:
-   - Real-time dashboard integration
-   - Custom derived metrics (when needed)
-   - Multi-season historical analysis
-   - Advanced statistical modeling
-
-## 🛠️ Development
-
-### Extending Scraping
-1. Add new stat category to `config/sources.yaml`
-2. Raw pipeline automatically includes new categories
-3. Update column mappings in `src/analytics/column_mappings.py` if needed
-4. Test with `python validate_analytics_system.py`
-
-### Database Queries
+### Data Access
 ```python
-# Example: Find top goal scorers by gameweek
+import duckdb
+
+# Connect to unified analytics database
+conn = duckdb.connect('data/premierleague_analytics.duckdb')
+
+# Query current top scorers
 top_scorers = conn.execute("""
-    SELECT gameweek, player_name, squad, goals,
-           RANK() OVER (PARTITION BY gameweek ORDER BY goals DESC) as rank
+    SELECT player_name, squad_name, goals, assists
     FROM analytics_players 
-    WHERE goals > 0 AND is_current = true
-    QUALIFY rank <= 5
-    ORDER BY gameweek, rank
+    WHERE is_current = true 
+    ORDER BY goals DESC 
+    LIMIT 10
 """).fetchdf()
 
-# Example: Goalkeeper performance
-keeper_stats = conn.execute("""
-    SELECT player_name, squad, saves, save_percentage, clean_sheets,
-           post_shot_expected_goals, post_shot_xg_performance
-    FROM analytics_keepers 
-    WHERE is_current = true AND minutes_played > 270
-    ORDER BY save_percentage DESC
+# Query team offensive stats
+team_offense = conn.execute("""
+    SELECT squad_name, goals, shots, expected_goals
+    FROM analytics_squads 
+    WHERE is_current = true 
+    ORDER BY goals DESC
+""").fetchdf()
+
+# Historical player progression
+player_history = conn.execute("""
+    SELECT gameweek, player_name, squad_name, goals, valid_from, valid_to
+    FROM analytics_players 
+    WHERE player_name = 'Erling Haaland'
+    ORDER BY gameweek
 """).fetchdf()
 ```
 
-### Schema Management
-The analytics database uses explicit column mapping from raw FBRef data:
-- **No prefixes**: Clean column names like `touches`, `tackles`, `shots`
-- **No derived metrics**: Only raw FBRef statistics (can add calculated metrics later)
-- **Type separation**: Outfield players and goalkeepers in separate tables
-- **Dynamic processing**: Centralized SCD Type 2 processor handles all historical tracking
+### Analysis Capabilities
+- **Player Analysis**: 404 tracked players with complete performance history
+- **Team Analytics**: 20 Premier League squads with tactical and performance data
+- **Opposition Scouting**: 20 opponent profiles for strategic analysis
+- **Transfer Tracking**: Automatic detection of player movements between teams
+- **Performance Trends**: Multi-gameweek analysis across all entity types
+
+## 🛠️ Development
+
+### System Extension
+The unified architecture makes extending the system straightforward:
+
+1. **Add new stat categories**: Update `config/sources.yaml`
+2. **Extend column mappings**: Modify `src/analytics/column_mappings.py`
+3. **Test changes**: Run `python validate_analytics_system.py`
+
+### Pipeline Intelligence
+The master pipeline uses smart decision-making:
+- **Incremental processing**: Only runs when new data is available
+- **Dependency tracking**: Analytics runs only after raw data updates
+- **Error recovery**: Comprehensive retry logic and graceful failures
+
+## 🎯 Achievements
+
+### Data Engineering Excellence
+✅ **Complete Data Coverage**: 100% of scraped data processed (vs. 33% in previous versions)  
+✅ **Unified Architecture**: Single consolidation system for all entity types  
+✅ **Production Ready**: Comprehensive validation and error handling  
+✅ **Historical Tracking**: SCD Type 2 implementation across all entities  
+✅ **Performance Optimized**: Processes 400+ entities in ~1 second  
+
+### Ready for Data Science
+✅ **Machine Learning Foundation**: Rich feature set across players, teams, and opponents  
+✅ **Historical Context**: Multi-gameweek tracking for trend analysis  
+✅ **Clean Data**: Validated, consolidated statistics ready for modeling  
+✅ **Scalable Architecture**: Designed for advanced analytics and automation  
 
 ## 📚 Additional Resources
 
-- **`PIPELINE_USAGE.md`**: Detailed pipeline usage examples
+- **`PIPELINE_USAGE.md`**: Detailed pipeline usage with examples
 - **`validate_analytics_system.py`**: Comprehensive system validation
-- **`config/`**: All configuration files with inline documentation
+- **`config/`**: Configuration files with inline documentation
 - **`src/analytics/column_mappings.py`**: Complete FBRef column mapping reference
 - **`notebooks/`**: Data science and analysis examples
 
@@ -241,4 +231,4 @@ The analytics database uses explicit column mapping from raw FBRef data:
 
 **Built with**: Python, DuckDB, Beautiful Soup, Pandas  
 **Data Source**: FBRef.com (used respectfully with rate limiting)  
-**Architecture**: Two-database system with SCD Type 2 historical tracking
+**Architecture**: Two-database system with unified analytics and SCD Type 2 tracking
