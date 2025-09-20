@@ -175,47 +175,61 @@ class AnalyticsETL:
             return False
     
     def _insert_outfield_data(self, analytics_conn, outfield_df: pd.DataFrame, gameweek: int) -> bool:
-        """Insert outfield player data into analytics_players table"""
+        """Insert outfield player data into analytics_players table using named columns"""
         try:
             analytics_conn.execute("BEGIN TRANSACTION")
             
-            # Insert using pandas to_sql equivalent for DuckDB
+            # Register the DataFrame with DuckDB
             analytics_conn.register('outfield_data', outfield_df)
-            analytics_conn.execute("""
-                INSERT INTO analytics_players 
-                SELECT * FROM outfield_data
+            
+            # Get the actual columns from the DataFrame (excluding created_at/updated_at)
+            df_columns = list(outfield_df.columns)
+            
+            # Create the named INSERT statement
+            columns_str = ', '.join(df_columns)
+            
+            analytics_conn.execute(f"""
+                INSERT INTO analytics_players ({columns_str})
+                SELECT {columns_str} FROM outfield_data
             """)
             
             analytics_conn.execute("COMMIT")
-            logger.debug(f"Successfully inserted {len(outfield_df)} outfield players")
+            logger.debug(f"Successfully inserted {len(outfield_df)} outfield players using named columns")
             return True
             
         except Exception as e:
             analytics_conn.execute("ROLLBACK")
             logger.error(f"Error inserting outfield data: {e}")
             return False
-    
+
     def _insert_goalkeeper_data(self, analytics_conn, goalkeepers_df: pd.DataFrame, gameweek: int) -> bool:
-        """Insert goalkeeper data into analytics_keepers table"""
+        """Insert goalkeeper data into analytics_keepers table using named columns"""
         try:
             analytics_conn.execute("BEGIN TRANSACTION")
             
-            # Insert using pandas to_sql equivalent for DuckDB
+            # Register the DataFrame with DuckDB
             analytics_conn.register('goalkeeper_data', goalkeepers_df)
-            analytics_conn.execute("""
-                INSERT INTO analytics_keepers 
-                SELECT * FROM goalkeeper_data
+            
+            # Get the actual columns from the DataFrame (excluding created_at/updated_at)
+            df_columns = list(goalkeepers_df.columns)
+            
+            # Create the named INSERT statement
+            columns_str = ', '.join(df_columns)
+            
+            analytics_conn.execute(f"""
+                INSERT INTO analytics_keepers ({columns_str})
+                SELECT {columns_str} FROM goalkeeper_data
             """)
             
             analytics_conn.execute("COMMIT")
-            logger.debug(f"Successfully inserted {len(goalkeepers_df)} goalkeepers")
+            logger.debug(f"Successfully inserted {len(goalkeepers_df)} goalkeepers using named columns")
             return True
             
         except Exception as e:
             analytics_conn.execute("ROLLBACK")
             logger.error(f"Error inserting goalkeeper data: {e}")
             return False
-    
+
     def _validate_analytics_data(self, analytics_conn, gameweek: int) -> bool:
         """Validate inserted analytics data"""
         try:
