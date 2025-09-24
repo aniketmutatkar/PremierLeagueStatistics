@@ -104,10 +104,12 @@ class ProductionAnalyticsPipeline:
         # Log system state for debugging
         try:
             from src.database.analytics_db import AnalyticsDBConnection
+            from src.database.analytics_db import AnalyticsDBOperations
+            ops = AnalyticsDBOperations()
             db = AnalyticsDBConnection()
             
             raw_gw = db.get_current_gameweek()
-            analytics_gw = db.get_current_analytics_gameweek()
+            analytics_gw = ops.get_current_analytics_gameweek()
             
             logger.error(f"🔍 System State:")
             logger.error(f"   Raw gameweek: {raw_gw}")
