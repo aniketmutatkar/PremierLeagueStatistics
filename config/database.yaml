@@ -4,7 +4,7 @@ database:
   
   # Database file paths
   paths:
-    raw: "data/premierleague_raw.duckdb"                      # Current raw data
+    raw: "data/premierleague_raw_historical.duckdb"                      # Current raw data
     raw_backup: "data/premierleague_raw_backup_gw4.duckdb"    # Backup of GW4 data
     analytics: "data/premierleague_analytics.duckdb"          # Analytics database
   

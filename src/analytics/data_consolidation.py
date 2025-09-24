@@ -345,11 +345,15 @@ class DataConsolidator:
         if df.empty:
             return df
         
+        # Initialize Scraper to add to business key
+        scraper = FBRefScraper()
+        df['season'] = "2023-2024" # scraper._extract_season_info()
+
         # Create entity_id (business key) based on entity type
         if entity_type == 'player':
-            df['player_id'] = df['player_name'] + '_' + df['born_year'].astype(str) + '_' + df['squad']
+            df['player_id'] = df['player_name'] + '_' + df['born_year'].astype(str) + '_' + df['squad'] + '_' + df['season']
         else:  # squad or opponent
-            df['entity_id'] = df['squad_name']
+            df['entity_id'] = df['squad_name'] + '_' + df['season']
         
         # Create unique analytics key (hash of entity_id + gameweek)
         def generate_analytics_key(row):
@@ -357,16 +361,15 @@ class DataConsolidator:
                 business_key = row['player_id']
             else:
                 business_key = row['entity_id']
+
             key_string = f"{business_key}_{gameweek}"
-            return int(hashlib.md5(key_string.encode()).hexdigest()[:8], 16)
+            return int(hashlib.md5(key_string.encode()).hexdigest()[:12], 16)
 
         # Set the appropriate key column based on entity type
         key_col = self._get_final_key_column(entity_type)
         df[key_col] = df.apply(generate_analytics_key, axis=1)
         
         # Add SCD Type 2 metadata (same for all entity types)
-        scraper = FBRefScraper()
-        df['season'] = scraper._extract_season_info()
         df['gameweek'] = gameweek
         df['valid_from'] = datetime.now().date()
         df['valid_to'] = None
