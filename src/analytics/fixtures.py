@@ -14,6 +14,9 @@ import logging
 from typing import Optional
 from datetime import datetime
 
+# Import production components
+from src.scraping.fbref_scraper import FBRefScraper
+
 logger = logging.getLogger(__name__)
 
 class FixturesProcessor:
@@ -83,43 +86,79 @@ class FixturesProcessor:
             return True  # If we can't check, assume we need to update
     
     def _update_fixtures_table(self, raw_conn, analytics_conn, current_gameweek: int) -> bool:
-        """Update/create the complete fixtures table"""
+        """Update fixtures table with season-aware logic"""
         try:
-            logger.info("🔄 Updating analytics_fixtures table...")
+            # Get current season
+            scraper = FBRefScraper()
+            current_season = scraper._extract_season_info()
             
             # Get all fixture data from raw database
             raw_fixtures_df = raw_conn.execute("SELECT * FROM raw_fixtures").fetchdf()
-            
             if raw_fixtures_df.empty:
                 logger.error("No fixtures data found in raw database")
                 return False
             
-            # Create analytics fixtures with all derived fields
+            # Add season to raw fixtures
+            raw_fixtures_df['season'] = current_season
+            
+            # Create analytics fixtures DataFrame
             analytics_fixtures_df = self._create_analytics_fixtures_dataframe(raw_fixtures_df)
             
-            # Replace entire table (fixtures are naturally versioned by gameweek)
-            analytics_conn.execute("DROP TABLE IF EXISTS analytics_fixtures")
+            # Check if analytics_fixtures table exists
+            table_exists = self._table_exists(analytics_conn, 'analytics_fixtures')
             
-            # Insert new table
-            analytics_conn.register('temp_fixtures', analytics_fixtures_df)
-            analytics_conn.execute("CREATE TABLE analytics_fixtures AS SELECT * FROM temp_fixtures")
-            analytics_conn.unregister('temp_fixtures')
+            if not table_exists:
+                # First time - create table
+                analytics_conn.register('temp_fixtures', analytics_fixtures_df)
+                analytics_conn.execute("CREATE TABLE analytics_fixtures AS SELECT * FROM temp_fixtures")
+                analytics_conn.unregister('temp_fixtures')
+                logger.info(f"Created analytics_fixtures table with {len(analytics_fixtures_df)} fixtures")
+            else:
+                # Table exists - smart update logic
+                
+                # Delete only current season fixtures (if any exist)
+                deleted_count = analytics_conn.execute(f"""
+                    DELETE FROM analytics_fixtures 
+                    WHERE season = '{current_season}'
+                """).rowcount
+                
+                if deleted_count > 0:
+                    logger.info(f"Deleted {deleted_count} existing fixtures for current season {current_season}")
+                
+                # Insert new current season fixtures
+                analytics_conn.register('new_fixtures', analytics_fixtures_df)
+                analytics_conn.execute("INSERT INTO analytics_fixtures SELECT * FROM new_fixtures")
+                analytics_conn.unregister('new_fixtures')
+                
+                logger.info(f"Added {len(analytics_fixtures_df)} fixtures for {current_season}")
             
             # Create indexes
             self._create_indexes(analytics_conn)
             
-            # Log results
-            total_fixtures = len(analytics_fixtures_df)
-            completed_fixtures = len(analytics_fixtures_df[analytics_fixtures_df['is_completed'] == True])
-            max_gw = analytics_fixtures_df['current_through_gameweek'].max()
+            # Log final state
+            season_counts = analytics_conn.execute("""
+                SELECT season, COUNT(*) as fixture_count 
+                FROM analytics_fixtures 
+                GROUP BY season 
+                ORDER BY season
+            """).fetchall()
             
-            logger.info(f"✅ Fixtures updated: {total_fixtures} total, {completed_fixtures} completed, through GW{max_gw}")
+            logger.info("Final fixtures by season:")
+            for season, count in season_counts:
+                logger.info(f"  {season}: {count} fixtures")
+            
             return True
             
         except Exception as e:
-            logger.error(f"❌ Failed to update fixtures table: {e}")
+            logger.error(f"Failed to update fixtures table: {e}")
             return False
-    
+
+    def _table_exists(self, conn, table_name: str) -> bool:
+        """Check if table exists"""
+        tables = conn.execute("SHOW TABLES").fetchall()
+        table_names = [t[0] for t in tables]
+        return table_name in table_names
+
     def _create_analytics_fixtures_dataframe(self, raw_fixtures_df: pd.DataFrame) -> pd.DataFrame:
         """Transform raw fixtures into analytics fixtures with derived fields"""
         
@@ -128,8 +167,8 @@ class FixturesProcessor:
         # Ensure numeric columns
         df['home_score'] = pd.to_numeric(df['home_score'], errors='coerce')
         df['away_score'] = pd.to_numeric(df['away_score'], errors='coerce')
-        df['xG'] = pd.to_numeric(df['xG'], errors='coerce')
-        df['xG.1'] = pd.to_numeric(df['xG.1'], errors='coerce')
+        df['xG'] = pd.to_numeric(df.get('xG', None), errors='coerce')
+        df['xG.1'] = pd.to_numeric(df.get('xG.1', None), errors='coerce')
         
         # Match outcome
         df['match_outcome'] = df.apply(self._determine_match_outcome, axis=1)
@@ -156,7 +195,7 @@ class FixturesProcessor:
         
         # Expected goals fields
         df['home_xg'] = df['xG']
-        df['away_xg'] = df['xG.1']
+        df['away_xg'] = df['xG.1'] 
         df['home_xg_difference'] = df.apply(
             lambda row: row['xG'] - row['xG.1'] if pd.notna(row['xG']) and pd.notna(row['xG.1']) else None, axis=1
         )
@@ -313,7 +352,7 @@ class FixturesProcessor:
                 season_start = year - 1
                 season_end = year
             
-            return f"{season_start}-{str(season_end)[-2:]}"
+            return f"{season_start}-{season_end}"
         
         except Exception:
             return 'Unknown'

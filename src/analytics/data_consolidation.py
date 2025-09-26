@@ -345,9 +345,14 @@ class DataConsolidator:
         if df.empty:
             return df
         
-        # Initialize Scraper to add to business key
-        scraper = FBRefScraper()
-        df['season'] = "2023-2024" # scraper._extract_season_info()
+        # Initialize Scraper to add to business key - HISTORICAL TEMP FIX
+        import os
+        historical_season = os.getenv('HISTORICAL_SEASON')
+        if historical_season:
+            df['season'] = historical_season
+        else:
+            scraper = FBRefScraper()
+            df['season'] = scraper._extract_season_info()
 
         # Create entity_id (business key) based on entity type
         if entity_type == 'player':

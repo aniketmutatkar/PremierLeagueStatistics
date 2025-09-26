@@ -190,6 +190,22 @@ class AnalyticsETL:
     
     def _validate_analytics_data(self, analytics_conn, gameweek: int) -> bool:
         """Validate inserted analytics data for all entity types"""
+        
+        # Get current season being processed
+        import os
+        historical_season = os.getenv('HISTORICAL_SEASON')
+        
+        if historical_season:
+            # For historical seasons, extract year to determine available stats
+            try:
+                year = int(historical_season.split('-')[0])
+                if year < 2017:
+                    logger.info(f"Skipping detailed validation for pre-2017 season {historical_season}")
+                    logger.info("Older seasons have limited stat availability")
+                return True
+            except:
+                pass
+        
         try:
             # Check outfield players
             outfield_count = analytics_conn.execute("""

@@ -151,7 +151,15 @@ class SCDType2Processor:
     def _prepare_scd_records(self, new_data: pd.DataFrame, gameweek: int) -> pd.DataFrame:
         """Prepare new records with SCD Type 2 metadata"""
         scd_data = new_data.copy()
-        scraper = FBRefScraper()
+        
+        # HISTORICAL TEMP FIX
+        import os
+        historical_season = os.getenv('HISTORICAL_SEASON')
+        if historical_season:
+            scd_data['season'] = historical_season
+        else:
+            scraper = FBRefScraper()
+            scd_data['season'] = scraper._extract_season_info()
         
         current_date = datetime.now().date()
         
@@ -160,17 +168,24 @@ class SCDType2Processor:
         scd_data['valid_from'] = current_date
         scd_data['valid_to'] = None
         scd_data['is_current'] = True
-        scd_data['season'] = scraper._extract_season_info()
         
         # Generate business keys (we'll let database handle player_key auto-increment)
-        scd_data['player_id'] = scd_data['player_name'] + '_' + scd_data['born_year'].astype(str) + '_' + scd_data['squad']
+        scd_data['player_id'] = scd_data['player_name'] + '_' + scd_data['born_year'].astype(str) + '_' + scd_data['squad'] + '_' + scd_data['season']
         
         return scd_data
     
     def _prepare_entity_scd_records(self, new_data: pd.DataFrame, gameweek: int, entity_type: str) -> pd.DataFrame:
         """Prepare new entity records with SCD Type 2 metadata"""
         scd_data = new_data.copy()
-        scraper = FBRefScraper()
+        
+        # HISTORICAL TEMP FIX
+        import os
+        historical_season = os.getenv('HISTORICAL_SEASON')
+        if historical_season:
+            scd_data['season'] = historical_season
+        else:
+            scraper = FBRefScraper()
+            scd_data['season'] = scraper._extract_season_info()
         
         current_date = datetime.now().date()
         
@@ -179,13 +194,12 @@ class SCDType2Processor:
         scd_data['valid_from'] = current_date
         scd_data['valid_to'] = None
         scd_data['is_current'] = True
-        scd_data['season'] = scraper._extract_season_info()
         
         # Generate business keys based on entity type
         if entity_type == 'squad':
-            scd_data['squad_id'] = scd_data['squad_name']
+            scd_data['squad_id'] = scd_data['squad_name'] + '_' + scd_data['season']
         elif entity_type == 'opponent':
-            scd_data['opponent_id'] = scd_data['squad_name']  # opponents are still squad names
+            scd_data['opponent_id'] = scd_data['squad_name'] + '_' + scd_data['season']
         
         return scd_data
 

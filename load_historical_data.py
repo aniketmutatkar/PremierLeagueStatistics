@@ -33,8 +33,8 @@ logger = logging.getLogger(__name__)
 class HistoricalRawLoader:
     """Loads historical seasons into raw historical database using production logic"""
     
-    def __init__(self):
-        self.scraper = FBRefScraper()
+    def __init__(self, season: str = None):
+        self.scraper = FBRefScraper(override_season=season)
         
         # Historical raw database (separate from production)
         self.historical_raw_db_path = "data/premierleague_raw_historical.duckdb"
@@ -61,7 +61,7 @@ class HistoricalRawLoader:
         Truncate historical raw database and load specified season
         
         Args:
-            season: Season in format "2023-2024"
+            season: Season in format "2024-2025"
             
         Returns:
             True if successful
@@ -190,7 +190,7 @@ class HistoricalRawLoader:
                 try:
                     # Apply rate limiting (same as production)
                     if i > 1:
-                        delay = 10  # 10 seconds between requests
+                        delay = 15  # 15 seconds between requests
                         logger.info(f"Rate limiting: {delay}s...")
                         time.sleep(delay)
                     
@@ -308,8 +308,6 @@ class HistoricalAnalyticsProcessor:
         """Mark all newly inserted records as historical"""
         
         try:
-            # Connect to test analytics database
-            # Note: AnalyticsDBConnection uses config, so we need to connect directly
             import duckdb
             
             with duckdb.connect(self.test_analytics_db_path) as conn:
@@ -318,12 +316,12 @@ class HistoricalAnalyticsProcessor:
                 tables_to_update = ['analytics_players', 'analytics_keepers', 'analytics_squads', 'analytics_opponents']
                 
                 for table in tables_to_update:
-                    # Update records to historical status
+                    # FIXED QUERY: Mark all gameweek 38 records as historical for this season
                     result = conn.execute(f"""
                         UPDATE {table} 
-                        SET is_current = false, season = ?
-                        WHERE gameweek = 38 AND (season IS NULL OR season != ?)
-                    """, [season, season])
+                        SET is_current = false
+                        WHERE gameweek = 38 AND season = ?
+                    """, [season])
                     
                     # Count updated records
                     count = conn.execute(f"""
@@ -331,7 +329,7 @@ class HistoricalAnalyticsProcessor:
                         WHERE season = ? AND is_current = false
                     """, [season]).fetchone()[0]
                     
-                    logger.info(f"Marked {count} records as historical in {table}")
+                    logger.info(f"Marked {count} records as historical in {table} for {season}")
             
             logger.info(f"Successfully marked all records as historical for {season}")
             return True
@@ -339,36 +337,42 @@ class HistoricalAnalyticsProcessor:
         except Exception as e:
             logger.error(f"Failed to mark records as historical: {e}")
             return False
-
-
+    
 class HistoricalDataLoader:
     """Main orchestrator for historical data loading"""
     
-    def __init__(self):
-        self.raw_loader = HistoricalRawLoader()
+    def __init__(self,  season: str = None):
+        self.raw_loader = HistoricalRawLoader(season)
         self.analytics_processor = HistoricalAnalyticsProcessor()
         
         logger.info("Historical data loader initialized")
     
-    def load_season(self, season: str = "2023-2024") -> bool:
+    def load_season(self, season: str = "2024-2025") -> bool:
         """
         Load complete historical season end-to-end
         
         Args:
-            season: Season to load (default: 2023-2024)
+            season: Season to load (default: 2024-2025)
             
         Returns:
             True if successful
         """
         start_time = datetime.now()
+
+        # Set environment variable so all components use this season
+        import os
+        os.environ['HISTORICAL_SEASON'] = season
         
         logger.info(f"STARTING HISTORICAL DATA LOAD: {season}")
         logger.info("=" * 60)
         
         try:
+            # Create new loader instance with the specific season
+            raw_loader = HistoricalRawLoader(season)  # Pass season here
+            
             # Step 1: Load historical raw data (truncate & reload)
             logger.info("STEP 1: Loading historical raw data...")
-            if not self.raw_loader.truncate_and_load_season(season):
+            if not raw_loader.truncate_and_load_season(season):
                 logger.error("Failed to load historical raw data")
                 return False
             
@@ -389,7 +393,40 @@ class HistoricalDataLoader:
         except Exception as e:
             logger.error(f"Historical data load failed: {e}")
             return False
+        
+        finally:
+            if 'HISTORICAL_SEASON' in os.environ:
+                del os.environ['HISTORICAL_SEASON']
 
+def load_multiple_seasons(seasons: list) -> bool:
+    """Load multiple historical seasons in sequence"""
+    print(f"\n🏈 LOADING {len(seasons)} HISTORICAL SEASONS")
+    print("=" * 60)
+    
+    for i, season in enumerate(seasons, 1):
+        print(f"\n{'='*60}")
+        print(f"SEASON {i}/{len(seasons)}: {season}")
+        print(f"{'='*60}")
+        
+        # Create loader for this specific season
+        loader = HistoricalDataLoader()
+        success = loader.load_season(season)
+        
+        if not success:
+            print(f"❌ FAILED to load {season}")
+            print(f"Stopped after {i-1} successful seasons")
+            return False
+        
+        print(f"✅ SUCCESS: {season} loaded")
+        
+        # Brief pause between seasons
+        if i < len(seasons):
+            print(f"⏳ Brief pause before next season...")
+            time.sleep(2)
+    
+    print(f"\n🎉 ALL {len(seasons)} SEASONS LOADED SUCCESSFULLY!")
+    print(f"Total seasons loaded: {len(seasons)}")
+    return True
 
 def main():
     """Load historical data for testing"""
@@ -399,32 +436,45 @@ def main():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    print("HISTORICAL DATA LOADER")
+    print("MULTI-SEASON HISTORICAL DATA LOADER")
     print("=" * 50)
-    print("Architecture: FBRef -> Raw Historical DB -> Existing Analytics Pipeline -> Test Analytics DB")
-    print("Uses 100% production logic with no modifications to production code")
+    print("Architecture: FBRef -> Raw Historical DB -> Existing Analytics Pipeline -> Analytics DB")
+    print("Now supports loading multiple seasons automatically!")
     print("=" * 50)
     
+    # Define seasons to load
+    historical_seasons = [
+        "2015-2016",
+        "2014-2015", 
+        "2013-2014",
+        "2012-2013",
+        "2011-2012",
+        "2010-2011"
+    ]
+
+    
+    print(f"\nSeasons to load: {', '.join(historical_seasons)}")
+    print(f"Total seasons: {len(historical_seasons)}")
+    print(f"Estimated time: ~{len(historical_seasons) * 15} minutes")
+    
     # Confirm before proceeding
-    response = input("\nThis will load 2024-25 historical data using production architecture. Continue? (y/N): ")
+    response = input(f"\nLoad all {len(historical_seasons)} historical seasons? (y/N): ")
     if response.lower() != 'y':
         print("Load cancelled")
         return
     
-    # Load historical data
-    loader = HistoricalDataLoader()
-    success = loader.load_season("2023-2024")
+    # Load all historical seasons
+    success = load_multiple_seasons(historical_seasons)
     
     if success:
-        print("\nHISTORICAL DATA LOAD SUCCESSFUL!")
-        print("Next steps:")
-        print("1. Query test analytics database to verify data looks correct")
-        print("2. Run validation queries across current + historical data")
-        print("3. If satisfied, modify to load into production analytics database")
+        print("\n🎉 ALL HISTORICAL SEASONS LOADED SUCCESSFULLY!")
+        print("\nNext steps:")
+        print("1. Query analytics database to verify all seasons are present")
+        print("2. Run validation queries across all historical data")
+        print("3. Test that current season runs still work normally")
     else:
-        print("\nHISTORICAL DATA LOAD FAILED")
+        print("\n❌ HISTORICAL SEASON LOADING FAILED")
         print("Check logs for details")
-
 
 if __name__ == "__main__":
     main()

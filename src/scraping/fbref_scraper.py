@@ -20,10 +20,11 @@ logger = logging.getLogger(__name__)
 class FBRefScraper:
     """Simplified scraper following archive pattern - individual stat categories only"""
     
-    def __init__(self, config_path: str = "config"):
+    def __init__(self, config_path: str = "config", override_season: str = None):
         self.config_path = Path(config_path)
         self.scraping_config = self._load_config("scraping.yaml")
         self.sources_config = self._load_config("sources.yaml")
+        self.override_season = override_season
         
         logger.info("FBRef scraper initialized (raw database mode)")
     
@@ -440,6 +441,11 @@ class FBRefScraper:
         return max(gameweeks) + 1 if gameweeks else 1
     
     def _extract_season_info(self) -> str:
+        # If we have an override (for historical), use it
+        if self.override_season:
+            return self.override_season
+        
+        # Otherwise, use normal logic (for current data)
         current_year = datetime.now().year
         if datetime.now().month >= 8:
             return f"{current_year}-{current_year + 1}"
