@@ -152,14 +152,8 @@ class SCDType2Processor:
         """Prepare new records with SCD Type 2 metadata"""
         scd_data = new_data.copy()
         
-        # HISTORICAL TEMP FIX
-        import os
-        historical_season = os.getenv('HISTORICAL_SEASON')
-        if historical_season:
-            scd_data['season'] = historical_season
-        else:
-            scraper = FBRefScraper()
-            scd_data['season'] = scraper._extract_season_info()
+        scraper = FBRefScraper()
+        scd_data['season'] = scraper._extract_season_info()
         
         current_date = datetime.now().date()
         
@@ -178,14 +172,8 @@ class SCDType2Processor:
         """Prepare new entity records with SCD Type 2 metadata"""
         scd_data = new_data.copy()
         
-        # HISTORICAL TEMP FIX
-        import os
-        historical_season = os.getenv('HISTORICAL_SEASON')
-        if historical_season:
-            scd_data['season'] = historical_season
-        else:
-            scraper = FBRefScraper()
-            scd_data['season'] = scraper._extract_season_info()
+        scraper = FBRefScraper()
+        scd_data['season'] = scraper._extract_season_info()
         
         current_date = datetime.now().date()
         
