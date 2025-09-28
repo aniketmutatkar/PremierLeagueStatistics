@@ -324,7 +324,3 @@ Historical data is stored separately in `data/historical/` and can be loaded int
 
 **FBRef.com** (used respectfully with rate limiting)  
 **Architecture**: Two-database system with unified analytics and SCD Type 2 tracking
-
----
-
-*This system represents a production-ready foundation for Premier League analytics, with clean data engineering practices and scalable architecture designed for advanced statistical analysis and machine learning applications.*
