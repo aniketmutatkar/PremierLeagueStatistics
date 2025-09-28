@@ -9,6 +9,9 @@ import logging
 from pathlib import Path
 import shutil
 from datetime import datetime
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Configure logging
 logging.basicConfig(

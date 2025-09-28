@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 import duckdb
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 st.set_page_config(
     page_title="Team Comparison",
     page_icon="⚽",

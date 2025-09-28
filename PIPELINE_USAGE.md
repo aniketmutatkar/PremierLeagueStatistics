@@ -40,7 +40,7 @@ python pipelines/analytics_pipeline.py --validate # Validation only
 ### System Validation
 ```bash
 # Comprehensive validation of entire unified system
-python validate_analytics_system.py
+python scripts/validate_analytics_system.py
 ```
 
 ## 🏗️ System Architecture
@@ -174,7 +174,7 @@ python pipelines/analytics_pipeline.py --validate
 
 ### Comprehensive Validation
 ```bash
-python validate_analytics_system.py
+python scripts/validate_analytics_system.py
 ```
 
 **Validation Coverage:**
@@ -365,7 +365,7 @@ keeper_performance = conn.execute("""
 2. **Database connection issues**: Check paths in `config/database.yaml`
 3. **Scraping failures**: Check internet connection and FBRef availability
 4. **SCD validation failures**: Run analytics pipeline with `--force` flag
-5. **Missing analytics tables**: Run `python create_analytics_db.py` to rebuild
+5. **Missing analytics tables**: Run `python scripts/create_analytics_db.py` to rebuild
 
 ### Performance Tips
 - **Use master pipeline**: More efficient than running individual pipelines
@@ -382,7 +382,7 @@ python pipelines/master_pipeline.py --status
 python pipelines/analytics_pipeline.py --validate
 
 # Full system validation
-python validate_analytics_system.py
+python scripts/validate_analytics_system.py
 
 # Check recent pipeline logs
 tail -f data/logs/master_pipeline_*.log

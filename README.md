@@ -20,7 +20,7 @@ A production-ready data pipeline and analytics system for Premier League statist
 
 ### Prerequisites
 ```bash
-pip install duckdb pandas beautifulsoup4 requests pyyaml numpy
+pip install duckdb pandas beautifulsoup4 requests pyyaml numpy streamlit plotly
 ```
 
 ### Basic Usage
@@ -32,7 +32,7 @@ python pipelines/master_pipeline.py
 python pipelines/master_pipeline.py --status
 
 # Validate entire system
-python validate_analytics_system.py
+python scripts/validate_analytics_system.py
 ```
 
 ## 📊 Pipeline Commands
@@ -61,38 +61,100 @@ python pipelines/analytics_pipeline.py --status        # Check analytics status
 python pipelines/analytics_pipeline.py --validate      # Run validation only
 ```
 
-## 🏛️ System Architecture
+### System Validation & Utilities
+```bash
+# Comprehensive system validation
+python scripts/validate_analytics_system.py
 
-### Project Structure
+# Database creation and management
+python scripts/create_analytics_db.py
+python scripts/create_analytics_fixtures.py
+```
+
+### Applications
+```bash
+# Team comparison dashboard
+streamlit run apps/app_teams.py
+
+# League overview dashboard  
+streamlit run apps/app_overview.py
+```
+
+### Historical Data Management
+```bash
+# Load historical seasons
+python historical/load_historical_data.py
+
+# Test historical loading
+python historical/historical_load_test.py
+```
+
+## 🏛️ Project Structure
+
 ```
 PremierLeagueStatistics/
-├── pipelines/                          # Production pipeline scripts
+├── apps/                               # User-facing applications
+│   ├── app_overview.py                 # League overview dashboard
+│   └── app_teams.py                    # Team comparison tool
+├── historical/                         # Historical data management
+│   ├── load_historical_data.py         # Historical season loader
+│   ├── historical_load_test.py         # Historical loading tests
+│   └── HISTORICAL_LOADING.md           # Historical loading guide
+├── scripts/                            # Utility scripts
+│   ├── validate_analytics_system.py    # System validation
+│   ├── create_analytics_db.py          # Database creation
+│   └── create_analytics_fixtures.py    # Fixtures setup
+├── tests/                              # Test suite
+│   └── test.py                         # Test utilities
+├── pipelines/                          # Production pipelines
 │   ├── master_pipeline.py              # Intelligent orchestration
-│   ├── raw_pipeline.py                 # FBRef scraping
+│   ├── raw_pipeline.py                 # FBRef scraping pipeline
 │   └── analytics_pipeline.py           # Unified analytics ETL
-├── src/                                # Core library
-│   ├── analytics/                      # Analytics components
+├── src/                                # Core library code
+│   ├── analytics/                      # Unified analytics components
 │   │   ├── analytics_etl.py            # Main ETL engine
 │   │   ├── data_consolidation.py       # Unified data consolidator
 │   │   ├── scd_processor.py            # SCD Type 2 processor
+│   │   ├── fixtures.py                 # Fixtures processing
 │   │   └── column_mappings.py          # FBRef → Analytics mapping
-│   ├── database/                       # Database layer
+│   ├── database/                       # Database connections & operations
 │   │   ├── raw_db/                     # Raw database operations
+│   │   │   ├── __init__.py
+│   │   │   ├── connection.py
+│   │   │   └── operations.py
 │   │   └── analytics_db/               # Analytics database operations
+│   │       ├── __init__.py
+│   │       ├── connection.py
+│   │       └── operations.py
 │   └── scraping/                       # FBRef scraping components
+│       ├── __init__.py
+│       └── fbref_scraper.py
 ├── config/                             # Configuration files
 │   ├── sources.yaml                    # FBRef URL mappings
 │   ├── scraping.yaml                   # Rate limiting settings
 │   ├── database.yaml                   # Database configuration
 │   └── pipeline.yaml                   # Pipeline settings
 ├── data/                               # Data storage
-│   ├── logs/                           # Timestamped pipeline logs
+│   ├── historical/                     # Historical data
+│   │   └── premierleague_raw_historical.duckdb
 │   ├── backups/                        # Database backups
-│   ├── premierleague_raw.duckdb        # Raw FBRef data
+│   │   ├── premierleague_analytics_backup_*.duckdb
+│   │   └── premierleague_raw_backup_*.duckdb
+│   ├── test_data/                      # Test HTML files
+│   │   └── test_htmls/
+│   ├── logs/                           # Timestamped pipeline logs
+│   ├── premierleague_raw.duckdb        # Raw FBRef data (33 tables)
 │   └── premierleague_analytics.duckdb  # Unified analytics with SCD Type 2
+├── docs/                               # Documentation
+│   ├── database_schema.txt
+│   ├── *_stats_reference.txt           # Stats documentation
+│   └── column_data_dump.md
 ├── notebooks/                          # Data science notebooks
-├── validate_analytics_system.py        # Comprehensive system validation
-└── PIPELINE_USAGE.md                   # Detailed usage guide
+│   ├── analytics_exploration.ipynb
+│   └── top6_analysis.ipynb
+├── PIPELINE_USAGE.md                   # Detailed pipeline usage
+├── README.md                           # This file
+└── requirements.txt                    # Python dependencies
 ```
 
 ### Data Flow
@@ -109,102 +171,57 @@ FBRef Website → Raw Pipeline → Unified Analytics ETL → Applications
 ### Raw Database (33 Tables)
 **Squad Tables (11)**: `squad_standard`, `squad_shooting`, `squad_passing`, etc.  
 **Opponent Tables (11)**: `opponent_standard`, `opponent_shooting`, etc.  
-**Player Tables (11)**: `player_standard`, `player_shooting`, etc.
+**Player Tables (11)**: `player_standard`, `player_shooting`, etc.  
+**Infrastructure Tables**: `raw_fixtures`, `teams`, `data_scraping_log`
 
-### Analytics Database (4 Tables) - NEW UNIFIED SYSTEM
-**Complete Entity Coverage:**
-- **`analytics_players`** (154 columns): Outfield player statistics with SCD Type 2
-- **`analytics_keepers`** (64 columns): Goalkeeper-specific metrics with SCD Type 2  
-- **`analytics_squads`** (185 columns): Team-level analytics with SCD Type 2
-- **`analytics_opponents`** (185 columns): Opposition analysis with SCD Type 2
+### Analytics Database (4 Core Tables)
+**`analytics_players`**: Unified outfield player statistics with SCD Type 2  
+**`analytics_keepers`**: Goalkeeper-specific metrics with historical tracking  
+**`analytics_squads`**: Team performance metrics with SCD Type 2  
+**`analytics_opponents`**: Opponent performance when facing each team  
+**`analytics_fixtures`**: Match results and metadata
 
-**Key Features:**
-- **100% Data Processing**: All 33 raw tables consolidated into 4 analytics tables
-- **Unified Consolidation**: Single `DataConsolidator` handles all entity types
-- **Historical Tracking**: Complete SCD Type 2 across all entities
-- **Entity-Aware Processing**: Consistent logic for players, teams, and opponents
+## ⚙️ Configuration Management
 
-### Current System Status (Example)
-```
-📋 SYSTEM SUMMARY:
-  analytics_players: 380 current, 349 historical (GW 5)
-  analytics_keepers: 24 current, 21 historical (GW 5)  
-  analytics_squads: 20 current, 20 historical (GW 5)
-  analytics_opponents: 20 current, 20 historical (GW 5)
-```
+### Core Configuration Files
 
-## 🔍 System Validation
-
-### Comprehensive Validation
-```bash
-python validate_analytics_system.py
+#### `config/sources.yaml`
+Maps FBRef URLs to stat categories:
+```yaml
+stats_sources:
+  standard:
+    url: "https://fbref.com/en/comps/9/stats/Premier-League-Stats"
+    tables: ["squad_standard", "opponent_standard", "player_standard"]
+  shooting:
+    url: "https://fbref.com/en/comps/9/shooting/Premier-League-Stats"
+    tables: ["squad_shooting", "opponent_shooting", "player_shooting"]
 ```
 
-**Validation Coverage:**
-- **Schema Validation**: All 4 analytics tables structure verification
-- **SCD Type 2 Integrity**: Historical tracking correctness across all entities
-- **Data Quality**: Missing data and consistency checks
-- **Cross-Entity Relationships**: Squad/opponent/player relationship validation
-- **Business Logic**: Statistical sanity checks and Premier League constraints
-
-## 💡 Usage Examples
-
-### Data Access
-```python
-import duckdb
-
-# Connect to unified analytics database
-conn = duckdb.connect('data/premierleague_analytics.duckdb')
-
-# Query current top scorers
-top_scorers = conn.execute("""
-    SELECT player_name, squad_name, goals, assists
-    FROM analytics_players 
-    WHERE is_current = true 
-    ORDER BY goals DESC 
-    LIMIT 10
-""").fetchdf()
-
-# Query team offensive stats
-team_offense = conn.execute("""
-    SELECT squad_name, goals, shots, expected_goals
-    FROM analytics_squads 
-    WHERE is_current = true 
-    ORDER BY goals DESC
-""").fetchdf()
-
-# Historical player progression
-player_history = conn.execute("""
-    SELECT gameweek, player_name, squad_name, goals, valid_from, valid_to
-    FROM analytics_players 
-    WHERE player_name = 'Erling Haaland'
-    ORDER BY gameweek
-""").fetchdf()
+#### `config/database.yaml`
+Database paths and settings:
+```yaml
+database:
+  paths:
+    raw: "data/premierleague_raw.duckdb"
+    analytics: "data/premierleague_analytics.duckdb"
+  connection:
+    memory_limit: "2GB"
+    threads: 4
 ```
 
-### Analysis Capabilities
-- **Player Analysis**: 404 tracked players with complete performance history
-- **Team Analytics**: 20 Premier League squads with tactical and performance data
-- **Opposition Scouting**: 20 opponent profiles for strategic analysis
-- **Transfer Tracking**: Automatic detection of player movements between teams
-- **Performance Trends**: Multi-gameweek analysis across all entity types
+#### `config/scraping.yaml`
+Controls scraping behavior:
+```yaml
+scraping:
+  delays:
+    between_requests: 10  # Respectful to FBRef
+    connection_timeout: 30
+  retries:
+    max_attempts: 3
+    backoff_factor: 2
+```
 
-## 🛠️ Development
-
-### System Extension
-The unified architecture makes extending the system straightforward:
-
-1. **Add new stat categories**: Update `config/sources.yaml`
-2. **Extend column mappings**: Modify `src/analytics/column_mappings.py`
-3. **Test changes**: Run `python validate_analytics_system.py`
-
-### Pipeline Intelligence
-The master pipeline uses smart decision-making:
-- **Incremental processing**: Only runs when new data is available
-- **Dependency tracking**: Analytics runs only after raw data updates
-- **Error recovery**: Comprehensive retry logic and graceful failures
-
-## 🎯 Achievements
+## 🎯 Key Features
 
 ### Data Engineering Excellence
 ✅ **Complete Data Coverage**: 100% of scraped data processed (vs. 33% in previous versions)  
@@ -219,16 +236,95 @@ The master pipeline uses smart decision-making:
 ✅ **Clean Data**: Validated, consolidated statistics ready for modeling  
 ✅ **Scalable Architecture**: Designed for advanced analytics and automation  
 
+### Pipeline Intelligence
+The master pipeline uses smart decision-making:
+- **Incremental processing**: Only runs when new data is available
+- **Dependency tracking**: Analytics runs only after raw data updates
+- **Error recovery**: Comprehensive retry logic and graceful failures
+
+## 🛠️ Development Workflow
+
+### Adding New Features
+1. **Add new stat categories**: Update `config/sources.yaml`
+2. **Extend column mappings**: Modify `src/analytics/column_mappings.py`
+3. **Test changes**: Run `python scripts/validate_analytics_system.py`
+
+### Troubleshooting
+```bash
+# Check system health
+python pipelines/master_pipeline.py --status
+
+# Validate without processing
+python pipelines/analytics_pipeline.py --validate
+
+# Full system validation
+python scripts/validate_analytics_system.py
+
+# Check recent pipeline logs
+tail -f data/logs/master_pipeline_*.log
+```
+
+### Common Issues
+1. **Import errors after updates**: Clear Python cache with `find . -name "*.pyc" -delete`
+2. **Database connection issues**: Check paths in `config/database.yaml`
+3. **Scraping failures**: Check internet connection and FBRef availability
+4. **SCD validation failures**: Run analytics pipeline with `--force` flag
+5. **Missing analytics tables**: Run `python scripts/create_analytics_db.py` to rebuild
+
+### Performance Tips
+- **Use master pipeline**: More efficient than running individual pipelines
+- **Monitor log file sizes**: Logs rotate automatically but check disk space
+- **Regular validation**: Run validation weekly to catch data quality issues early
+- **Database optimization**: Analytics database automatically optimizes queries with proper indexing
+
+## 🔄 Historical Data Management
+
+### Loading Historical Seasons
+```bash
+# Load historical seasons (see historical/HISTORICAL_LOADING.md for details)
+python historical/load_historical_data.py
+
+# Test historical loading functionality
+python historical/historical_load_test.py
+```
+
+Historical data is stored separately in `data/historical/` and can be loaded into the main analytics database with proper season tagging and historical status marking.
+
+## 📊 Analytics Applications
+
+### Team Comparison Dashboard
+- **Features**: Side-by-side team analysis across all statistical categories
+- **Usage**: `streamlit run apps/app_teams.py`
+- **Data**: Real-time analytics from consolidated database
+
+### League Overview Dashboard  
+- **Features**: Current standings, top scorers, recent results, upcoming fixtures
+- **Usage**: `streamlit run apps/app_overview.py`
+- **Data**: Live Premier League statistics and form analysis
+
 ## 📚 Additional Resources
 
 - **`PIPELINE_USAGE.md`**: Detailed pipeline usage with examples
-- **`validate_analytics_system.py`**: Comprehensive system validation
+- **`historical/HISTORICAL_LOADING.md`**: Historical data loading guide
+- **`scripts/validate_analytics_system.py`**: Comprehensive system validation
 - **`config/`**: Configuration files with inline documentation
 - **`src/analytics/column_mappings.py`**: Complete FBRef column mapping reference
 - **`notebooks/`**: Data science and analysis examples
 
+## 🏆 Built With
+
+- **Python 3.12+**: Core language
+- **DuckDB**: High-performance analytics database
+- **Beautiful Soup**: Web scraping
+- **Pandas**: Data manipulation
+- **Streamlit**: Interactive dashboards
+- **PyYAML**: Configuration management
+
+## 📄 Data Source
+
+**FBRef.com** (used respectfully with rate limiting)  
+**Architecture**: Two-database system with unified analytics and SCD Type 2 tracking
+
 ---
 
-**Built with**: Python, DuckDB, Beautiful Soup, Pandas  
-**Data Source**: FBRef.com (used respectfully with rate limiting)  
-**Architecture**: Two-database system with unified analytics and SCD Type 2 tracking
+*This system represents a production-ready foundation for Premier League analytics, with clean data engineering practices and scalable architecture designed for advanced statistical analysis and machine learning applications.*

@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Dict, Optional
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 # Import production components
 from src.scraping.fbref_scraper import FBRefScraper
@@ -37,7 +37,7 @@ class HistoricalRawLoader:
         self.scraper = FBRefScraper(override_season=season)
         
         # Historical raw database (separate from production)
-        self.historical_raw_db_path = "data/premierleague_raw_historical.duckdb"
+        self.historical_raw_db_path = "data/historical/premierleague_raw_historical.duckdb"
         
         # Historical URL patterns (same as your sources.yaml structure)
         self.historical_url_patterns = {
