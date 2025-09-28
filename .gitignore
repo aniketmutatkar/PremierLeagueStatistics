@@ -22,4 +22,18 @@ backup_before_cleanup/
 .vscode/
 .idea/
 # OS files
+Thumbs.db__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+*.db
+.DS_Store
+data/logs/*.log
+data/backups/
+data/test_data/
+.ipynb_checkpoints/
+.vscode/
+.idea/
 Thumbs.db
