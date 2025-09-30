@@ -97,16 +97,3 @@ class AnalyticsDBConnection:
             logger.error(f"Analytics DB validation failed: {e}")
         
         return raw_ok, analytics_ok
-    
-    def get_current_gameweek(self) -> Optional[int]:
-        """Get current gameweek from raw database"""
-        try:
-            with self.get_raw_connection() as conn:
-                result = conn.execute("""
-                    SELECT MAX(current_through_gameweek) 
-                    FROM player_standard
-                """).fetchone()
-                return int(result[0]) if result[0] else None
-        except Exception as e:
-            logger.error(f"Error getting current gameweek: {e}")
-            return None

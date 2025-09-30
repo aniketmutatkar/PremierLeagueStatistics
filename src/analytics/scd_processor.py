@@ -142,14 +142,15 @@ class SCDType2Processor:
             return False
     
     def _mark_current_as_historical_for_teams(self, table: str, teams: set, entity_type: str = 'player') -> None:
-        """
-        NEW: Mark current records as historical for SPECIFIC teams only
+        """Mark current records as historical for SPECIFIC teams only"""
         
-        Args:
-            table: Table name
-            teams: Set of team names to mark
-            entity_type: 'player', 'squad', or 'opponent' (determines column name)
-        """
+        # Check if table exists first
+        tables = self.conn.execute("SHOW TABLES").fetchall()
+        table_names = [t[0] for t in tables]
+        if table not in table_names:
+            logger.info(f"Table {table} doesn't exist yet, skipping historical marking")
+            return
+        
         current_date = datetime.now().date()
         
         # Determine column name based on entity type
@@ -158,31 +159,29 @@ class SCDType2Processor:
         else:
             team_column = 'squad'
         
-        # Build team list for SQL
-        team_list = "', '".join(teams)
-        
         # Count records before update
+        placeholders = ','.join(['?' for _ in teams])
         count_before = self.conn.execute(f"""
             SELECT COUNT(*) FROM {table} 
             WHERE is_current = true 
-              AND {team_column} IN ('{team_list}')
-        """).fetchone()[0]
+            AND {team_column} IN ({placeholders})
+        """, list(teams)).fetchone()[0]
         
         if count_before == 0:
             logger.info(f"No current records to mark for teams in {table}")
             return
         
-        # Mark as historical
+        # Mark as historical using parameterized query
         self.conn.execute(f"""
             UPDATE {table} 
             SET is_current = false,
                 valid_to = ?
             WHERE is_current = true
-              AND {team_column} IN ('{team_list}')
-        """, [current_date])
+            AND {team_column} IN ({placeholders})
+        """, [current_date] + list(teams))
         
         logger.info(f"Marked {count_before} records as historical for {len(teams)} teams in {table}")
-    
+
     def _prepare_scd_records(self, new_data: pd.DataFrame) -> pd.DataFrame:
         """
         NEW: Prepare player records with SCD Type 2 metadata
@@ -235,36 +234,45 @@ class SCDType2Processor:
     def _insert_new_current_records(self, scd_data: pd.DataFrame, table: str) -> None:
         """Insert new current records into specified analytics table"""
         
-        # Get the columns that exist in the target table
-        table_columns = self._get_table_columns(table)
+        # Check if table exists, if not create it
+        tables = self.conn.execute("SHOW TABLES").fetchall()
+        table_names = [t[0] for t in tables]
         
-        # Only keep columns that exist in the target table
+        if table not in table_names:
+            # Create table from dataframe
+            self.conn.register('temp_scd_data', scd_data)
+            self.conn.execute(f"CREATE TABLE {table} AS SELECT * FROM temp_scd_data")
+            self.conn.unregister('temp_scd_data')
+            logger.info(f"Created {table} with {len(scd_data)} records")
+            return
+        
+        # Table exists - insert records normally
+        table_columns = self._get_table_columns(table)
         insert_columns = [col for col in scd_data.columns if col in table_columns]
+        
+        if not insert_columns:
+            logger.error(f"No matching columns found for {table}")
+            return
+        
         insert_data = scd_data[insert_columns]
         
-        # Build dynamic insert statement using named columns
         inserted_count = 0
         for _, row in insert_data.iterrows():
             try:
-                # Build dynamic insert statement
                 columns_str = ', '.join(insert_columns)
                 placeholders = ', '.join(['?' for _ in insert_columns])
                 values = [row[col] for col in insert_columns]
                 
-                insert_sql = f"""
-                INSERT INTO {table} ({columns_str})
-                VALUES ({placeholders})
-                """
-                
+                insert_sql = f"INSERT INTO {table} ({columns_str}) VALUES ({placeholders})"
                 self.conn.execute(insert_sql, values)
                 inserted_count += 1
                 
             except Exception as e:
-                logger.error(f"Failed to insert record for {row.get('player_name', 'unknown')} into {table}: {e}")
+                logger.error(f"Failed to insert record: {e}")
                 continue
         
         logger.info(f"Inserted {inserted_count} new current records into {table}")
-    
+
     def _get_table_columns(self, table: str) -> List[str]:
         """Get list of columns in specified analytics table"""
         try:

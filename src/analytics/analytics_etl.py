@@ -116,39 +116,52 @@ class AnalyticsETL:
                 logger.info(f"   - Squads: {summary.get('squads_count', 0)} squads")
                 logger.info(f"   - Opponents: {summary.get('opponents_count', 0)} opponents")
 
-                # NEW Step 5: Assign team-specific gameweeks to each record
+                # Step 5: Assign team-specific gameweeks to each record
                 logger.info("🎯 Step 5: Assigning team-specific gameweeks...")
-                
+
+                # Assign gameweeks based on team's completed fixtures
                 outfield_df['gameweek'] = outfield_df['squad'].map(team_gameweeks)
                 goalkeepers_df['gameweek'] = goalkeepers_df['squad'].map(team_gameweeks)
-                squad_df['gameweek'] = squad_df['squad_name'].map(team_gameweeks)
-                opponent_df['gameweek'] = opponent_df['squad_name'].map(team_gameweeks)
-                
-                # Check for any unmapped teams (shouldn't happen)
+
+                if squad_df is not None and not squad_df.empty:
+                    squad_df['gameweek'] = squad_df['squad_name'].map(team_gameweeks)
+
+                if opponent_df is not None and not opponent_df.empty:
+                    # FIX: Opponent team names have "vs " prefix, need to strip before mapping
+                    opponent_df['squad_name_clean'] = opponent_df['squad_name'].str.replace('vs ', '', regex=False).str.strip()
+                    opponent_df['gameweek'] = opponent_df['squad_name_clean'].map(team_gameweeks)
+                    opponent_df = opponent_df.drop(columns=['squad_name_clean'])
+
+                # Validate gameweek assignments
                 unmapped_outfield = outfield_df[outfield_df['gameweek'].isna()]
-                unmapped_keepers = goalkeepers_df[goalkeepers_df['gameweek'].isna()]
-                unmapped_squads = squad_df[squad_df['gameweek'].isna()]
-                unmapped_opponents = opponent_df[opponent_df['gameweek'].isna()]
-                
-                if not unmapped_outfield.empty or not unmapped_keepers.empty or not unmapped_squads.empty or not unmapped_opponents.empty:
+                unmapped_goalkeepers = goalkeepers_df[goalkeepers_df['gameweek'].isna()]
+                unmapped_squads = squad_df[squad_df['gameweek'].isna()] if squad_df is not None and not squad_df.empty else pd.DataFrame()
+                unmapped_opponents = opponent_df[opponent_df['gameweek'].isna()] if opponent_df is not None and not opponent_df.empty else pd.DataFrame()
+
+                if not unmapped_outfield.empty or not unmapped_goalkeepers.empty or not unmapped_squads.empty or not unmapped_opponents.empty:
                     logger.error("Found records with unmapped gameweeks:")
                     if not unmapped_outfield.empty:
-                        logger.error(f"  Unmapped outfield teams: {unmapped_outfield['squad'].unique()}")
-                    if not unmapped_keepers.empty:
-                        logger.error(f"  Unmapped keeper teams: {unmapped_keepers['squad'].unique()}")
+                        logger.error(f"  Unmapped outfield players: {unmapped_outfield['squad'].unique()}")
+                    if not unmapped_goalkeepers.empty:
+                        logger.error(f"  Unmapped goalkeepers: {unmapped_goalkeepers['squad'].unique()}")
                     if not unmapped_squads.empty:
-                        logger.error(f"  Unmapped squad teams: {unmapped_squads['squad_name'].unique()}")
+                        logger.error(f"  Unmapped squads: {unmapped_squads['squad_name'].unique()}")
                     if not unmapped_opponents.empty:
                         logger.error(f"  Unmapped opponent teams: {unmapped_opponents['squad_name'].unique()}")
                     return False
-                
-                logger.info(f"✅ Gameweeks assigned successfully")
-                
-                # Show gameweek distribution
-                gw_dist = outfield_df['gameweek'].value_counts().sort_index()
-                logger.info(f"   Player distribution by gameweek:")
-                for gw, count in gw_dist.items():
-                    logger.info(f"     GW{int(gw)}: {count} players")
+
+                logger.info(f"✅ Gameweeks assigned successfully:")
+                logger.info(f"   Outfield: {len(outfield_df)} records")
+                logger.info(f"   Goalkeepers: {len(goalkeepers_df)} records")
+                logger.info(f"   Squads: {len(squad_df) if squad_df is not None else 0} records")
+                logger.info(f"   Opponents: {len(opponent_df) if opponent_df is not None else 0} records")
+
+                # Log gameweek distribution for players
+                if not outfield_df.empty:
+                    gw_dist = outfield_df.groupby('gameweek').size().to_dict()
+                    logger.info(f"   Player distribution by gameweek:")
+                    for gw, count in gw_dist.items():
+                        logger.info(f"     GW{int(gw)}: {count} players")
 
                 # Validate consolidation
                 validation = self.consolidator.validate_consolidation(
