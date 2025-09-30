@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Raw Data Pipeline - Following archive pattern exactly
-Processes each stat category individually, no consolidation
+Raw Data Pipeline - NEW FIXTURE-BASED IMPLEMENTATION
+Phase 2: Remove gameweek tagging, store raw data without gameweek metadata
 """
 import sys
 import logging
@@ -23,8 +23,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def run_raw_pipeline():
-    """Main raw data pipeline following archive pattern"""
-    print("=== RAW DATA PIPELINE (ARCHIVE PATTERN) ===")
+    """NEW: Raw data pipeline without gameweek tagging"""
+    print("=" * 60)
+    print("RAW DATA PIPELINE (NEW FIXTURE-BASED MODE)")
+    print("=" * 60)
     print(f"Run started: {datetime.now()}")
     
     try:
@@ -43,18 +45,24 @@ def run_raw_pipeline():
             logger.error("Failed to scrape fixtures")
             return False
         
-        current_gameweek = fixture_data['current_gameweek']
-        print(f"✅ Current gameweek detected: {current_gameweek}")
+        # NEW: Get gameweek status (for logging only)
+        gw_status = fixture_data['gameweek_status']
+        print(f"✅ Gameweek status:")
+        print(f"   Min: {gw_status['min_gameweek']}, Max: {gw_status['max_gameweek']}")
+        print(f"   Teams aligned: {gw_status['all_teams_aligned']}")
+        if gw_status['teams_behind']:
+            print(f"   Teams behind: {len(gw_status['teams_behind'])}")
         
-        # Insert fixtures
-        db_operations.insert_fixtures(fixture_data['fixtures'], current_gameweek)
+        # NEW: Insert fixtures WITHOUT gameweek parameter
+        db_operations.insert_fixtures(fixture_data['fixtures'])
+        print("✅ Fixtures inserted")
         
-        # STEP 2: Process each stat category individually (archive pattern)
-        print(f"\n📊 Processing stat categories individually...")
+        # STEP 2: Process each stat category individually
+        print(f"\n📊 Processing stat categories...")
         
         # Get stat categories from config
         stat_categories = list(scraper.sources_config['stats_sources'].keys())
-        print(f"Processing {len(stat_categories)} stat categories: {stat_categories}")
+        print(f"Processing {len(stat_categories)} categories: {stat_categories}")
         
         successful_categories = []
         failed_categories = []
@@ -68,8 +76,8 @@ def run_raw_pipeline():
                 category_config = scraper.sources_config['stats_sources'][stat_category]
                 source_url = category_config['url']
                 
-                # Apply rate limiting (archive pattern)
-                if i > 1:  # Not first category
+                # Apply rate limiting
+                if i > 1:
                     delay = scraper.scraping_config['scraping']['delays']['between_requests']
                     print(f"Rate limiting: waiting {delay}s...")
                     time.sleep(delay)
@@ -82,11 +90,11 @@ def run_raw_pipeline():
                     failed_categories.append(stat_category)
                     continue
                 
-                # Insert each table individually (archive pattern)
+                # NEW: Insert each table WITHOUT gameweek parameter
                 category_success = True
                 for table_name, table_df in category_tables.items():
                     try:
-                        db_operations.insert_clean_stat_table(table_name, table_df, current_gameweek)
+                        db_operations.insert_clean_stat_table(table_name, table_df)
                         total_tables_inserted += 1
                         print(f"  ✅ {table_name}: {len(table_df)} rows")
                     except Exception as e:
@@ -106,16 +114,21 @@ def run_raw_pipeline():
                 print(f"❌ {stat_category} failed: {e}")
         
         # STEP 3: Final validation
-        print(f"\n🔍 Pipeline completion summary...")
-        print(f"✅ Successful categories ({len(successful_categories)}): {successful_categories}")
+        print(f"\n{'='*60}")
+        print("PIPELINE COMPLETION SUMMARY")
+        print(f"{'='*60}")
+        print(f"✅ Successful categories: {len(successful_categories)}/{len(stat_categories)}")
+        if successful_categories:
+            print(f"   {successful_categories}")
         if failed_categories:
-            print(f"❌ Failed categories ({len(failed_categories)}): {failed_categories}")
+            print(f"❌ Failed categories: {len(failed_categories)}")
+            print(f"   {failed_categories}")
         
         print(f"📊 Total tables inserted: {total_tables_inserted}")
         
         # Get database status
         db_status = db_operations.get_raw_database_status()
-        print(f"📈 Database status:")
+        print(f"\n📈 Database status:")
         print(f"  Total tables: {db_status['total_tables']}")
         print(f"  Stat tables: {db_status['stat_tables']}")
         print(f"  Infrastructure tables: {db_status['infrastructure_tables']}")
@@ -130,11 +143,15 @@ def run_raw_pipeline():
         success = len(successful_categories) >= len(stat_categories) * 0.8  # 80% success rate
         
         if success:
-            print(f"\n🎉 RAW PIPELINE COMPLETE!")
+            print(f"\n{'='*60}")
+            print("🎉 RAW PIPELINE COMPLETE!")
+            print(f"{'='*60}")
             print(f"✅ {len(successful_categories)}/{len(stat_categories)} categories successful")
-            print(f"✅ {total_tables_inserted} tables populated with clean data")
-            print(f"✅ Data through gameweek {current_gameweek}")
-            print(f"✅ Ready for analytics layer")
+            print(f"✅ {total_tables_inserted} tables populated")
+            print(f"✅ Season: {fixture_data['season']}")
+            print(f"✅ Gameweek range: {gw_status['min_gameweek']}-{gw_status['max_gameweek']}")
+            print(f"\n💡 NOTE: Raw data stored WITHOUT gameweek tagging")
+            print(f"   Gameweek assignment will happen in analytics layer")
         else:
             print(f"\n⚠️ PIPELINE COMPLETED WITH ISSUES")
             print(f"⚠️ Only {len(successful_categories)}/{len(stat_categories)} categories successful")
@@ -145,11 +162,15 @@ def run_raw_pipeline():
     except Exception as e:
         logger.error(f"Pipeline failed: {e}")
         print(f"\n❌ PIPELINE FAILED: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def check_raw_pipeline_status():
     """Check current raw pipeline status"""
-    print("=== RAW PIPELINE STATUS CHECK ===")
+    print("=" * 60)
+    print("RAW PIPELINE STATUS CHECK")
+    print("=" * 60)
     
     try:
         db_connection, db_operations = initialize_raw_database()
@@ -186,14 +207,16 @@ def check_raw_pipeline_status():
         
     except Exception as e:
         print(f"Status check failed: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='Raw Data Pipeline')
+    parser = argparse.ArgumentParser(description='Raw Data Pipeline (NEW Fixture-Based)')
     parser.add_argument('--status', action='store_true', help='Check pipeline status only')
-    parser.add_argument('--force', action='store_true', help='Force run even if data exists')
+    parser.add_argument('--force', action='store_true', help='Force run (currently no effect)')
     
     args = parser.parse_args()
     

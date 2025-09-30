@@ -1,6 +1,6 @@
 """
-Raw Database Operations - Following archive pattern exactly
-Handles 33 individual stat tables (11 categories × 3 types)
+Raw Database Operations - NEW FIXTURE-BASED IMPLEMENTATION
+Phase 2: Remove gameweek tagging from raw data
 """
 import pandas as pd
 import logging
@@ -11,11 +11,11 @@ from .connection import RawDatabaseConnection
 logger = logging.getLogger(__name__)
 
 class RawDatabaseOperations:
-    """Database operations for raw data storage - follows archive pattern"""
+    """NEW: Raw database operations without gameweek tagging"""
     
     def __init__(self, db_connection: RawDatabaseConnection):
         self.db = db_connection
-        logger.info("Raw database operations initialized")
+        logger.info("Raw database operations initialized (NEW fixture-based mode)")
     
     def create_infrastructure_tables(self):
         """Create infrastructure tables (fixtures, teams)"""
@@ -28,7 +28,7 @@ class RawDatabaseOperations:
         logger.info("Infrastructure tables created successfully")
     
     def _create_fixtures_table(self, conn):
-        """Create fixtures table"""
+        """Create fixtures table (UNCHANGED - fixtures table stays the same)"""
         sql = """
         CREATE TABLE IF NOT EXISTS raw_fixtures (
             fixture_id VARCHAR PRIMARY KEY,
@@ -52,7 +52,7 @@ class RawDatabaseOperations:
         logger.debug("Created raw_fixtures table")
     
     def _create_teams_table(self, conn):
-        """Create teams table"""
+        """Create teams table (UNCHANGED)"""
         sql = """
         CREATE TABLE IF NOT EXISTS teams (
             team_name VARCHAR PRIMARY KEY,
@@ -62,27 +62,27 @@ class RawDatabaseOperations:
         conn.execute(sql)
         logger.debug("Created teams table")
     
-    def insert_clean_stat_table(self, table_name: str, data: pd.DataFrame, current_gameweek: int):
+    def insert_clean_stat_table(self, table_name: str, data: pd.DataFrame):
         """
-        Insert a single clean stat table (following archive pattern)
+        NEW: Insert stat table WITHOUT gameweek tagging
         
         Args:
             table_name: e.g., 'squad_standard', 'player_passing', etc.
             data: Clean DataFrame ready for insertion
-            current_gameweek: Current gameweek number
+            
+        REMOVED: current_gameweek parameter - no longer tags data with gameweek
         """
         if data.empty:
             logger.warning(f"No data to insert for {table_name}")
             return
         
-        # Add metadata (following archive pattern)
+        # NEW: Only add last_updated, NO gameweek tagging
         data = data.copy()
-        data['current_through_gameweek'] = current_gameweek
         data['last_updated'] = datetime.now().date()
         
         with self.db.get_connection() as conn:
             try:
-                # Drop and recreate table (overwrite approach like archive)
+                # Drop and recreate table (overwrite approach)
                 conn.execute(f"DROP TABLE IF EXISTS {table_name}")
                 
                 # Create new table with current data structure
@@ -90,15 +90,22 @@ class RawDatabaseOperations:
                 conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM temp_raw_data")
                 conn.unregister('temp_raw_data')
                 
-                logger.info(f"Inserted {len(data)} rows into {table_name} for gameweek {current_gameweek}")
+                logger.info(f"Inserted {len(data)} rows into {table_name}")
                 
             except Exception as e:
                 logger.error(f"Failed to insert data into {table_name}: {e}")
                 raise
     
-    def insert_fixtures(self, fixtures_df: pd.DataFrame, current_gameweek: int):
-        """Insert fixture data"""
-        self.insert_clean_stat_table('raw_fixtures', fixtures_df, current_gameweek)
+    def insert_fixtures(self, fixtures_df: pd.DataFrame):
+        """
+        NEW: Insert fixture data WITHOUT gameweek parameter
+        
+        Args:
+            fixtures_df: DataFrame with fixture data
+            
+        REMOVED: current_gameweek parameter
+        """
+        self.insert_clean_stat_table('raw_fixtures', fixtures_df)
     
     def get_raw_database_status(self) -> Dict[str, Any]:
         """Get status of raw database"""
@@ -111,47 +118,27 @@ class RawDatabaseOperations:
                     WHERE table_schema='main' AND table_type='BASE TABLE'
                 """).fetchall()
                 
-                table_names = [row[0] for row in tables_result]
+                all_tables = [row[0] for row in tables_result]
                 
                 # Categorize tables
-                stat_tables = []
-                infrastructure_tables = []
-                
-                for table_name in table_names:
-                    if any(table_name.startswith(prefix) for prefix in ['squad_', 'opponent_', 'player_']):
-                        stat_tables.append(table_name)
-                    else:
-                        infrastructure_tables.append(table_name)
+                stat_tables = [t for t in all_tables if any(t.startswith(prefix) for prefix in ['squad_', 'opponent_', 'player_'])]
+                infrastructure_tables = [t for t in all_tables if t not in stat_tables]
                 
                 status = {
-                    'total_tables': len(table_names),
+                    'total_tables': len(all_tables),
                     'stat_tables': len(stat_tables),
                     'infrastructure_tables': len(infrastructure_tables),
-                    'stat_table_names': sorted(stat_tables),
-                    'infrastructure_table_names': sorted(infrastructure_tables),
+                    'table_names': all_tables,
                     'table_details': {}
                 }
                 
-                # Get details for each table
-                for table_name in table_names:
+                # Get row counts for each table
+                for table_name in all_tables:
                     try:
-                        # Get row count
-                        count_result = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()
-                        row_count = count_result[0] if count_result else 0
-                        
-                        # Get current gameweek if applicable
-                        current_gw = None
-                        try:
-                            gw_result = conn.execute(f"SELECT MAX(current_through_gameweek) FROM {table_name}").fetchone()
-                            current_gw = gw_result[0] if gw_result and gw_result[0] else None
-                        except:
-                            pass  # Table doesn't have current_through_gameweek column
-                        
+                        row_count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
                         status['table_details'][table_name] = {
-                            'row_count': row_count,
-                            'current_through_gameweek': current_gw
+                            'row_count': row_count
                         }
-                        
                     except Exception as e:
                         status['table_details'][table_name] = {'error': str(e)}
                 
@@ -187,85 +174,64 @@ class RawDatabaseOperations:
                             tables_exist.append(False)
                     
                     if all(tables_exist):
-                        results[f"{category}_tables"] = "✅ All 3 tables exist"
+                        results[category] = f"✅ {category}: All 3 tables present"
                     else:
-                        missing_count = tables_exist.count(False)
-                        results[f"{category}_tables"] = f"❌ {missing_count} tables missing"
+                        missing = [t for t, exists in zip([squad_table, opponent_table, player_table], tables_exist) if not exists]
+                        results[category] = f"❌ {category}: Missing tables: {missing}"
                 
-                # Check fixtures
+                # Check fixtures table
                 try:
-                    fixture_result = conn.execute("SELECT COUNT(*) FROM raw_fixtures").fetchone()
-                    if fixture_result is not None:
-                        fixture_count = fixture_result[0]
-                        results['fixtures'] = f"✅ {fixture_count} fixtures"
-                    else:
-                        results['fixtures'] = "❌ No fixture data returned"
-                except:
-                    results['fixtures'] = "❌ No fixtures table"
+                    fixture_count = conn.execute("SELECT COUNT(*) FROM raw_fixtures").fetchone()[0]
+                    completed_count = conn.execute("SELECT COUNT(*) FROM raw_fixtures WHERE is_completed = true").fetchone()[0]
+                    results['fixtures'] = f"✅ Fixtures: {fixture_count} total, {completed_count} completed"
+                except Exception as e:
+                    results['fixtures'] = f"❌ Fixtures: {e}"
                 
-                # Sample data quality check
-                try:
-                    # Check a player table for data quality
-                    player_result = conn.execute("SELECT COUNT(*) FROM player_standard").fetchone()
-                    if player_result is not None:
-                        player_count = player_result[0]
-                        if player_count > 250:  # Reasonable number of Premier League players
-                            results['player_data'] = f"✅ {player_count} players"
-                        else:
-                            results['player_data'] = f"⚠️ Only {player_count} players"
-                    else:
-                        results['player_data'] = "❌ No player data returned"
-                except:
-                    results['player_data'] = "❌ No player data"
+                return results
                 
             except Exception as e:
-                results['validation_error'] = f"❌ Validation failed: {e}"
-        
-        return results
-    
-    def get_expected_stat_tables(self) -> List[str]:
-        """Get list of expected stat table names"""
-        categories = ['standard', 'keepers', 'keepersadv', 'shooting', 'passing', 
-                     'passingtypes', 'goalshotcreation', 'defense', 'possession', 
-                     'playingtime', 'misc']
-        prefixes = ['squad', 'opponent', 'player']
-        
-        tables = []
-        for prefix in prefixes:
-            for category in categories:
-                tables.append(f"{prefix}_{category}")
-        
-        return tables
+                logger.error(f"Failed to validate raw data quality: {e}")
+                return {'error': str(e)}
     
     def check_stat_category_completion(self, category: str) -> Dict[str, Any]:
-        """Check if all 3 tables exist for a stat category"""
-        table_names = [f"squad_{category}", f"opponent_{category}", f"player_{category}"]
-        
+        """Check completion status for a stat category"""
         with self.db.get_connection() as conn:
-            results = {}
-            
-            for table_name in table_names:
-                try:
-                    count_result = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()
-                    count = count_result[0] if count_result else 0
-                    results[table_name] = {
-                        'exists': True,
-                        'row_count': count
-                    }
-                except:
-                    results[table_name] = {
-                        'exists': False,
-                        'row_count': 0
-                    }
-            
-            # Summary
-            all_exist = all(results[table]['exists'] for table in table_names)
-            total_rows = sum(results[table]['row_count'] for table in table_names)
-            
-            results['summary'] = {
-                'category': category,
-                'all_tables_exist': all_exist,
-                'total_rows': total_rows
-            }
-            
-            return results
+            try:
+                squad_table = f"squad_{category}"
+                opponent_table = f"opponent_{category}"
+                player_table = f"player_{category}"
+                
+                result = {
+                    'category': category,
+                    'tables': {},
+                    'summary': {}
+                }
+                
+                total_rows = 0
+                all_exist = True
+                
+                for table_name in [squad_table, opponent_table, player_table]:
+                    try:
+                        row_count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
+                        result['tables'][table_name] = {
+                            'exists': True,
+                            'row_count': row_count
+                        }
+                        total_rows += row_count
+                    except Exception as e:
+                        result['tables'][table_name] = {
+                            'exists': False,
+                            'error': str(e)
+                        }
+                        all_exist = False
+                
+                result['summary'] = {
+                    'all_tables_exist': all_exist,
+                    'total_rows': total_rows
+                }
+                
+                return result
+                
+            except Exception as e:
+                logger.error(f"Failed to check {category} completion: {e}")
+                return {'error': str(e)}

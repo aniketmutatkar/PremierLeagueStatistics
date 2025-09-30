@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Analytics ETL Pipeline - Production pipeline for analytics layer
-Orchestrates the complete ETL process from raw to analytics
+Analytics ETL Pipeline - NEW FIXTURE-BASED IMPLEMENTATION
+Phase 3: Team-specific gameweek assignment in analytics layer
 """
 
 import logging
 import pandas as pd
 from datetime import datetime
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, List
 import sys
 from pathlib import Path
 
@@ -28,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class AnalyticsETL:
-    """Production ETL pipeline for analytics layer"""
+    """NEW: Production ETL pipeline with team-specific gameweek assignment"""
     
     def __init__(self):
         self.db = AnalyticsDBConnection()
@@ -38,58 +38,72 @@ class AnalyticsETL:
         self.pipeline_start_time = None
         self.pipeline_stats = {}
     
-    def run_full_pipeline(self, target_gameweek: Optional[int] = None, force_refresh: bool = False) -> bool:
+    def run_full_pipeline(self, force_refresh: bool = False) -> bool:
         """
-        Run the complete analytics ETL pipeline
+        NEW: Run analytics ETL with fixture-based gameweek assignment
         
         Args:
-            target_gameweek: Specific gameweek to process (None = current)
             force_refresh: Force refresh even if data already exists
+            
+        REMOVED: target_gameweek parameter - calculated from fixtures
             
         Returns:
             bool: True if successful, False otherwise
         """
         self.pipeline_start_time = datetime.now()
-        logger.info("🚀 Starting Analytics ETL Pipeline")
+        logger.info("🚀 Starting Analytics ETL Pipeline (NEW Fixture-Based Mode)")
         
         try:
             with self.db.get_dual_connections() as (raw_conn, analytics_conn):
                 
-                # Step 1: Determine target gameweek
-                if target_gameweek is None:
-                    target_gameweek = self._get_current_gameweek(raw_conn)
-                    if target_gameweek is None:
-                        logger.error("Could not determine target gameweek")
-                        return False
+                # NEW Step 1: Get team-specific gameweeks from fixtures
+                logger.info("📊 Step 1: Calculating team-specific gameweeks from fixtures...")
+                team_gameweeks = self._get_team_gameweeks_from_fixtures(raw_conn)
                 
-                logger.info(f"🎯 Processing gameweek {target_gameweek}")
+                if not team_gameweeks:
+                    logger.error("Could not determine team gameweeks from fixtures")
+                    return False
                 
-                # Step 2: Check if refresh is needed
-                if not force_refresh and self._is_data_current(analytics_conn, target_gameweek):
-                    logger.info("✅ Data is already current, skipping ETL")
-                    return True
+                min_gw = min(team_gameweeks.values())
+                max_gw = max(team_gameweeks.values())
+                teams_aligned = (min_gw == max_gw)
                 
+                logger.info(f"✅ Team gameweeks calculated:")
+                logger.info(f"   Range: GW{min_gw} to GW{max_gw}")
+                logger.info(f"   Teams aligned: {teams_aligned}")
+                logger.info(f"   Total teams: {len(team_gameweeks)}")
+                
+                if not teams_aligned:
+                    teams_behind = [t for t, gw in team_gameweeks.items() if gw < max_gw]
+                    logger.info(f"   Teams behind: {len(teams_behind)} - {teams_behind}")
+                
+                # NEW Step 2: Check if refresh needed (team-by-team)
+                if not force_refresh:
+                    teams_needing_update = self._get_teams_needing_update(analytics_conn, team_gameweeks)
+                    if not teams_needing_update:
+                        logger.info("✅ All teams' data is current, skipping ETL")
+                        return True
+                    logger.info(f"Teams needing update: {len(teams_needing_update)} - {teams_needing_update}")
+                
+                # Step 3: Process fixtures (unchanged)
                 logger.info("🏈 Step 3: Processing fixtures...")
                 fixtures_processor = FixturesProcessor()
-                fixtures_success = fixtures_processor.process_fixtures(raw_conn, analytics_conn, target_gameweek, force_refresh)
+                fixtures_success = fixtures_processor.process_fixtures(raw_conn, analytics_conn, max_gw, force_refresh)
                 if not fixtures_success:
                     logger.warning("⚠️ Fixtures processing failed, continuing with entity analytics")
 
-                # Step 4: Consolidate player data
-                logger.info("🔄 Consolidating player data...")
-                outfield_df, goalkeepers_df = self.consolidator.consolidate_players(raw_conn, target_gameweek)
-
-                logger.info("🔄 Consolidating squad data...")
-                squad_df = self.consolidator.consolidate_squads(raw_conn, target_gameweek)
-
-                logger.info("🔄 Consolidating opponent data...")
-                opponent_df = self.consolidator.consolidate_opponents(raw_conn, target_gameweek)
+                # Step 4: Consolidate data (NOTE: consolidator doesn't need gameweek parameter anymore)
+                logger.info("🔄 Step 4: Consolidating all entity data...")
+                
+                outfield_df, goalkeepers_df = self.consolidator.consolidate_players(raw_conn)
+                squad_df = self.consolidator.consolidate_squads(raw_conn)
+                opponent_df = self.consolidator.consolidate_opponents(raw_conn)
                 
                 if outfield_df.empty and goalkeepers_df.empty:
                     logger.error("No player data consolidated")
                     return False
                 
-                # Log consolidation results
+                # Log consolidation
                 summary = self.consolidator.get_consolidation_summary(
                     outfield=outfield_df, 
                     goalkeepers=goalkeepers_df,
@@ -102,6 +116,40 @@ class AnalyticsETL:
                 logger.info(f"   - Squads: {summary.get('squads_count', 0)} squads")
                 logger.info(f"   - Opponents: {summary.get('opponents_count', 0)} opponents")
 
+                # NEW Step 5: Assign team-specific gameweeks to each record
+                logger.info("🎯 Step 5: Assigning team-specific gameweeks...")
+                
+                outfield_df['gameweek'] = outfield_df['squad'].map(team_gameweeks)
+                goalkeepers_df['gameweek'] = goalkeepers_df['squad'].map(team_gameweeks)
+                squad_df['gameweek'] = squad_df['squad_name'].map(team_gameweeks)
+                opponent_df['gameweek'] = opponent_df['squad_name'].map(team_gameweeks)
+                
+                # Check for any unmapped teams (shouldn't happen)
+                unmapped_outfield = outfield_df[outfield_df['gameweek'].isna()]
+                unmapped_keepers = goalkeepers_df[goalkeepers_df['gameweek'].isna()]
+                unmapped_squads = squad_df[squad_df['gameweek'].isna()]
+                unmapped_opponents = opponent_df[opponent_df['gameweek'].isna()]
+                
+                if not unmapped_outfield.empty or not unmapped_keepers.empty or not unmapped_squads.empty or not unmapped_opponents.empty:
+                    logger.error("Found records with unmapped gameweeks:")
+                    if not unmapped_outfield.empty:
+                        logger.error(f"  Unmapped outfield teams: {unmapped_outfield['squad'].unique()}")
+                    if not unmapped_keepers.empty:
+                        logger.error(f"  Unmapped keeper teams: {unmapped_keepers['squad'].unique()}")
+                    if not unmapped_squads.empty:
+                        logger.error(f"  Unmapped squad teams: {unmapped_squads['squad_name'].unique()}")
+                    if not unmapped_opponents.empty:
+                        logger.error(f"  Unmapped opponent teams: {unmapped_opponents['squad_name'].unique()}")
+                    return False
+                
+                logger.info(f"✅ Gameweeks assigned successfully")
+                
+                # Show gameweek distribution
+                gw_dist = outfield_df['gameweek'].value_counts().sort_index()
+                logger.info(f"   Player distribution by gameweek:")
+                for gw, count in gw_dist.items():
+                    logger.info(f"     GW{int(gw)}: {count} players")
+
                 # Validate consolidation
                 validation = self.consolidator.validate_consolidation(
                     outfield=outfield_df,
@@ -113,32 +161,67 @@ class AnalyticsETL:
                     logger.error(f"Consolidation validation failed: {validation['errors']}")
                     return False
                 
-                # Step 5: Handle SCD Type 2 updates
-                logger.info("🕐 Processing SCD Type 2 updates...")
+                # NEW Step 6: Process SCD updates by gameweek groups
+                logger.info("🕐 Step 6: Processing SCD Type 2 updates (by gameweek)...")
                 
                 scd_processor = SCDType2Processor(analytics_conn)
-                # Process both tables with clean, consistent SCD logic
-                if not scd_processor.process_all_updates(outfield_df, goalkeepers_df, target_gameweek, squad_df, opponent_df):
-                    logger.error("SCD Type 2 processing failed")
-                    return False
                 
-                logger.info(f"✅ SCD Type 2 processing completed for {len(outfield_df)} outfield + {len(goalkeepers_df)} goalkeepers")
+                # Get unique gameweeks present in the data
+                all_gameweeks = set()
+                if not outfield_df.empty:
+                    all_gameweeks.update(outfield_df['gameweek'].unique())
+                if not goalkeepers_df.empty:
+                    all_gameweeks.update(goalkeepers_df['gameweek'].unique())
+                if squad_df is not None and not squad_df.empty:
+                    all_gameweeks.update(squad_df['gameweek'].unique())
+                if opponent_df is not None and not opponent_df.empty:
+                    all_gameweeks.update(opponent_df['gameweek'].unique())
                 
-                # Step 6: Final validation
-                if not self._validate_analytics_data(analytics_conn, target_gameweek):
+                all_gameweeks = sorted([int(gw) for gw in all_gameweeks if pd.notna(gw)])
+                
+                logger.info(f"Processing {len(all_gameweeks)} gameweek(s): {all_gameweeks}")
+                
+                # Process each gameweek separately
+                for gameweek in all_gameweeks:
+                    logger.info(f"\n--- Processing Gameweek {gameweek} ---")
+                    
+                    # Filter data for this gameweek
+                    gw_outfield = outfield_df[outfield_df['gameweek'] == gameweek].copy() if not outfield_df.empty else pd.DataFrame()
+                    gw_goalkeepers = goalkeepers_df[goalkeepers_df['gameweek'] == gameweek].copy() if not goalkeepers_df.empty else pd.DataFrame()
+                    gw_squads = squad_df[squad_df['gameweek'] == gameweek].copy() if squad_df is not None and not squad_df.empty else None
+                    gw_opponents = opponent_df[opponent_df['gameweek'] == gameweek].copy() if opponent_df is not None and not opponent_df.empty else None
+                    
+                    logger.info(f"  Outfield: {len(gw_outfield)}, Keepers: {len(gw_goalkeepers)}, " +
+                               f"Squads: {len(gw_squads) if gw_squads is not None else 0}, " +
+                               f"Opponents: {len(gw_opponents) if gw_opponents is not None else 0}")
+                    
+                    # Process this gameweek's data
+                    if not scd_processor.process_all_updates(gw_outfield, gw_goalkeepers, gameweek, gw_squads, gw_opponents):
+                        logger.error(f"SCD Type 2 processing failed for gameweek {gameweek}")
+                        return False
+                    
+                    logger.info(f"✅ Gameweek {gameweek} processed successfully")
+                
+                logger.info(f"\n✅ All SCD Type 2 processing completed")
+                
+                # Step 7: Final validation
+                logger.info("🔍 Step 7: Validating analytics data...")
+                if not self._validate_analytics_data(analytics_conn, all_gameweeks):
                     logger.error("Analytics data validation failed")
                     return False
                 
                 # Update pipeline stats
                 elapsed_time = (datetime.now() - self.pipeline_start_time).total_seconds()
                 self.pipeline_stats = {
-                    'gameweek': target_gameweek,
+                    'gameweek_range': f"{min_gw}-{max_gw}",
+                    'teams_aligned': teams_aligned,
                     'outfield_players': len(outfield_df),
                     'goalkeepers': len(goalkeepers_df),
-                    'squads': len(squad_df),
-                    'opponents': len(opponent_df),
-                    'total_players': len(outfield_df) + len(goalkeepers_df),
-                    'total_entities': len(outfield_df) + len(goalkeepers_df) + len(squad_df) + len(opponent_df),
+                    'squads': len(squad_df) if squad_df is not None else 0,
+                    'opponents': len(opponent_df) if opponent_df is not None else 0,
+                    'total_entities': len(outfield_df) + len(goalkeepers_df) + 
+                                     (len(squad_df) if squad_df is not None else 0) + 
+                                     (len(opponent_df) if opponent_df is not None else 0),
                     'elapsed_time_seconds': elapsed_time,
                     'success': True
                 }
@@ -148,115 +231,115 @@ class AnalyticsETL:
                 
         except Exception as e:
             logger.error(f"ETL process error: {e}")
+            import traceback
+            traceback.print_exc()
             self.pipeline_stats['success'] = False
             return False
     
-    def _get_current_gameweek(self, raw_conn) -> Optional[int]:
-        """Get current gameweek from raw database"""
+    def _get_team_gameweeks_from_fixtures(self, raw_conn) -> Dict[str, int]:
+        """
+        NEW: Calculate team-specific gameweeks from fixtures table
+        
+        Returns:
+            Dict mapping team_name -> latest_completed_gameweek
+        """
         try:
-            result = raw_conn.execute("""
-                SELECT MAX(current_through_gameweek) as current_gw 
-                FROM raw_fixtures
-            """).fetchone()
+            # Get all fixtures
+            fixtures_df = raw_conn.execute("SELECT * FROM raw_fixtures").fetchdf()
             
-            if result and result[0]:
-                return result[0]
+            if fixtures_df.empty:
+                logger.error("No fixtures found in raw database")
+                return {}
             
-            logger.warning("Could not determine current gameweek from fixtures")
-            return None
+            team_gameweeks = {}
+            
+            # Get all unique teams
+            home_teams = set(fixtures_df['home_team'].dropna().unique())
+            away_teams = set(fixtures_df['away_team'].dropna().unique())
+            all_teams = home_teams | away_teams
+            
+            for team in all_teams:
+                # Find completed fixtures for this team
+                team_fixtures = fixtures_df[
+                    ((fixtures_df['home_team'] == team) | (fixtures_df['away_team'] == team)) &
+                    (fixtures_df['is_completed'] == True)
+                ]
+                
+                if not team_fixtures.empty:
+                    latest_gw = int(team_fixtures['gameweek'].max())
+                    team_gameweeks[team] = latest_gw
+                else:
+                    team_gameweeks[team] = 0
+            
+            return team_gameweeks
             
         except Exception as e:
-            logger.error(f"Error getting current gameweek: {e}")
-            return None
+            logger.error(f"Error calculating team gameweeks: {e}")
+            return {}
     
-    def _is_data_current(self, analytics_conn, gameweek: int) -> bool:
-        """Check if analytics data is already current for this gameweek"""
+    def _get_teams_needing_update(self, analytics_conn, team_gameweeks: Dict[str, int]) -> List[str]:
+        """
+        NEW: Determine which teams need data updates
+        
+        Args:
+            analytics_conn: Analytics database connection
+            team_gameweeks: Current gameweeks for each team
+            
+        Returns:
+            List of team names that need updates
+        """
+        teams_needing_update = []
+        
         try:
-            # Check if we have current data for this gameweek
-            result = analytics_conn.execute("""
-                SELECT COUNT(*) FROM analytics_players 
-                WHERE gameweek = ? AND is_current = true
-            """, [gameweek]).fetchone()
+            for team, current_gw in team_gameweeks.items():
+                # Check what gameweek we have in analytics for this team
+                result = analytics_conn.execute("""
+                    SELECT MAX(gameweek) as analytics_gw
+                    FROM analytics_players
+                    WHERE squad = ? AND is_current = true
+                """, [team]).fetchone()
+                
+                analytics_gw = result[0] if result and result[0] is not None else 0
+                
+                if current_gw > analytics_gw:
+                    teams_needing_update.append(team)
             
-            if result and result[0] > 0:
-                logger.info(f"Found {result[0]} current records for gameweek {gameweek}")
-                return True
-            
-            return False
+            return teams_needing_update
             
         except Exception as e:
-            logger.error(f"Error checking data currency: {e}")
-            return False
+            logger.warning(f"Error checking teams needing update: {e}")
+            # If we can't determine, assume all need updates
+            return list(team_gameweeks.keys())
     
-    def _validate_analytics_data(self, analytics_conn, gameweek: int) -> bool:
-        """Validate inserted analytics data for all entity types"""
+    def _validate_analytics_data(self, analytics_conn, gameweeks: List[int]) -> bool:
+        """
+        NEW: Validate analytics data for multiple gameweeks
         
-        # Get current season being processed
-        import os
-        historical_season = os.getenv('HISTORICAL_SEASON')
-        
-        if historical_season:
-            # For historical seasons, extract year to determine available stats
-            try:
-                year = int(historical_season.split('-')[0])
-                if year < 2017:
-                    logger.info(f"Skipping detailed validation for pre-2017 season {historical_season}")
-                    logger.info("Older seasons have limited stat availability")
-                return True
-            except:
-                pass
-        
+        Args:
+            analytics_conn: Analytics database connection
+            gameweeks: List of gameweeks to validate
+        """
         try:
-            # Check outfield players
-            outfield_count = analytics_conn.execute("""
-                SELECT COUNT(*) FROM analytics_players 
-                WHERE gameweek = ? AND is_current = true
-            """, [gameweek]).fetchone()[0]
+            for gameweek in gameweeks:
+                # Check outfield players
+                outfield_count = analytics_conn.execute("""
+                    SELECT COUNT(*) FROM analytics_players 
+                    WHERE gameweek = ? AND is_current = true
+                """, [gameweek]).fetchone()[0]
+                
+                # Check goalkeepers
+                goalkeeper_count = analytics_conn.execute("""
+                    SELECT COUNT(*) FROM analytics_keepers 
+                    WHERE gameweek = ? AND is_current = true
+                """, [gameweek]).fetchone()[0]
+                
+                logger.info(f"GW{gameweek}: {outfield_count} outfield, {goalkeeper_count} keepers")
+                
+                if outfield_count == 0:
+                    logger.error(f"No outfield players found for gameweek {gameweek}")
+                    return False
             
-            # Check goalkeepers
-            goalkeeper_count = analytics_conn.execute("""
-                SELECT COUNT(*) FROM analytics_keepers 
-                WHERE gameweek = ? AND is_current = true
-            """, [gameweek]).fetchone()[0]
-            
-            # Check squads
-            squad_count = analytics_conn.execute("""
-                SELECT COUNT(*) FROM analytics_squads 
-                WHERE gameweek = ? AND is_current = true
-            """, [gameweek]).fetchone()[0]
-            
-            # Check opponents
-            opponent_count = analytics_conn.execute("""
-                SELECT COUNT(*) FROM analytics_opponents 
-                WHERE gameweek = ? AND is_current = true
-            """, [gameweek]).fetchone()[0]
-            
-            logger.info(f"Validation: {outfield_count} outfield, {goalkeeper_count} goalkeepers, {squad_count} squads, {opponent_count} opponents")
-            
-            # Basic validation - should have some players
-            if outfield_count == 0:
-                logger.error("No outfield players found after insertion")
-                return False
-            
-            # Check expected squad count (should be around 20 teams)
-            if squad_count < 15 or squad_count > 25:
-                logger.warning(f"Unexpected squad count: {squad_count} (expected 15-25)")
-            
-            # Check expected opponent count (should match squad count)
-            if opponent_count != squad_count:
-                logger.warning(f"Opponent count ({opponent_count}) doesn't match squad count ({squad_count})")
-            
-            # Check for realistic data (players should have some touches, etc.)
-            realistic_data = analytics_conn.execute("""
-                SELECT COUNT(*) FROM analytics_players 
-                WHERE gameweek = ? AND is_current = true AND touches > 0
-            """, [gameweek]).fetchone()[0]
-            
-            if realistic_data == 0:
-                logger.error("No players have touches > 0 - data consolidation may have failed")
-                return False
-            
-            logger.info(f"✅ Validation passed: {realistic_data}/{outfield_count} outfield players have touches > 0")
+            logger.info("✅ Analytics data validation passed")
             return True
             
         except Exception as e:
@@ -268,7 +351,7 @@ class AnalyticsETL:
         return self.pipeline_stats.copy()
     
     def get_pipeline_status(self) -> Dict[str, Any]:
-        """Get current pipeline status for all entity types"""
+        """Get current pipeline status"""
         try:
             with self.db.get_analytics_connection() as conn:
                 # Get latest gameweek from players table
@@ -279,7 +362,7 @@ class AnalyticsETL:
                 if latest_gw is None:
                     return {'status': 'empty', 'message': 'No analytics data found'}
                 
-                # Get record counts for all entity types
+                # Get record counts
                 outfield_count = conn.execute("""
                     SELECT COUNT(*) FROM analytics_players 
                     WHERE gameweek = ? AND is_current = true
@@ -290,7 +373,6 @@ class AnalyticsETL:
                     WHERE gameweek = ? AND is_current = true
                 """, [latest_gw]).fetchone()[0]
                 
-                # Check if squad/opponent tables exist and have data
                 try:
                     squad_count = conn.execute("""
                         SELECT COUNT(*) FROM analytics_squads 
@@ -325,8 +407,7 @@ class AnalyticsETL:
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='Run Analytics ETL Pipeline')
-    parser.add_argument('--gameweek', type=int, help='Specific gameweek to process')
+    parser = argparse.ArgumentParser(description='Run Analytics ETL Pipeline (NEW Fixture-Based)')
     parser.add_argument('--force', action='store_true', help='Force refresh even if data exists')
     parser.add_argument('--status', action='store_true', help='Show pipeline status')
     
@@ -338,7 +419,7 @@ if __name__ == "__main__":
         status = etl.get_pipeline_status()
         print(f"Pipeline Status: {status}")
     else:
-        success = etl.run_full_pipeline(args.gameweek, args.force)
+        success = etl.run_full_pipeline(args.force)
         stats = etl.get_pipeline_stats()
         print(f"Pipeline {'Succeeded' if success else 'Failed'}: {stats}")
         sys.exit(0 if success else 1)
