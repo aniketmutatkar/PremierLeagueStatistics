@@ -234,14 +234,22 @@ class SCDType2Processor:
     def _insert_new_current_records(self, scd_data: pd.DataFrame, table: str) -> None:
         """Insert new current records into specified analytics table"""
         
+        # Ensure valid_to is DATE type, not inferred as INTEGER
+        if 'valid_to' in scd_data.columns:
+            scd_data['valid_to'] = pd.to_datetime(scd_data['valid_to']).dt.date
+        
         # Check if table exists, if not create it
         tables = self.conn.execute("SHOW TABLES").fetchall()
         table_names = [t[0] for t in tables]
         
         if table not in table_names:
-            # Create table from dataframe
+            # Create table from dataframe with explicit DATE type for valid_to
             self.conn.register('temp_scd_data', scd_data)
             self.conn.execute(f"CREATE TABLE {table} AS SELECT * FROM temp_scd_data")
+            
+            # EXPLICITLY set valid_to to DATE type after creation
+            self.conn.execute(f"ALTER TABLE {table} ALTER COLUMN valid_to SET DATA TYPE DATE")
+            
             self.conn.unregister('temp_scd_data')
             logger.info(f"Created {table} with {len(scd_data)} records")
             return

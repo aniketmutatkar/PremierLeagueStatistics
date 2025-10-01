@@ -1,91 +1,70 @@
 #!/usr/bin/env python3
 """
-Master Pipeline - Orchestrates Complete Data Pipeline
-Runs Raw → Analytics pipeline with intelligent dependency management
+Master Pipeline - PHASE 4: Team-by-Team Gameweek Comparison
+Orchestrates complete data pipeline with intelligent team-specific run detection
 """
-
 import sys
 import subprocess
 import argparse
-from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, Tuple
-import time
+import logging
 import glob
+from pathlib import Path
+from datetime import datetime
+from typing import Tuple, Dict
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 class PipelineLogger:
-    """Enhanced logging for pipeline operations with rotation and granular tracking"""
-    
-    def __init__(self, pipeline_name: str, log_dir: str = "data/logs", keep_logs: int = 5):
-        import logging
-        
-        self.pipeline_name = pipeline_name
-        self.log_dir = Path(log_dir)
-        self.keep_logs = keep_logs
-        
-        # Ensure log directory exists
+    """Enhanced logging with file and console output"""
+    def __init__(self, name: str):
+        self.log_dir = Path("data/logs")
         self.log_dir.mkdir(parents=True, exist_ok=True)
         
         # Create timestamped log file
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.log_file = self.log_dir / f"{pipeline_name}_{timestamp}.log"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.log_file = self.log_dir / f"{name}_{timestamp}.log"
         
-        # Setup logging
-        self._setup_logging()
-        
-        # Cleanup old logs
-        self._cleanup_old_logs()
-    
-    def _setup_logging(self):
-        """Configure logging with both file and console output"""
-        import logging
-        
-        # Clear any existing handlers
-        for handler in logging.root.handlers[:]:
-            logging.root.removeHandler(handler)
-        
-        # Create formatter (cleaner format)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)s - %(message)s',
-            datefmt='%H:%M:%S'
-        )
+        # Setup logger
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
         
         # File handler
-        file_handler = logging.FileHandler(self.log_file, mode='w')
+        file_handler = logging.FileHandler(self.log_file)
         file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(formatter)
         
-        # Console handler (less verbose)
-        console_handler = logging.StreamHandler(sys.stdout)
+        # Console handler
+        console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
-        console_formatter = logging.Formatter('%(message)s')
-        console_handler.setFormatter(console_formatter)
         
-        # Configure root logger
-        logging.root.setLevel(logging.INFO)
-        logging.root.addHandler(file_handler)
-        logging.root.addHandler(console_handler)
+        # Formatter
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
         
-        # Get logger for this pipeline
-        self.logger = logging.getLogger(self.pipeline_name)
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console_handler)
+        
+        # Cleanup old logs (keep last 10)
+        self.keep_logs = 10
+        self._cleanup_old_logs()
     
     def _cleanup_old_logs(self):
-        """Keep only the most recent N log files"""
-        pattern = str(self.log_dir / f"{self.pipeline_name}_*.log")
-        log_files = glob.glob(pattern)
-        
-        if len(log_files) > self.keep_logs:
-            # Sort by modification time (newest first)
-            log_files.sort(key=lambda x: Path(x).stat().st_mtime, reverse=True)
-            
-            # Remove old logs
-            for old_log in log_files[self.keep_logs:]:
-                try:
-                    Path(old_log).unlink()
-                except Exception:
-                    pass  # Ignore cleanup errors
+        """Remove old log files, keeping only recent ones"""
+        try:
+            log_files = sorted(glob.glob(str(self.log_dir / "master_pipeline_*.log")))
+            if len(log_files) > self.keep_logs:
+                for old_log in log_files[:-self.keep_logs]:
+                    try:
+                        Path(old_log).unlink()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
-# Initialize enhanced logging
 pipeline_logger = PipelineLogger("master_pipeline")
 logger = pipeline_logger.logger
 
@@ -100,8 +79,9 @@ class MasterPipeline:
             'total_duration': None,
             'raw_duration': None,
             'analytics_duration': None,
-            'raw_gameweek': None,
-            'analytics_gameweek': None,
+            'raw_team_gameweeks': None,
+            'analytics_team_gameweeks': None,
+            'teams_updated': None,
             'records_processed': None
         }
     
@@ -118,17 +98,17 @@ class MasterPipeline:
         """
         self.start_time = datetime.now()
         
-        logger.info("🚀 MASTER PIPELINE STARTED")
+        logger.info("🚀 MASTER PIPELINE STARTED (TEAM-SPECIFIC MODE)")
         logger.info(f"Run started: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
         logger.info("=" * 50)
         
         try:
-            # Step 1: Intelligent decision making
-            logger.info("🔍 Checking pipeline requirements...")
+            # Step 1: Intelligent decision making (team-by-team)
+            logger.info("🔍 Checking pipeline requirements (team-by-team)...")
             should_run_raw, should_run_analytics = self._should_run_pipeline(force_raw, force_analytics)
             
             if not should_run_raw and not should_run_analytics:
-                logger.info("✅ All data current - no updates needed")
+                logger.info("✅ All teams up to date - no updates needed")
                 return True
             
             # Step 2: Run Raw Pipeline (if needed)
@@ -169,7 +149,7 @@ class MasterPipeline:
     
     def _should_run_pipeline(self, force_raw: bool, force_analytics: bool) -> Tuple[bool, bool]:
         """
-        Intelligent decision on what pipelines to run
+        PHASE 4: Team-by-team intelligent decision on what pipelines to run
         Returns: (should_run_raw, should_run_analytics)
         """
         if force_raw or force_analytics:
@@ -177,105 +157,181 @@ class MasterPipeline:
             return force_raw, force_analytics
         
         try:
-            # Get current local state (fast)
-            raw_gw = self._get_raw_gameweek()
-            analytics_gw = self._get_analytics_gameweek()
+            # Get team-specific gameweeks from both databases
+            raw_team_gws = self._get_raw_team_gameweeks()
+            analytics_team_gws = self._get_analytics_team_gameweeks()
             
-            logger.info(f"Current state: Raw=GW{raw_gw}, Analytics=GW{analytics_gw}")
+            self.pipeline_stats['raw_team_gameweeks'] = raw_team_gws
+            self.pipeline_stats['analytics_team_gameweeks'] = analytics_team_gws
             
-            # Case 1: Analytics behind raw - run analytics only
-            if analytics_gw < raw_gw:
-                logger.info("Analytics behind raw - will update analytics")
-                return False, True
+            if not raw_team_gws:
+                logger.warning("No raw data found - will run full pipeline")
+                return True, True
             
-            # Case 2: Check if new gameweek available on FBRef
+            # Log team gameweek ranges
+            raw_min = min(raw_team_gws.values()) if raw_team_gws else 0
+            raw_max = max(raw_team_gws.values()) if raw_team_gws else 0
+            logger.info(f"Raw data: GW{raw_min}-{raw_max} across {len(raw_team_gws)} teams")
+            
+            if analytics_team_gws:
+                analytics_min = min(analytics_team_gws.values())
+                analytics_max = max(analytics_team_gws.values())
+                logger.info(f"Analytics data: GW{analytics_min}-{analytics_max} across {len(analytics_team_gws)} teams")
+            else:
+                logger.info("Analytics database empty - will populate")
+            
+            # Compare team-by-team to find which teams need updates
+            teams_to_update = []
+            for team, raw_gw in raw_team_gws.items():
+                analytics_gw = analytics_team_gws.get(team, 0)
+                if raw_gw > analytics_gw:
+                    teams_to_update.append(f"{team} (GW{analytics_gw}→{raw_gw})")
+            
+            if teams_to_update:
+                logger.info(f"Teams needing update ({len(teams_to_update)}):")
+                for team_info in teams_to_update[:5]:  # Show first 5
+                    logger.info(f"  • {team_info}")
+                if len(teams_to_update) > 5:
+                    logger.info(f"  ... and {len(teams_to_update) - 5} more")
+                
+                self.pipeline_stats['teams_updated'] = len(teams_to_update)
+                return False, True  # Only analytics needed
+            
+            # Check if new gameweek available on FBRef
             if self._should_check_fbref():
                 logger.info("Checking FBRef for new gameweek...")
-                fbref_gw = self._quick_gameweek_check()
-                logger.info(f"FBRef gameweek: {fbref_gw}")
+                fbref_max_gw = self._quick_gameweek_check()
+                logger.info(f"FBRef max gameweek: {fbref_max_gw}")
                 
-                if raw_gw < fbref_gw:
-                    logger.info(f"New gameweek available: GW{fbref_gw}")
+                if raw_max < fbref_max_gw:
+                    logger.info(f"New gameweek available: GW{fbref_max_gw}")
                     return True, True
                 else:
                     logger.info("No new gameweek found")
             else:
                 logger.info("Skipping FBRef check (recently checked)")
             
-            # Case 3: Everything current
-            logger.info("All systems up to date")
+            logger.info("All teams up to date")
             return False, False
             
         except Exception as e:
             logger.warning(f"Decision logic failed: {e}, defaulting to force run")
             return True, True
     
+    def _get_raw_team_gameweeks(self) -> Dict[str, int]:
+        """
+        PHASE 4 NEW: Calculate team-specific gameweeks from raw_fixtures
+        Returns: {'Man City': 6, 'Liverpool': 5, ...}
+        """
+        try:
+            import duckdb
+            
+            conn = duckdb.connect('data/premierleague_raw.duckdb', read_only=True)
+            
+            # Get all completed fixtures
+            fixtures = conn.execute("""
+                SELECT home_team, away_team, gameweek, is_completed
+                FROM raw_fixtures
+                WHERE is_completed = true
+            """).fetchdf()
+            
+            conn.close()
+            
+            if fixtures.empty:
+                return {}
+            
+            # Calculate max completed gameweek per team
+            team_gameweeks = {}
+            all_teams = set(fixtures['home_team'].unique()) | set(fixtures['away_team'].unique())
+            
+            for team in all_teams:
+                team_fixtures = fixtures[
+                    ((fixtures['home_team'] == team) | (fixtures['away_team'] == team))
+                ]
+                if not team_fixtures.empty:
+                    team_gameweeks[team] = int(team_fixtures['gameweek'].max())
+            
+            return team_gameweeks
+            
+        except Exception as e:
+            logger.warning(f"Failed to get raw team gameweeks: {e}")
+            return {}
+    
+    def _get_analytics_team_gameweeks(self) -> Dict[str, int]:
+        """
+        PHASE 4 NEW: Get team-specific gameweeks from analytics_players
+        Returns: {'Man City': 6, 'Liverpool': 5, ...}
+        """
+        try:
+            import duckdb
+            
+            # Check if analytics DB exists
+            analytics_path = Path('data/premierleague_analytics.duckdb')
+            if not analytics_path.exists():
+                return {}
+            
+            conn = duckdb.connect(str(analytics_path), read_only=True)
+            
+            # Get max gameweek per team from current records
+            result = conn.execute("""
+                SELECT squad, MAX(gameweek) as max_gw
+                FROM analytics_players
+                WHERE is_current = true
+                GROUP BY squad
+            """).fetchdf()
+            
+            conn.close()
+            
+            if result.empty:
+                return {}
+            
+            # Convert to dict
+            return dict(zip(result['squad'], result['max_gw']))
+            
+        except Exception as e:
+            logger.warning(f"Failed to get analytics team gameweeks: {e}")
+            return {}
+    
     def _should_check_fbref(self) -> bool:
         """Only check FBRef once per day to avoid unnecessary requests"""
         try:
-            # Check if we've already checked FBRef today
             today = datetime.now().date()
-            
-            # Look for today's log files to see if we already checked
             log_pattern = str(pipeline_logger.log_dir / f"master_pipeline_{today.strftime('%Y%m%d')}_*.log")
             today_logs = glob.glob(log_pattern)
             
-            # If we have logs from today, check if we already made FBRef request
             for log_file in today_logs:
                 try:
                     with open(log_file, 'r') as f:
                         content = f.read()
                         if "Checking FBRef for new gameweek" in content:
-                            logger.info("Already checked FBRef today - skipping")
                             return False
                 except Exception:
                     continue
             
-            # No FBRef check found today - ok to check
             return True
             
         except Exception:
-            # If anything fails, default to checking (safe fallback)
             return True
     
     def _quick_gameweek_check(self) -> int:
-        """Quick check of current gameweek from FBRef fixtures page"""
+        """
+        PHASE 4 UPDATED: Quick check using new gameweek_status dict
+        Returns max gameweek from FBRef
+        """
         try:
-            # Add src to path for imports
             sys.path.insert(0, str(Path(__file__).parent.parent))
             from src.scraping.fbref_scraper import FBRefScraper
             
             scraper = FBRefScraper()
             fixtures_url = scraper.sources_config['fixtures_sources']['current_season']['url']
             
-            # Use existing fixtures scraping (lightweight)
             fixture_data = scraper.scrape_fixtures(fixtures_url)
-            return fixture_data['current_gameweek']
+            
+            # PHASE 4: Use new gameweek_status dict structure
+            return fixture_data['gameweek_status']['max_gameweek']
             
         except Exception as e:
             logger.warning(f"FBRef check failed: {e}")
-            return 0  # Safe fallback
-    
-    def _get_raw_gameweek(self) -> int:
-        """Get current gameweek from raw database"""
-        try:
-            sys.path.insert(0, str(Path(__file__).parent.parent))
-            from src.database.analytics_db import AnalyticsDBConnection
-            
-            db = AnalyticsDBConnection()
-            return db.get_current_gameweek() or 0
-        except Exception:
-            return 0
-    
-    def _get_analytics_gameweek(self) -> int:
-        """Get current gameweek from analytics database"""
-        try:
-            sys.path.insert(0, str(Path(__file__).parent.parent))
-            from src.database.analytics_db import AnalyticsDBOperations
-            
-            ops = AnalyticsDBOperations()
-            return ops.get_current_analytics_gameweek() or 0
-        except Exception:
             return 0
     
     def _run_raw_pipeline(self, force: bool = False) -> bool:
@@ -283,7 +339,6 @@ class MasterPipeline:
         raw_start = datetime.now()
         
         try:
-            # Build command
             cmd = [sys.executable, "pipelines/raw_pipeline.py"]
             if force:
                 cmd.append("--force")
@@ -292,12 +347,11 @@ class MasterPipeline:
             if force:
                 logger.info("  🔄 Force refresh enabled")
             
-            # Run raw pipeline
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=1800  # 30 minute timeout
+                timeout=1800
             )
             
             raw_duration = datetime.now() - raw_start
@@ -307,39 +361,32 @@ class MasterPipeline:
                 logger.info("✅ Raw pipeline completed successfully")
                 logger.info(f"⏱️  Duration: {raw_duration.total_seconds():.1f} seconds")
                 
-                # Parse output for gameweek info and progress
+                # Parse output for progress
                 output_lines = result.stdout.split('\n')
                 for line in output_lines:
-                    if "Current gameweek detected:" in line:
-                        gameweek = line.split(":")[-1].strip()
-                        self.pipeline_stats['raw_gameweek'] = gameweek
-                        logger.info(f"📈 Gameweek: {gameweek}")
-                    elif "categories successful" in line:
+                    if "categories successful" in line or "tables populated" in line:
                         logger.info(f"📊 {line.strip()}")
-                    elif "tables populated" in line:
-                        logger.info(f"💾 {line.strip()}")
                 
                 return True
             else:
                 logger.error("❌ Raw pipeline failed")
                 logger.error(f"Exit code: {result.returncode}")
                 if result.stderr:
-                    logger.error(f"Error: {result.stderr[:200]}...")
+                    logger.error(f"Error: {result.stderr[:500]}")
                 return False
                 
         except subprocess.TimeoutExpired:
-            logger.error("❌ Raw pipeline timed out (30 minutes)")
+            logger.error("❌ Raw pipeline timeout (30 minutes)")
             return False
         except Exception as e:
             logger.error(f"❌ Raw pipeline error: {e}")
             return False
     
     def _run_analytics_pipeline(self, force: bool = False) -> bool:
-        """Run the analytics pipeline with detailed tracking"""
+        """Run the analytics ETL pipeline with detailed tracking"""
         analytics_start = datetime.now()
         
         try:
-            # Build command
             cmd = [sys.executable, "pipelines/analytics_pipeline.py"]
             if force:
                 cmd.append("--force")
@@ -348,12 +395,11 @@ class MasterPipeline:
             if force:
                 logger.info("  🔄 Force refresh enabled")
             
-            # Run analytics pipeline
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=600  # 10 minute timeout
+                timeout=1800
             )
             
             analytics_duration = datetime.now() - analytics_start
@@ -363,26 +409,22 @@ class MasterPipeline:
                 logger.info("✅ Analytics pipeline completed successfully")
                 logger.info(f"⏱️  Duration: {analytics_duration.total_seconds():.1f} seconds")
                 
-                # Parse output for processing details
+                # Parse output for progress
                 output_lines = result.stdout.split('\n')
                 for line in output_lines:
-                    if "Players processed:" in line:
-                        logger.info(f"👥 {line.strip()}")
-                    elif "Records inserted:" in line:
-                        logger.info(f"💾 {line.strip()}")
-                    elif "SCD Type 2" in line:
-                        logger.info(f"🔄 {line.strip()}")
+                    if "records" in line.lower() or "processed" in line.lower():
+                        logger.info(f"📊 {line.strip()}")
                 
                 return True
             else:
                 logger.error("❌ Analytics pipeline failed")
                 logger.error(f"Exit code: {result.returncode}")
                 if result.stderr:
-                    logger.error(f"Error: {result.stderr[:200]}...")
+                    logger.error(f"Error: {result.stderr[:500]}")
                 return False
                 
         except subprocess.TimeoutExpired:
-            logger.error("❌ Analytics pipeline timed out (10 minutes)")
+            logger.error("❌ Analytics pipeline timeout (30 minutes)")
             return False
         except Exception as e:
             logger.error(f"❌ Analytics pipeline error: {e}")
@@ -406,9 +448,9 @@ class MasterPipeline:
             analytics_time = self.pipeline_stats['analytics_duration'].total_seconds()
             logger.info(f"🧮 Analytics: {analytics_time:.1f}s")
         
-        # Current state
-        if self.pipeline_stats['raw_gameweek']:
-            logger.info(f"📈 Current gameweek: {self.pipeline_stats['raw_gameweek']}")
+        # Team update info
+        if self.pipeline_stats['teams_updated']:
+            logger.info(f"👥 Teams updated: {self.pipeline_stats['teams_updated']}")
         
         # Quick validation
         logger.info("🔍 Running final validation...")
@@ -422,35 +464,38 @@ class MasterPipeline:
             logger.warning(f"⚠️  Validation check failed: {e}")
         
         logger.info(f"📁 Log saved: {pipeline_logger.log_file.name}")
-        
+    
     def _quick_validation(self) -> bool:
         """Run quick validation checks with detailed reporting"""
         try:
-            sys.path.insert(0, str(Path(__file__).parent.parent))
-            from src.database.analytics_db import AnalyticsDBConnection, AnalyticsDBOperations
+            import duckdb
             
-            db = AnalyticsDBConnection()
-            ops = AnalyticsDBOperations()
-            
-            # Check basic stats
-            raw_gw = db.get_current_gameweek()
-            analytics_gw = ops.get_current_analytics_gameweek()
-            player_count = ops.get_analytics_player_count()
-            
-            # Validation checks
-            if raw_gw is None or analytics_gw is None:
-                logger.warning("  Could not determine gameweek status")
+            # Check analytics database
+            analytics_path = Path('data/premierleague_analytics.duckdb')
+            if not analytics_path.exists():
+                logger.warning("  Analytics database does not exist")
                 return False
             
-            if raw_gw != analytics_gw:
-                logger.warning(f"  Gameweek mismatch: Raw={raw_gw}, Analytics={analytics_gw}")
-                return False
+            conn = duckdb.connect(str(analytics_path), read_only=True)
             
-            if player_count < 300:  # Sanity check
+            # Check player count
+            player_count = conn.execute("""
+                SELECT COUNT(*) FROM analytics_players WHERE is_current = true
+            """).fetchone()[0]
+            
+            # Check gameweek range
+            gw_stats = conn.execute("""
+                SELECT MIN(gameweek) as min_gw, MAX(gameweek) as max_gw
+                FROM analytics_players WHERE is_current = true
+            """).fetchone()
+            
+            conn.close()
+            
+            if player_count < 300:
                 logger.warning(f"  Low player count: {player_count}")
                 return False
             
-            logger.info(f"  📊 GW{analytics_gw} with {player_count:,} players")
+            logger.info(f"  📊 GW{gw_stats[0]}-{gw_stats[1]} with {player_count:,} players")
             return True
             
         except Exception as e:
@@ -459,7 +504,7 @@ class MasterPipeline:
 
 def check_system_status():
     """Check overall system status"""
-    print("🔍 SYSTEM STATUS CHECK")
+    print("🔍 SYSTEM STATUS CHECK (TEAM-SPECIFIC MODE)")
     print("=" * 50)
     
     try:
@@ -476,7 +521,6 @@ def check_system_status():
             print("✅ Raw pipeline status OK")
         else:
             print("❌ Raw pipeline status issues")
-            print(raw_result.stderr)
         
         # Check analytics pipeline status  
         print("\n🧮 Analytics Pipeline Status:")
@@ -491,7 +535,6 @@ def check_system_status():
             print("✅ Analytics pipeline status OK")
         else:
             print("❌ Analytics pipeline status issues")
-            print(analytics_result.stderr)
         
         return raw_result.returncode == 0 and analytics_result.returncode == 0
         
@@ -501,7 +544,7 @@ def check_system_status():
 
 def main():
     """Main entry point for master pipeline"""
-    parser = argparse.ArgumentParser(description='Master Data Pipeline')
+    parser = argparse.ArgumentParser(description='Master Data Pipeline (Team-Specific Mode)')
     parser.add_argument('--force-raw', action='store_true', help='Force raw pipeline refresh')
     parser.add_argument('--force-analytics', action='store_true', help='Force analytics pipeline refresh')
     parser.add_argument('--force-all', action='store_true', help='Force both pipelines')
@@ -519,28 +562,23 @@ def main():
         elif args.dry_run:
             print("🔍 DRY RUN - Would execute:")
             print("1. Raw pipeline (scrape latest FBRef data)")
-            print("2. Analytics pipeline (SCD Type 2 update)")
-            print("3. Validation and reporting")
+            print("2. Analytics pipeline (team-specific SCD Type 2 update)")
+            print("3. Validation checks")
             success = True
         else:
-            # Handle force flags
-            force_raw = args.force_raw or args.force_all
-            force_analytics = args.force_analytics or args.force_all
+            force_raw = args.force_all or args.force_raw
+            force_analytics = args.force_all or args.force_analytics
             
-            # Run master pipeline
             pipeline = MasterPipeline()
-            success = pipeline.run_complete_pipeline(
-                force_raw=force_raw,
-                force_analytics=force_analytics
-            )
+            success = pipeline.run_complete_pipeline(force_raw, force_analytics)
         
         sys.exit(0 if success else 1)
         
     except KeyboardInterrupt:
-        logger.info("Master pipeline interrupted by user")
-        sys.exit(130)
+        print("\n⚠️  Pipeline interrupted by user")
+        sys.exit(1)
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        print(f"❌ Pipeline failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

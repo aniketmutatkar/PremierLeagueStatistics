@@ -253,7 +253,9 @@ class FBRefScraper:
             return f"{current_year - 1}-{current_year}"
     
     def _clean_stat_data_archive_method(self, rawdata: List[pd.DataFrame]) -> List[pd.DataFrame]:
-        """Your EXACT archive cleaning method (UNCHANGED)"""
+        """
+        Complete archive cleaning method - main branch logic + level_0 fix
+        """
         logger.debug("Cleaning stat data using archive method...")
         current_date = datetime.now().strftime('%Y-%m-%d')
         
@@ -264,16 +266,57 @@ class FBRefScraper:
         
         for i, df in enumerate(rawdata):
             logger.debug(f"Cleaning DataFrame {i+1}/{len(rawdata)}")
-            df_clean = df.copy()
-            df_clean.columns = [' '.join(col).strip() if isinstance(col, tuple) else str(col).strip() for col in df_clean.columns]
-            df_clean = df_clean[~df_clean.iloc[:, 0].astype(str).str.contains('Rk|Player|Squad', case=False, na=False)]
-            df_clean['Current Date'] = current_date
-            cleaned_tables.append(df_clean)
+            
+            # Copy dataframe
+            df = df.copy()
+            
+            # Join multi-level columns
+            df.columns = [' '.join(col).strip() for col in df.columns]
+            
+            # Reset index (MAIN BRANCH HAS THIS)
+            df = df.reset_index(drop=True)
+            
+            # Strip level_0 prefixes (FIX FOR NEW HTML STRUCTURE)
+            new_columns = []
+            for cols in df.columns:
+                if 'level_0' in cols:
+                    new_col = cols.split()[-1]  # takes the last name
+                else:
+                    new_col = cols
+                new_columns.append(new_col)
+            
+            df.columns = new_columns
+            
+            # Fill NA with 0 (MAIN BRANCH HAS THIS)
+            df = df.fillna(0)
 
-        SquadStats = cleaned_tables[0].copy()
-        OpponentStats = cleaned_tables[1].copy()
-        PlayerStats = cleaned_tables[2].copy()
+            # Add current date column
+            df['Current Date'] = current_date
+            
+            cleaned_tables.append(df)
 
+        # Rename DataFrames
+        SquadStats = cleaned_tables[0]
+        OpponentStats = cleaned_tables[1]
+        PlayerStats = cleaned_tables[2]
+
+        # Format Player Columns (MAIN BRANCH HAS THIS)
+        if 'Age' in PlayerStats.columns:
+            PlayerStats['Age'] = PlayerStats['Age'].str[:2]
+        if 'Nation' in PlayerStats.columns:
+            PlayerStats['Nation'] = PlayerStats['Nation'].str.split(' ').str.get(1)
+        if 'Rk' in PlayerStats.columns:
+            PlayerStats = PlayerStats.drop(columns=['Rk'], errors='ignore')
+        if 'Matches' in PlayerStats.columns:
+            PlayerStats = PlayerStats.drop(columns=['Matches'], errors='ignore')
+
+        # Drop rows with NaN (CRITICAL - MAIN BRANCH HAS THIS)
+        initial_player_count = len(PlayerStats)
+        PlayerStats.dropna(inplace=True)
+        final_player_count = len(PlayerStats)
+        logger.debug(f"Dropped {initial_player_count - final_player_count} rows with NaN values from PlayerStats.")
+
+        # Convert numeric columns
         for col in SquadStats.columns[1:-1]:
             SquadStats[col] = pd.to_numeric(SquadStats[col], errors='coerce')
         for col in OpponentStats.columns[1:-1]:
@@ -284,7 +327,7 @@ class FBRefScraper:
         logger.debug("Archive cleaning method completed successfully")
         
         return [SquadStats, OpponentStats, PlayerStats]
-    
+
     def _identify_stat_tables(self, tables: List[pd.DataFrame]) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
         """Identify squad, opponent, and player tables (UNCHANGED)"""
         if len(tables) < 3:
