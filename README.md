@@ -2,7 +2,7 @@
 
 A production-ready data pipeline and analytics system for Premier League statistics, featuring intelligent scraping, unified data consolidation, and comprehensive player/team analysis with full historical tracking.
 
-## 🏗️ System Architecture
+## System Architecture
 
 ### Two-Database Design
 - **Raw Database** (`premierleague_raw.duckdb`): Preserves original FBRef structure across 33 stat tables
@@ -16,7 +16,19 @@ A production-ready data pipeline and analytics system for Premier League statist
 - **Production Logging**: Timestamped, rotated logs with comprehensive validation
 - **Entity-Aware Processing**: Consistent handling across all data types
 
-## 🚀 Quick Start
+### Fixture-Based Gameweek Tracking
+- **Team-Specific Gameweeks**: Each team's gameweek calculated from their completed fixtures  
+- **Postponement Handling**: System gracefully handles postponed matches and teams at different gameweeks  
+- **Mid-Gameweek Scraping**: Accurate data even when scraped during an ongoing gameweek  
+- **Intelligent Updates**: Only processes teams with new data, skipping unchanged teams  
+
+**Example Scenario**: If Manchester City postpones their GW6 match, the system correctly assigns:
+- Man City players: GW5 (5 matches played)
+- Other teams: GW6 (6 matches played)
+
+This replaces the old single global gameweek approach that couldn't handle real-world complexity.
+
+## Quick Start
 
 ### Prerequisites
 ```bash
@@ -35,7 +47,7 @@ python pipelines/master_pipeline.py --status
 python scripts/validate_analytics_system.py
 ```
 
-## 📊 Pipeline Commands
+## Pipeline Commands
 
 ### Master Pipeline (Recommended)
 ```bash
@@ -89,7 +101,7 @@ python historical/load_historical_data.py
 python historical/historical_load_test.py
 ```
 
-## 🏛️ Project Structure
+## Project Structure
 
 ```
 PremierLeagueStatistics/
@@ -166,13 +178,15 @@ FBRef Website → Raw Pipeline → Unified Analytics ETL → Applications
              Rate Limited       100% Data Coverage      Notebooks
 ```
 
-## 📈 Data Architecture Details
+## Data Architecture Details
 
 ### Raw Database (33 Tables)
 **Squad Tables (11)**: `squad_standard`, `squad_shooting`, `squad_passing`, etc.  
 **Opponent Tables (11)**: `opponent_standard`, `opponent_shooting`, etc.  
 **Player Tables (11)**: `player_standard`, `player_shooting`, etc.  
 **Infrastructure Tables**: `raw_fixtures`, `teams`, `data_scraping_log`
+
+**Note**: Raw data is stored WITHOUT gameweek metadata. Gameweek assignment happens in the analytics layer based on each team's completed fixtures from the `raw_fixtures` table.
 
 ### Analytics Database (4 Core Tables)
 **`analytics_players`**: Unified outfield player statistics with SCD Type 2  
@@ -181,7 +195,40 @@ FBRef Website → Raw Pipeline → Unified Analytics ETL → Applications
 **`analytics_opponents`**: Opponent performance when facing each team  
 **`analytics_fixtures`**: Match results and metadata
 
-## ⚙️ Configuration Management
+## How Gameweek Tracking Works
+
+### Fixture-Based Approach
+The system determines each team's current gameweek by analyzing completed fixtures:
+
+1. **Raw Layer**: Scrapes fixtures with `is_completed` flag
+2. **Analytics Layer**: Calculates `MAX(gameweek)` per team where `is_completed = true`
+3. **Assignment**: Each player/squad record gets their team's gameweek
+4. **SCD Processing**: Updates only teams with new completed fixtures
+
+**Why This Matters**:
+- Traditional systems use ONE gameweek for ALL teams (breaks with postponements)
+- Fixture-based tracking handles real-world complexity:
+  - Postponed matches
+  - Mid-gameweek scraping
+  - Teams playing at different paces
+  - Rescheduled fixtures
+
+**Example**:
+```
+Fixtures Table:
+  GW5: Man City vs Burnley → is_completed = false (postponed)
+  GW5: Arsenal vs Liverpool → is_completed = true
+
+Result:
+  Man City: gameweek = 4 (last completed fixture)
+  Burnley: gameweek = 4
+  Arsenal: gameweek = 5
+  Liverpool: gameweek = 5
+```
+
+This ensures data accuracy even in complex scheduling scenarios.
+
+## Configuration Management
 
 ### Core Configuration Files
 
@@ -221,28 +268,38 @@ scraping:
     backoff_factor: 2
 ```
 
-## 🎯 Key Features
+## Key Features
 
 ### Data Engineering Excellence
-✅ **Complete Data Coverage**: 100% of scraped data processed (vs. 33% in previous versions)  
-✅ **Unified Architecture**: Single consolidation system for all entity types  
-✅ **Production Ready**: Comprehensive validation and error handling  
-✅ **Historical Tracking**: SCD Type 2 implementation across all entities  
-✅ **Performance Optimized**: Processes 400+ entities in ~1 second  
+- **Complete Data Coverage**: 100% of scraped data processed (vs. 33% in previous versions)  
+- **Unified Architecture**: Single consolidation system for all entity types  
+- **Production Ready**: Comprehensive validation and error handling  
+- **Historical Tracking**: SCD Type 2 implementation across all entities  
+- **Performance Optimized**: Processes 400+ entities in ~1 second  
 
 ### Ready for Data Science
-✅ **Machine Learning Foundation**: Rich feature set across players, teams, and opponents  
-✅ **Historical Context**: Multi-gameweek tracking for trend analysis  
-✅ **Clean Data**: Validated, consolidated statistics ready for modeling  
-✅ **Scalable Architecture**: Designed for advanced analytics and automation  
+- **Machine Learning Foundation**: Rich feature set across players, teams, and opponents  
+- **Historical Context**: Multi-gameweek tracking for trend analysis  
+- **Clean Data**: Validated, consolidated statistics ready for modeling  
+- **Scalable Architecture**: Designed for advanced analytics and automation  
 
 ### Pipeline Intelligence
-The master pipeline uses smart decision-making:
-- **Incremental processing**: Only runs when new data is available
-- **Dependency tracking**: Analytics runs only after raw data updates
-- **Error recovery**: Comprehensive retry logic and graceful failures
+The master pipeline uses smart decision-making with team-by-team gameweek tracking:
+- **Team-Specific Detection**: Compares gameweeks per team, not globally
+- **Incremental Processing**: Only updates teams with new fixtures completed
+- **Postponement Awareness**: Handles teams at different gameweeks seamlessly
+- **Dependency Tracking**: Analytics runs only after raw data updates
+- **Error Recovery**: Comprehensive retry logic and graceful failures
 
-## 🛠️ Development Workflow
+**Example Decision Logic**:
+```
+Raw Data: 18 teams at GW6, 2 teams at GW5 (postponement)
+Analytics: All teams at GW5
+Decision: Update only the 18 teams that completed GW6
+Result: Mixed gameweeks in analytics (18 teams GW6, 2 teams GW5)
+```
+
+## Development Workflow
 
 ### Adding New Features
 1. **Add new stat categories**: Update `config/sources.yaml`
@@ -277,7 +334,7 @@ tail -f data/logs/master_pipeline_*.log
 - **Regular validation**: Run validation weekly to catch data quality issues early
 - **Database optimization**: Analytics database automatically optimizes queries with proper indexing
 
-## 🔄 Historical Data Management
+## Historical Data Management
 
 ### Loading Historical Seasons
 ```bash
@@ -290,7 +347,7 @@ python historical/historical_load_test.py
 
 Historical data is stored separately in `data/historical/` and can be loaded into the main analytics database with proper season tagging and historical status marking.
 
-## 📊 Analytics Applications
+## Analytics Applications
 
 ### Team Comparison Dashboard
 - **Features**: Side-by-side team analysis across all statistical categories
@@ -302,7 +359,7 @@ Historical data is stored separately in `data/historical/` and can be loaded int
 - **Usage**: `streamlit run apps/app_overview.py`
 - **Data**: Live Premier League statistics and form analysis
 
-## 📚 Additional Resources
+## Additional Resources
 
 - **`PIPELINE_USAGE.md`**: Detailed pipeline usage with examples
 - **`historical/HISTORICAL_LOADING.md`**: Historical data loading guide
@@ -311,7 +368,7 @@ Historical data is stored separately in `data/historical/` and can be loaded int
 - **`src/analytics/column_mappings.py`**: Complete FBRef column mapping reference
 - **`notebooks/`**: Data science and analysis examples
 
-## 🏆 Built With
+## Built With
 
 - **Python 3.12+**: Core language
 - **DuckDB**: High-performance analytics database
@@ -320,7 +377,7 @@ Historical data is stored separately in `data/historical/` and can be loaded int
 - **Streamlit**: Interactive dashboards
 - **PyYAML**: Configuration management
 
-## 📄 Data Source
+## Data Source
 
 **FBRef.com** (used respectfully with rate limiting)  
 **Architecture**: Two-database system with unified analytics and SCD Type 2 tracking

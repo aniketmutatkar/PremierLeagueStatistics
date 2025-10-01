@@ -1,6 +1,6 @@
 # Pipeline Usage Guide
 
-## 🚀 Production Pipelines
+## Production Pipelines
 
 ### Master Pipeline (Recommended)
 ```bash
@@ -43,7 +43,7 @@ python pipelines/analytics_pipeline.py --validate # Validation only
 python scripts/validate_analytics_system.py
 ```
 
-## 🏗️ System Architecture
+## System Architecture
 
 ### Project Structure
 ```
@@ -76,14 +76,77 @@ PremierLeagueStatistics/
 └── docs/                               # Documentation
 ```
 
-## 📊 Data Architecture
+## Fixture-Based Gameweek System
+
+### How It Works
+The system calculates gameweeks **per team** based on completed fixtures, not a single global gameweek.
+
+**Key Concept**: 
+- Each team's gameweek = `MAX(gameweek)` where their fixtures have `is_completed = true`
+- Different teams can be at different gameweeks simultaneously
+- Raw data has NO gameweek column (gameweek assigned in analytics layer)
+
+### Data Flow
+```
+1. Scraper → Fixtures table (with is_completed flag)
+2. Analytics ETL → Calculate team gameweeks from fixtures
+3. Consolidation → Assign each record its team's gameweek
+4. SCD Processor → Update only teams with new data
+5. Master Pipeline → Compare team-by-team to detect updates
+```
+
+### Real-World Scenarios
+
+**Scenario 1: Postponement**
+```
+Situation: Man City vs Burnley (GW6) postponed
+Result in Analytics:
+  - Man City: gameweek = 5, matches_played = 5
+  - Burnley: gameweek = 5, matches_played = 5
+  - Other 18 teams: gameweek = 6, matches_played = 6
+```
+
+**Scenario 2: Mid-Gameweek Scraping**
+```
+Situation: Scrape on Saturday (10 teams played, 10 haven't)
+Result in Analytics:
+  - 10 teams completed GW6: gameweek = 6
+  - 10 teams not yet played GW6: gameweek = 5
+Next scrape: System updates only the 10 teams that completed GW6
+```
+
+**Scenario 3: Rescheduled Match**
+```
+Situation: Man City plays postponed GW6 match
+Master Pipeline Detection:
+  Raw: Man City now at GW6
+  Analytics: Man City still at GW5
+  Decision: Update only Man City (not other 19 teams)
+```
+
+### Why This Approach?
+
+**Old System (Single Global Gameweek)**:
+- Used ONE number for ALL teams
+- Broke with postponements
+- Couldn't handle mid-gameweek scraping
+- Updated all 20 teams even if only 1 had new data
+
+**New System (Team-Specific Gameweeks)**:
+- Each team has their own gameweek based on fixtures
+- Handles postponements naturally
+- Accurate during mid-gameweek scraping
+- Only updates teams with new completed fixtures
+- Matches real-world Premier League complexity
+
+## Data Architecture
 
 ### Two-Database System
 - **Raw Database** (`premierleague_raw.duckdb`): Preserves original FBRef structure (33 tables)
 - **Analytics Database** (`premierleague_analytics.duckdb`): Unified analytics with SCD Type 2 (4 tables)
 
 ### Unified Analytics Tables
-**Complete Entity Coverage (NEW):**
+**Complete Entity Coverage:**
 - **`analytics_players`**: 154 columns, outfield player statistics
 - **`analytics_keepers`**: 64 columns, goalkeeper-specific metrics
 - **`analytics_squads`**: 185 columns, team-level analytics  
@@ -96,29 +159,45 @@ PremierLeagueStatistics/
 - **Dynamic season detection** with proper historical versioning
 - **Unified SCD processor** handles all entity types consistently
 
-## 🎯 Pipeline Details
+## Pipeline Details
 
-### Master Pipeline Intelligence
-The master pipeline uses sophisticated decision-making to optimize operations:
+### Master Pipeline Intelligence (Team-Specific Mode)
+
+The master pipeline compares gameweeks **team-by-team** rather than globally:
 
 ```bash
-# Check what the pipeline would do
 python pipelines/master_pipeline.py --status
 ```
 
-**Decision Logic:**
-1. **Analytics behind Raw**: Runs analytics pipeline only
-2. **New gameweek detected**: Runs both raw and analytics pipelines
-3. **All current**: Skips both pipelines unless forced
-4. **Force flags**: Override intelligent decisions
-
-**Example Status Output:**
+**Example Output**:
 ```
 📊 Current Status:
-   Raw gameweek: 5
-   Analytics gameweek: 5
-   Analytics entities: 444 total (380 players + 24 keepers + 20 squads + 20 opponents)
-   Refresh needed: ❌ No
+   Raw data: GW5-6 across 20 teams (2 teams behind)
+   Analytics data: GW5-5 across 20 teams
+   Teams needing update: Man City (GW5→6), Burnley (GW5→6)
+   Refresh needed: ✅ Yes (2 teams)
+```
+
+**Decision Logic**:
+1. Calculate team gameweeks from raw_fixtures
+2. Get current team gameweeks from analytics_players
+3. Compare team-by-team:
+   ```python
+   for team in all_teams:
+       if raw_gw[team] > analytics_gw[team]:
+           teams_to_update.append(team)
+   ```
+4. If any teams need updating → run analytics pipeline
+5. SCD processor marks ONLY those teams as historical
+
+**Efficiency Example**:
+```
+Scenario: Man City completes postponed match
+Raw: 19 teams at GW6, Man City at GW6 (was GW5)
+Analytics: 19 teams at GW6, Man City at GW5
+Master Pipeline: Detects only Man City needs update
+Analytics Pipeline: Updates only Man City (skip other 19 teams)
+SCD Processor: Marks only Man City GW5 as historical
 ```
 
 ### Raw Pipeline
@@ -142,6 +221,16 @@ python pipelines/raw_pipeline.py --force
 - Archive-pattern data cleaning (proven method)
 - Comprehensive error handling and retry logic
 
+**Note on Gameweek Tagging**:
+The raw pipeline stores fixtures with completion status but does NOT tag stat tables with gameweeks. You'll see this in the logs:
+```
+✅ 33 tables populated
+💡 NOTE: Raw data stored WITHOUT gameweek tagging
+   Gameweek assignment will happen in analytics layer
+```
+
+This is intentional. Gameweeks are calculated dynamically in the analytics layer based on each team's completed fixtures.
+
 ### Unified Analytics Pipeline
 Processes raw data into clean analytics tables with SCD Type 2 across all entity types:
 
@@ -160,17 +249,73 @@ python pipelines/analytics_pipeline.py --validate
 ```
 
 **Unified ETL Process:**
-1. **Data Consolidation**: Uses single `DataConsolidator` for all entity types
-2. **Column Mapping**: Maps FBRef columns to clean analytics names consistently
-3. **SCD Type 2 Processing**: Handles historical tracking across all entities
-4. **Data Validation**: Comprehensive quality checks for all 4 analytics tables
+1. **Team Gameweek Calculation**: Calculate each team's gameweek from raw_fixtures
+2. **Data Consolidation**: Uses single `DataConsolidator` for all entity types
+3. **Gameweek Assignment**: Assign team-specific gameweeks to each record
+4. **SCD Processing**: Group by gameweek, process each group separately
+5. **Historical Marking**: Mark only updated teams as historical (not all teams)
+6. **Validation**: Comprehensive data quality checks
 
-**Performance:**
-- Processes ~410 entities in ~1 second
-- 100% data coverage (vs. 33% in previous versions)
-- Unified processing logic for consistency
+**Pipeline Output Example:**
+```
+✅ Consolidated 464 total entities
+   - Outfield: 398 players
+   - Goalkeepers: 26 players
+   - Squads: 20 squads
+   - Opponents: 20 opponents
+🎯 Gameweeks assigned: GW6 (all teams aligned)
+✅ All SCD Type 2 processing completed
+🔍 Analytics data validation passed
+🎉 ETL Pipeline completed successfully in 1.3s
+```
 
-## 🔍 System Validation
+## Understanding Gameweek Behavior
+
+### What You'll See in Analytics
+
+**Query Example**:
+```sql
+SELECT squad, gameweek, COUNT(*) as players
+FROM analytics_players
+WHERE is_current = true
+GROUP BY squad, gameweek
+ORDER BY gameweek, squad;
+```
+
+**Normal Result (All Teams Aligned)**:
+```
+Arsenal: GW6, 20 players
+Brighton: GW6, 19 players
+Chelsea: GW6, 22 players
+...
+(All 20 teams at GW6)
+```
+
+**Result During Postponement**:
+```
+Man City: GW5, 20 players     ← Postponed GW6
+Burnley: GW5, 19 players      ← Postponed GW6
+Arsenal: GW6, 20 players
+Brighton: GW6, 19 players
+...
+(18 teams at GW6, 2 teams at GW5)
+```
+
+### Common Questions
+
+**Q: Why do teams have different gameweeks?**
+A: Real-world postponements, rescheduling, or mid-gameweek scraping. This is accurate behavior.
+
+**Q: Will teams "catch up" eventually?**
+A: Yes. When postponed matches are played and you re-scrape, those teams' gameweeks will increment.
+
+**Q: Does this affect historical data?**
+A: Yes, positively. Each team's historical records reflect their actual match progression, not a fake global gameweek.
+
+**Q: What about matches_played vs gameweek?**
+A: They should be equal or close (within 1-2). Large differences indicate data quality issues or players who haven't played much.
+
+## System Validation
 
 ### Comprehensive Validation
 ```bash
@@ -178,16 +323,16 @@ python scripts/validate_analytics_system.py
 ```
 
 **Validation Coverage:**
-1. **Schema Validation**: Table structure and column presence for all 4 tables
-2. **SCD Type 2 Integrity**: Historical tracking correctness across all entities
-3. **Data Quality Validation**: Missing data and logical consistency checks
-4. **Cross-Entity Validation**: Squad/opponent/player relationship verification
-5. **Business Logic Validation**: Statistical sanity checks and Premier League constraints
+- Schema validation across all analytics tables
+- SCD Type 2 integrity checks
+- Data quality validation
+- Cross-entity validation
+- Business logic validation
 
-**Example Validation Output:**
+**Example Output:**
 ```
 ================================================================================
-VALIDATION SUMMARY
+ANALYTICS SYSTEM VALIDATION
 ================================================================================
 Schema Validation........................................... PASS
 SCD Type 2 Validation....................................... PASS
@@ -199,7 +344,7 @@ OVERALL RESULT: ALL VALIDATIONS PASSED
 ================================================================================
 ```
 
-## ⚙️ Configuration Management
+## Configuration Management
 
 ### Core Configuration Files
 
@@ -251,7 +396,7 @@ pipeline:
     validation_enabled: true
 ```
 
-## 📝 Error Handling & Logging
+## Error Handling & Logging
 
 ### Enhanced Logging
 All pipelines use timestamped, rotated logging:
@@ -273,7 +418,7 @@ raw_pipeline_20250920_140130.log
 - **Retry logic**: Built-in retry for transient failures
 - **Validation gates**: Comprehensive checks before committing data
 
-## 🎮 Advanced Usage
+## Advanced Usage
 
 ### Force Operations
 ```bash
@@ -301,77 +446,58 @@ python pipelines/analytics_pipeline.py --validate
 ```
 
 ### Development Workflow
-1. **Test individual components**: Run validation frequently during development
-2. **Check status before running**: Use `--status` flags to understand current state
-3. **Use dry-run for planning**: Preview operations with `--dry-run`
-4. **Monitor logs**: Check timestamped logs for detailed progress tracking
-5. **Validate after changes**: Always run validation after code modifications
+1. Make code changes in `src/`
+2. Test with `--dry-run` to preview
+3. Run with `--force-all` to test changes
+4. Validate with `python scripts/validate_analytics_system.py`
+5. Check logs in `data/logs/` for detailed output
 
-## 🔬 Data Science Integration
-
-### Accessing Unified Analytics Data
-```python
-import duckdb
-
-# Connect to unified analytics database
-conn = duckdb.connect('data/premierleague_analytics.duckdb')
-
-# Query current top scorers
-current_players = conn.execute("""
-    SELECT player_name, squad_name, goals, assists, expected_goals
-    FROM analytics_players 
-    WHERE is_current = true
-    ORDER BY goals DESC
-    LIMIT 10
-""").fetchdf()
-
-# Query team performance
-team_stats = conn.execute("""
-    SELECT squad_name, goals, shots, expected_goals, defensive_actions
-    FROM analytics_squads 
-    WHERE is_current = true 
-    ORDER BY goals DESC
-""").fetchdf()
-
-# Historical player progression (SCD Type 2)
-player_progression = conn.execute("""
-    SELECT gameweek, player_name, squad_name, goals, valid_from, valid_to
-    FROM analytics_players 
-    WHERE player_name = 'Erling Haaland'
-    ORDER BY gameweek
-""").fetchdf()
-
-# Goalkeeper analysis
-keeper_performance = conn.execute("""
-    SELECT player_name, squad_name, save_percentage, clean_sheets, post_shot_xg_performance
-    FROM analytics_keepers 
-    WHERE is_current = true AND minutes_played > 270
-    ORDER BY save_percentage DESC
-""").fetchdf()
-```
-
-### Analysis Capabilities
-- **Player Analysis**: 404+ tracked players with complete performance history
-- **Team Analytics**: 20 Premier League squads with comprehensive tactical data
-- **Opposition Scouting**: 20 opponent profiles for strategic analysis  
-- **Transfer Impact Analysis**: Automatic detection using SCD Type 2 data
-- **Performance Trends**: Multi-gameweek analysis across all entity types
-- **Cross-Entity Insights**: Player performance in team context
-
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Common Issues
-1. **Import errors after updates**: Clear Python cache with `find . -name "*.pyc" -delete`
-2. **Database connection issues**: Check paths in `config/database.yaml`
-3. **Scraping failures**: Check internet connection and FBRef availability
-4. **SCD validation failures**: Run analytics pipeline with `--force` flag
-5. **Missing analytics tables**: Run `python scripts/create_analytics_db.py` to rebuild
 
-### Performance Tips
-- **Use master pipeline**: More efficient than running individual pipelines
-- **Monitor log file sizes**: Logs rotate automatically but check disk space
-- **Regular validation**: Run validation weekly to catch data quality issues early
-- **Database optimization**: Analytics database automatically optimizes queries with proper indexing
+**Import errors after updates**: 
+```bash
+find . -name "*.pyc" -delete
+```
+
+**Database connection issues**: 
+Check paths in `config/database.yaml`
+
+**Scraping failures**: 
+Check internet connection and FBRef availability
+
+**SCD validation failures**: 
+```bash
+python pipelines/analytics_pipeline.py --force
+```
+
+**Missing analytics tables**: 
+```bash
+python scripts/create_analytics_db.py
+```
+
+### Gameweek-Related Issues
+
+**Teams at different gameweeks**:
+- **Not an error**: This is normal during postponements or mid-gameweek scraping
+- **Verify**: Check `raw_fixtures` table for `is_completed` status
+- **Expected**: System will align once all teams play their matches
+
+**Pipeline says "Teams needing update" but gameweeks look aligned**:
+- **Cause**: You may have scraped mid-processing of a gameweek
+- **Fix**: Re-run `python pipelines/master_pipeline.py` - it will detect no updates needed
+- **Prevention**: Run pipeline after gameweeks are fully complete
+
+**Historical records missing for some teams**:
+- **Cause**: SCD processor only marks updated teams as historical
+- **Expected**: Teams without new data keep their current records
+- **Not a bug**: This is efficient selective processing
+
+**Matches_played doesn't match gameweek**:
+- **Normal**: Rotation players, substitutes, injured players have fewer matches
+- **Check**: Look at MAX(matches_played) per team, not individual players
+- **Issue only if**: MAX(matches_played) > gameweek (player played more matches than team completed)
 
 ### Debug Commands
 ```bash
@@ -387,6 +513,13 @@ python scripts/validate_analytics_system.py
 # Check recent pipeline logs
 tail -f data/logs/master_pipeline_*.log
 ```
+
+## Performance Tips
+
+- **Use master pipeline**: More efficient than running individual pipelines
+- **Monitor log file sizes**: Logs rotate automatically but check disk space
+- **Regular validation**: Run validation weekly to catch data quality issues early
+- **Database optimization**: Analytics database automatically optimizes queries with proper indexing
 
 ---
 
