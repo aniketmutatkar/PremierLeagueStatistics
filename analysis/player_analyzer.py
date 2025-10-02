@@ -17,6 +17,8 @@ import duckdb
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Union, Tuple
+import unicodedata
+from difflib import SequenceMatcher
 
 # Add project paths
 project_root = Path(__file__).parent.parent
@@ -659,6 +661,369 @@ class PlayerAnalyzer:
             "score_type": "position-aware" if position_scores else "overall"
         }
 
+    # ============================================================================
+    # DETAILED COMPARISON METHODS
+    # ============================================================================
+
+    def compare_players_detailed(self, player1: str, player2: str, timeframe: str = "current") -> Dict:
+        """
+        Detailed player comparison with metric-by-metric breakdown
+        
+        Add this method to your PlayerAnalyzer class
+        """
+        # Get comprehensive profiles
+        profile1 = self.get_comprehensive_player_profile(player1, timeframe)
+        profile2 = self.get_comprehensive_player_profile(player2, timeframe)
+        
+        if "error" in profile1:
+            return {"error": f"Player 1 ({player1}): {profile1['error']}"}
+        if "error" in profile2:
+            return {"error": f"Player 2 ({player2}): {profile2['error']}"}
+        
+        # Extract category scores
+        categories1 = profile1['dual_percentiles']['category_scores']
+        categories2 = profile2['dual_percentiles']['category_scores']
+        
+        comparison = {
+            'players': [player1, player2],
+            'timeframe_info': profile1['basic_info']['timeframe_description'],
+            'category_summary': {},
+            'detailed_breakdown': {},
+            'summary': {
+                'category_wins': {player1: 0, player2: 0},
+                'metric_wins': {player1: 0, player2: 0}
+            }
+        }
+        
+        # Category-by-category with metric details
+        for category in self.stat_categories.keys():
+            if category in categories1 and category in categories2:
+                cat_data1 = categories1[category]
+                cat_data2 = categories2[category]
+                
+                # Category-level comparison
+                score1 = cat_data1['position_score'] or cat_data1['overall_score']
+                score2 = cat_data2['position_score'] or cat_data2['overall_score']
+                
+                if score1 is not None and score2 is not None:
+                    cat_winner = player1 if score1 > score2 else player2 if score2 > score1 else 'tie'
+                    if cat_winner == player1:
+                        comparison['summary']['category_wins'][player1] += 1
+                    elif cat_winner == player2:
+                        comparison['summary']['category_wins'][player2] += 1
+                    
+                    comparison['category_summary'][category] = {
+                        f'{player1}_score': score1,
+                        f'{player2}_score': score2,
+                        'difference': round(score1 - score2, 1),
+                        'winner': cat_winner
+                    }
+                    
+                    # Metric-level breakdown within this category
+                    metric_breakdown = {}
+                    metrics1 = cat_data1['metric_breakdown']
+                    metrics2 = cat_data2['metric_breakdown']
+                    
+                    # Get common metrics
+                    common_metrics = set(metrics1.keys()) & set(metrics2.keys())
+                    
+                    for metric in common_metrics:
+                        m1_data = metrics1[metric]
+                        m2_data = metrics2[metric]
+                        
+                        # Use position percentile if available
+                        pct1 = m1_data['position_percentile'] if m1_data['position_percentile'] is not None else m1_data['overall_percentile']
+                        pct2 = m2_data['position_percentile'] if m2_data['position_percentile'] is not None else m2_data['overall_percentile']
+                        
+                        if pct1 is not None and pct2 is not None:
+                            metric_winner = player1 if pct1 > pct2 else player2 if pct2 > pct1 else 'tie'
+                            if metric_winner == player1:
+                                comparison['summary']['metric_wins'][player1] += 1
+                            elif metric_winner == player2:
+                                comparison['summary']['metric_wins'][player2] += 1
+                            
+                            metric_breakdown[metric] = {
+                                f'{player1}_percentile': pct1,
+                                f'{player2}_percentile': pct2,
+                                f'{player1}_value': m1_data['value'],
+                                f'{player2}_value': m2_data['value'],
+                                'percentile_difference': round(pct1 - pct2, 1),
+                                'winner': metric_winner
+                            }
+                    
+                    comparison['detailed_breakdown'][category] = metric_breakdown
+        
+        # Overall winner determination
+        cat_diff = comparison['summary']['category_wins'][player1] - comparison['summary']['category_wins'][player2]
+        if cat_diff > 0:
+            comparison['summary']['overall_winner'] = player1
+        elif cat_diff < 0:
+            comparison['summary']['overall_winner'] = player2
+        else:
+            # Tie on categories, use metric wins
+            metric_diff = comparison['summary']['metric_wins'][player1] - comparison['summary']['metric_wins'][player2]
+            comparison['summary']['overall_winner'] = player1 if metric_diff > 0 else player2 if metric_diff < 0 else 'balanced'
+        
+        return comparison
+
+
+    # ============================================================================
+    # SIMILAR PLAYER FINDER METHODS
+    # ============================================================================
+
+    def find_similar_players(self, player_name: str, timeframe: str = "current", top_n: int = 5, same_position_only: bool = True) -> Dict:
+        """
+        Find statistically similar players based on category profiles
+        
+        Add this method to your PlayerAnalyzer class
+        """
+        # Get target player's profile
+        target_profile = self.calculate_dual_percentiles(player_name, timeframe)
+        if "error" in target_profile:
+            return target_profile
+        
+        target_categories = target_profile['category_scores']
+        target_position = target_profile['player_info']['primary_position']
+        
+        # Create vector of category scores (using position scores)
+        target_vector = []
+        category_names = []
+        for category, data in target_categories.items():
+            score = data['position_score'] if data['position_score'] is not None else data['overall_score']
+            if score is not None:
+                target_vector.append(score)
+                category_names.append(category)
+        
+        if not target_vector:
+            return {"error": "No valid category scores for target player"}
+        
+        target_vector = np.array(target_vector)
+        
+        # Get all players in database for comparison
+        filter_clause, timeframe_desc = self._parse_timeframe(timeframe)
+        
+        if same_position_only:
+            position_group, _ = self._get_position_group(target_position)
+            position_filter = "', '".join(position_group)
+            player_query = f"""
+                SELECT DISTINCT player_name, position
+                FROM analytics_players
+                WHERE {filter_clause} AND position IN ('{position_filter}')
+            """
+        else:
+            player_query = f"""
+                SELECT DISTINCT player_name, position
+                FROM analytics_players
+                WHERE {filter_clause}
+            """
+        
+        potential_players = self.conn.execute(player_query).fetchdf()
+        
+        # Calculate similarity for each player
+        similarities = []
+        
+        for _, row in potential_players.iterrows():
+            candidate_name = row['player_name']
+            
+            # Skip the target player
+            if candidate_name == player_name:
+                continue
+            
+            # Get candidate's profile
+            candidate_profile = self.calculate_dual_percentiles(candidate_name, timeframe)
+            if "error" in candidate_profile:
+                continue
+            
+            candidate_categories = candidate_profile['category_scores']
+            
+            # Create vector for candidate (matching same categories)
+            candidate_vector = []
+            for category in category_names:
+                if category in candidate_categories:
+                    data = candidate_categories[category]
+                    score = data['position_score'] if data['position_score'] is not None else data['overall_score']
+                    if score is not None:
+                        candidate_vector.append(score)
+                    else:
+                        candidate_vector.append(0)
+                else:
+                    candidate_vector.append(0)
+            
+            candidate_vector = np.array(candidate_vector)
+            
+            # Calculate Euclidean distance (lower = more similar)
+            if len(candidate_vector) == len(target_vector):
+                distance = np.linalg.norm(target_vector - candidate_vector)
+                similarity_score = 100 - (distance / len(target_vector))  # Convert to 0-100 scale
+                
+                similarities.append({
+                    'player_name': candidate_name,
+                    'position': row['position'],
+                    'similarity_score': round(similarity_score, 1),
+                    'distance': round(distance, 2)
+                })
+        
+        # Sort by similarity (highest first)
+        similarities.sort(key=lambda x: x['similarity_score'], reverse=True)
+        
+        return {
+            'target_player': {
+                'name': player_name,
+                'position': target_position,
+                'category_profile': {cat: target_categories[cat]['position_score'] or target_categories[cat]['overall_score'] 
+                                for cat in category_names}
+            },
+            'timeframe_info': {
+                'timeframe': timeframe,
+                'description': timeframe_desc
+            },
+            'similar_players': similarities[:top_n],
+            'comparison_method': 'position-aware' if same_position_only else 'all-players',
+            'categories_compared': category_names
+        }
+    def _normalize_name(self, name: str) -> str:
+        """
+        Normalize name for fuzzy matching
+        - Remove accents
+        - Convert to lowercase
+        - Remove extra whitespace
+        """
+        # Remove accents
+        normalized = unicodedata.normalize('NFD', name)
+        without_accents = ''.join(char for char in normalized if unicodedata.category(char) != 'Mn')
+        
+        # Lowercase and strip
+        cleaned = without_accents.lower().strip()
+        
+        # Normalize whitespace
+        cleaned = ' '.join(cleaned.split())
+        
+        return cleaned
+
+
+    def _calculate_similarity(self, str1: str, str2: str) -> float:
+        """Calculate similarity score between two strings (0-100)"""
+        return SequenceMatcher(None, str1, str2).ratio() * 100
+
+
+    def find_player_by_fuzzy_name(self, player_name: str, timeframe: str = "current", 
+                                threshold: float = 70.0, max_results: int = 5) -> Dict:
+        """
+        Find player using fuzzy name matching
+        
+        Args:
+            player_name: Name to search for (can have typos/accents)
+            timeframe: Which timeframe to search in
+            threshold: Minimum similarity score (0-100) to consider a match
+            max_results: Maximum number of matches to return
+            
+        Returns:
+            Dict with exact matches, fuzzy matches, or error
+        """
+        filter_clause, timeframe_desc = self._parse_timeframe(timeframe)
+        
+        # Normalize input name
+        normalized_input = self._normalize_name(player_name)
+        
+        # Get all distinct player names from database
+        query = f"""
+            SELECT DISTINCT player_name
+            FROM analytics_players
+            WHERE {filter_clause}
+        """
+        
+        all_players = self.conn.execute(query).fetchdf()
+        
+        if all_players.empty:
+            return {"error": "No players found in database"}
+        
+        # Try exact match first (case-insensitive, accent-insensitive)
+        exact_matches = []
+        fuzzy_matches = []
+        
+        for _, row in all_players.iterrows():
+            actual_name = row['player_name']
+            normalized_actual = self._normalize_name(actual_name)
+            
+            # Check for exact normalized match
+            if normalized_input == normalized_actual:
+                exact_matches.append(actual_name)
+                continue
+            
+            # Calculate similarity
+            similarity = self._calculate_similarity(normalized_input, normalized_actual)
+            
+            if similarity >= threshold:
+                fuzzy_matches.append({
+                    'name': actual_name,
+                    'similarity': round(similarity, 1)
+                })
+        
+        # Sort fuzzy matches by similarity
+        fuzzy_matches.sort(key=lambda x: x['similarity'], reverse=True)
+        
+        # Limit results
+        fuzzy_matches = fuzzy_matches[:max_results]
+        
+        return {
+            'search_term': player_name,
+            'normalized_search': normalized_input,
+            'exact_matches': exact_matches,
+            'fuzzy_matches': fuzzy_matches,
+            'threshold': threshold
+        }
+
+
+    def get_player_with_fuzzy_match(self, player_name: str, timeframe: str = "current", 
+                                    auto_select: bool = False) -> Tuple[Optional[str], Dict]:
+        """
+        Get player name with automatic fuzzy matching
+        
+        Args:
+            player_name: Name to search for
+            timeframe: Which timeframe to search
+            auto_select: If True and only one match found, return it automatically
+            
+        Returns:
+            (matched_name, match_info) tuple
+        """
+        match_result = self.find_player_by_fuzzy_name(player_name, timeframe)
+        
+        if "error" in match_result:
+            return None, match_result
+        
+        # Check for exact match
+        if match_result['exact_matches']:
+            return match_result['exact_matches'][0], {
+                'match_type': 'exact',
+                'original': player_name,
+                'matched': match_result['exact_matches'][0]
+            }
+        
+        # Check fuzzy matches
+        fuzzy = match_result['fuzzy_matches']
+        
+        if not fuzzy:
+            return None, {
+                'error': f"No matches found for '{player_name}'",
+                'suggestion': "Try checking spelling or use --list to see available players"
+            }
+        
+        # Auto-select if only one match and flag is set
+        if len(fuzzy) == 1 and auto_select:
+            return fuzzy[0]['name'], {
+                'match_type': 'fuzzy_auto',
+                'original': player_name,
+                'matched': fuzzy[0]['name'],
+                'similarity': fuzzy[0]['similarity']
+            }
+        
+        # Multiple matches or no auto-select
+        return None, {
+            'match_type': 'fuzzy_multiple',
+            'original': player_name,
+            'candidates': fuzzy
+        }
 
 # Test function
 def test_enhanced_analyzer():
