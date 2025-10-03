@@ -35,6 +35,28 @@ class PlayerAnalyzer:
         self.min_minutes = min_minutes
         self.conn = None
         
+        # Metric polarity classification - defines which metrics are inverted (lower = better)
+        self.NEGATIVE_METRICS = {
+            # Discipline
+            'yellow_cards', 'red_cards', 'second_yellow_cards', 'fouls_committed',
+            
+            # Errors
+            'errors', 'miscontrols', 'dispossessed', 'own_goals',
+            
+            # Lost duels/challenges
+            'challenges_lost', 'take_ons_tackled', 'take_ons_tackled_rate',
+            'aerial_duels_lost',
+            
+            # Offsides
+            'offsides', 'offsides_pass_types',
+            
+            # Conceded
+            'penalty_kicks_conceded',
+            
+            # Blocked (when YOUR passes are blocked)
+            'blocked_passes'
+        }
+
         # Cleaned stat categories - removed misleading role-specific metrics
         self.stat_categories = {
             'attacking_output': {
@@ -271,29 +293,21 @@ class PlayerAnalyzer:
                 if metric in player_data.columns:
                     player_value = player_record[metric]
                     
-                    # Overall percentile
+                    # Overall percentile - NOW USING METRIC-LEVEL POLARITY
                     if metric in overall_comparison.columns:
                         overall_values = overall_comparison[metric].dropna()
-                        if len(overall_values) > 0 and pd.notna(player_value):
-                            if category_name == 'discipline_reliability':
-                                overall_pct = (overall_values > player_value).sum() / len(overall_values) * 100
-                            else:
-                                overall_pct = (overall_values < player_value).sum() / len(overall_values) * 100
-                        else:
-                            overall_pct = None
+                        overall_pct = self._calculate_percentile_with_polarity(
+                            metric, player_value, overall_values
+                        )
                     else:
                         overall_pct = None
                     
-                    # Position-specific percentile
+                    # Position-specific percentile - NOW USING METRIC-LEVEL POLARITY
                     if metric in position_comparison.columns:
                         position_values = position_comparison[metric].dropna()
-                        if len(position_values) > 0 and pd.notna(player_value):
-                            if category_name == 'discipline_reliability':
-                                position_pct = (position_values > player_value).sum() / len(position_values) * 100
-                            else:
-                                position_pct = (position_values < player_value).sum() / len(position_values) * 100
-                        else:
-                            position_pct = None
+                        position_pct = self._calculate_percentile_with_polarity(
+                            metric, player_value, position_values
+                        )
                     else:
                         position_pct = None
                     
@@ -335,7 +349,33 @@ class PlayerAnalyzer:
                 'description': timeframe_desc
             }
         }
-    
+
+    def _calculate_percentile_with_polarity(self, metric: str, player_value: float, 
+                                        comparison_values: pd.Series) -> Optional[float]:
+        """
+        Calculate percentile with proper polarity handling.
+        
+        Args:
+            metric: Name of the metric
+            player_value: Player's value for this metric
+            comparison_values: Series of comparison values (already filtered/dropna)
+            
+        Returns:
+            Percentile (0-100) or None if cannot calculate
+        """
+        if len(comparison_values) == 0 or pd.isna(player_value):
+            return None
+        
+        # Negative metrics: lower is better, so invert the comparison
+        if metric in self.NEGATIVE_METRICS:
+            # Player with FEWER errors/cards/etc should have HIGHER percentile
+            percentile = (comparison_values > player_value).sum() / len(comparison_values) * 100
+        else:
+            # Positive metrics: higher is better (standard calculation)
+            percentile = (comparison_values < player_value).sum() / len(comparison_values) * 100
+        
+        return percentile
+
     def get_position_analysis(self, player_name: str, timeframe: str = "current") -> Dict:
         """Get position-specific analysis with expectations"""
         dual_percentiles = self.calculate_dual_percentiles(player_name, timeframe)
@@ -881,6 +921,7 @@ class PlayerAnalyzer:
             'comparison_method': 'position-aware' if same_position_only else 'all-players',
             'categories_compared': category_names
         }
+    
     def _normalize_name(self, name: str) -> str:
         """
         Normalize name for fuzzy matching
