@@ -159,13 +159,19 @@ class SCDType2Processor:
         else:
             team_column = 'squad'
         
+        # For opponents, add "vs " prefix to match database format
+        if entity_type == 'opponent':
+            teams_to_query = {'vs ' + team for team in teams}
+        else:
+            teams_to_query = teams
+        
         # Count records before update
-        placeholders = ','.join(['?' for _ in teams])
+        placeholders = ','.join(['?' for _ in teams_to_query])
         count_before = self.conn.execute(f"""
             SELECT COUNT(*) FROM {table} 
             WHERE is_current = true 
             AND {team_column} IN ({placeholders})
-        """, list(teams)).fetchone()[0]
+        """, list(teams_to_query)).fetchone()[0]
         
         if count_before == 0:
             logger.info(f"No current records to mark for teams in {table}")
@@ -178,7 +184,7 @@ class SCDType2Processor:
                 valid_to = ?
             WHERE is_current = true
             AND {team_column} IN ({placeholders})
-        """, [current_date] + list(teams))
+        """, [current_date] + list(teams_to_query))
         
         logger.info(f"Marked {count_before} records as historical for {len(teams)} teams in {table}")
 
