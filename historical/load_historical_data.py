@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Dict, Optional
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import production components
 from src.scraping.fbref_scraper import FBRefScraper
@@ -151,7 +151,7 @@ class HistoricalRawLoader:
             raw_ops = RawDatabaseOperations(raw_conn)
             
             # Insert fixtures (gameweek 38 for completed historical season)
-            raw_ops.insert_fixtures(fixture_data['fixtures'], 38)
+            raw_ops.insert_fixtures(fixture_data['fixtures'])
             
             logger.info(f"Successfully loaded {len(fixture_data['fixtures'])} historical fixtures")
             return True
@@ -207,7 +207,7 @@ class HistoricalRawLoader:
                     for table_name, table_df in category_tables.items():
                         try:
                             # Use production insert method (same as raw pipeline)
-                            raw_ops.insert_clean_stat_table(table_name, table_df, 38)  # gameweek 38
+                            raw_ops.insert_clean_stat_table(table_name, table_df)  # gameweek 38
                             total_tables_inserted += 1
                             logger.info(f"  Inserted {table_name}: {len(table_df)} rows")
                         except Exception as e:
@@ -245,7 +245,7 @@ class HistoricalAnalyticsProcessor:
     """Processes historical raw data through existing analytics pipeline"""
     
     def __init__(self):
-        self.historical_raw_db_path = "data/premierleague_raw_historical.duckdb"
+        self.historical_raw_db_path = "data/historical/premierleague_raw_historical.duckdb"
         self.test_analytics_db_path = "data/premierleague_analytics.duckdb"
         
         logger.info("Historical analytics processor initialized")
@@ -280,7 +280,7 @@ class HistoricalAnalyticsProcessor:
                 analytics_etl.db.analytics_db_path = self.test_analytics_db_path
             
             # Run full analytics pipeline (gameweek 38 for historical)
-            success = analytics_etl.run_full_pipeline(target_gameweek=38, force_refresh=True)
+            success = analytics_etl.run_full_pipeline(force_refresh=True)
             
             # Restore original paths
             if original_raw_path and hasattr(analytics_etl.db, 'raw_db_path'):
@@ -444,6 +444,15 @@ def main():
     
     # Define seasons to load
     historical_seasons = [
+        "2024-2025",
+        "2023-2024",
+        "2022-2023",
+        "2021-2022",
+        "2020-2021",
+        "2019-2020",
+        "2018-2019",
+        "2017-2018",
+        "2016-2017",
         "2015-2016",
         "2014-2015", 
         "2013-2014",
