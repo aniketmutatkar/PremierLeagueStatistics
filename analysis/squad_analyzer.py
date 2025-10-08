@@ -468,17 +468,28 @@ class SquadAnalyzer:
                         if len(overall_values) > 0 and pd.notna(squad_value):
                             if self._is_higher_better(metric):
                                 overall_pct = (overall_values < squad_value).sum() / len(overall_values) * 100
+                                # Rank: count squads with BETTER (higher) values + 1
+                                metric_rank = (overall_values > squad_value).sum() + 1
                             else:
                                 overall_pct = (overall_values > squad_value).sum() / len(overall_values) * 100
+                                # Rank: count squads with BETTER (lower) values + 1
+                                metric_rank = (overall_values < squad_value).sum() + 1
+                            total_squads = len(overall_values)
                         else:
                             overall_pct = None
+                            metric_rank = None
+                            total_squads = None
                     else:
                         overall_pct = None
+                        metric_rank = None
+                        total_squads = None
                     
                     metric_breakdown[metric] = {
                         'value': squad_value,
                         'percentile': overall_pct,
-                        'normalized': None  # Could add if needed
+                        'rank': metric_rank,  # NEW
+                        'total_squads': total_squads,  # NEW
+                        'normalized': None
                     }
             
             category_scores[category_name] = {
@@ -562,6 +573,8 @@ class SquadAnalyzer:
                 'metric': metric_name,
                 'value': value,
                 'percentile': pct,
+                'rank': metric_data.get('rank'),  # NEW
+                'total_squads': metric_data.get('total_squads'),  # NEW
                 'interpretation': interpretation
             })
         

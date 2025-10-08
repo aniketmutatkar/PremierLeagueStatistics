@@ -156,7 +156,7 @@ def print_category_breakdown(squad_name: str, category: str, timeframe: str = "c
         # Show ALL individual metrics
         print(f"\n📈 ALL INDIVIDUAL METRICS ({len(breakdown['metric_details'])} total):")
         print("-" * 80)
-        print(f"{'Rank':<4} | {'Metric':<35} | {'Percentile':<10} | {'Level':<12} | {'Value'}")
+        print(f"{'Rank':<4} | {'Metric':<35} | {'Rank (Out of 20)':<16} | {'Level':<12} | {'Value'}")
         print("-" * 80)
         
         for i, metric in enumerate(breakdown['metric_details'], 1):  # ALL METRICS
@@ -178,7 +178,9 @@ def print_category_breakdown(squad_name: str, category: str, timeframe: str = "c
             else:
                 emoji = "❌"
             
-            pct_str = f"{pct:.1f}%" if pct is not None else "N/A"
+            rank = metric.get('rank')
+            total = metric.get('total_squads', 20)
+            rank_str = f"{rank}/{total}" if rank is not None else "N/A"
             
             # Format value
             if isinstance(value, float):
@@ -188,7 +190,7 @@ def print_category_breakdown(squad_name: str, category: str, timeframe: str = "c
             else:
                 value_str = str(value)
             
-            print(f"{i:<4} | {metric['metric']:<35} | {pct_str:<10} | {emoji} {interpretation:<10} | {value_str}")
+            print(f"{i:<4} | {metric['metric']:<35} | {rank_str:<16} | {emoji} {interpretation:<10} | {value_str}")
         
         print(f"\n💡 TIP: The composite score ({composite:.1f}/100) is calculated by normalizing")
         print(f"   and averaging all {len(breakdown['metric_details'])} metrics in this category.")
@@ -299,7 +301,7 @@ def print_top_defending(timeframe: str = "current"):
             
             print(f"{emoji} {rank:<3} | {squad:<20} | {score:<8.1f} | {gap_str}")
 
-            
+
 def print_game_control(timeframe: str = "current"):
     """Print top game control teams (combined possession + passing + ball_progression)"""
     with SquadAnalyzer() as analyzer:
