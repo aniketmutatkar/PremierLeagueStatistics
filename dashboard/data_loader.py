@@ -9,6 +9,7 @@ Handles all database interactions and data transformations.
 
 import streamlit as st
 import sys
+import pandas as pd
 from pathlib import Path
 
 # Add analysis directory to path
@@ -313,3 +314,101 @@ def extract_metric_breakdown(breakdown_data):
         })
     
     return metrics
+
+
+@st.cache_data(ttl=3600)
+def load_league_overview(timeframe="current"):
+    """
+    Load complete league overview with traditional stats + composite scores
+    
+    Args:
+        timeframe: "current" or "season_YYYY-YYYY"
+        
+    Returns:
+        DataFrame with columns:
+            - position, squad_name, points, goal_difference, wins, draws, losses
+            - overall_composite (NEW - average of all 9 categories)
+            - attacking_output, creativity, passing, ball_progression, defending, 
+              physical_duels, possession, team_performance (9 composites)
+    """
+    with SquadAnalyzer() as analyzer:
+        # Get league table with traditional stats
+        league_table = analyzer.calculate_league_table(timeframe)
+    
+    # Build complete dataset with composites
+    overview_data = []
+    
+    for _, row in league_table.iterrows():
+        squad_name = row['squad_name']
+        
+        # Get squad profile (cached, so fast)
+        profile = load_squad_profile(squad_name, timeframe)
+        
+        # Skip if error
+        if "error" in profile:
+            continue
+        
+        # Extract composite scores from profile
+        category_scores = profile['dual_percentiles']['category_scores']
+        
+        # Build row
+        squad_row = {
+            'position': int(row['position']),
+            'squad_name': squad_name,
+            'points': int(row['points']),
+            'goal_difference': int(row['goal_difference']),
+            'wins': int(row['wins']),
+            'draws': int(row['draws']),
+            'losses': int(row['losses'])
+        }
+        
+        # Add composite scores (9 categories) and collect for overall calculation
+        composite_values = []
+        for category, data in category_scores.items():
+            composite_score = data.get('composite_score', None)
+            squad_row[category] = composite_score
+            if composite_score is not None:
+                composite_values.append(composite_score)
+        
+        # Calculate overall composite (average of all categories)
+        if composite_values:
+            squad_row['overall_composite'] = sum(composite_values) / len(composite_values)
+        else:
+            squad_row['overall_composite'] = None
+        
+        overview_data.append(squad_row)
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(overview_data)
+    
+    return df
+
+@st.cache_data(ttl=3600)
+def load_category_leaderboard(category, timeframe="current", n=5):
+    """
+    Get top N squads for a specific category
+    
+    Args:
+        category: Category name (e.g., 'attacking_output')
+        timeframe: "current" or "season_YYYY-YYYY"
+        n: Number of top squads to return (default 5)
+        
+    Returns:
+        DataFrame with columns:
+            - rank: int (1, 2, 3, ...)
+            - squad_name: str
+            - composite_score: float (0-100)
+    """
+    with SquadAnalyzer() as analyzer:
+        # Get all composite scores for this category
+        composite_results = analyzer.calculate_category_composite_scores(category, timeframe)
+    
+    # Check if we got results
+    if composite_results.empty:
+        return pd.DataFrame(columns=['rank', 'squad_name', 'composite_score'])
+    
+    # Take top N
+    top_n = composite_results.head(n)
+    
+    # Return only the columns we need
+    return top_n[['rank', 'squad_name', 'composite_score']].copy()
