@@ -63,7 +63,7 @@ st.set_page_config(
     page_title="Squad Analytics",
     page_icon="⚽",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # Custom CSS for better styling
@@ -145,7 +145,7 @@ with st.sidebar:
     # ========================================================================
     page = st.radio(
         "Navigate",
-        ["Squad Comparison", "League Overview"],
+        ["League Overview", "Squad Comparison"],
         index=0,
         label_visibility="collapsed"  # Hide the "Navigate" label
     )
@@ -155,8 +155,6 @@ with st.sidebar:
     # ========================================================================
     # SEASON SELECTOR (ALWAYS VISIBLE)
     # ========================================================================
-    st.subheader("⚙️ Settings")
-    
     seasons = get_available_seasons()
     
     if seasons:
@@ -215,9 +213,8 @@ with st.sidebar:
 def show_league_overview():
     """League Overview page with table, scatter plot, heatmap, winners chart, and top 5 rankings"""
     
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<p class="main-title">Premier League Overview</p>', unsafe_allow_html=True)
-    st.markdown(f"**Season:** {selected_season}")
+    st.markdown('<div class="main-title">Premier League Overview</div>', unsafe_allow_html=True)
+    st.caption(f"Season: {selected_season}")
     st.markdown("---")
     
     # Load data
@@ -231,10 +228,6 @@ def show_league_overview():
     # ========================================================================
     # SECTION 1: LEAGUE TABLE + SCATTER PLOT (SIDE BY SIDE)
     # ========================================================================
-    
-    st.markdown('<div class="section-header">League Standings & Statistical Quality</div>', unsafe_allow_html=True)
-    st.markdown("League table with composite scores alongside position vs quality analysis.")
-    
     col_left, col_right = st.columns([0.45, 0.55])
     
     with col_left:
@@ -356,7 +349,8 @@ if page == "Squad Comparison":
     # HEADER & TITLE
     # ============================================================================
 
-    st.markdown(f'<div class="main-title">{squad1} vs {squad2}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="main-title">Premier League Squad Comparison</div>', unsafe_allow_html=True)
+    st.markdown(f'#### {squad1} vs {squad2}', unsafe_allow_html=True)
     st.caption(f"Season: {selected_season}")
     st.markdown("---")
 
