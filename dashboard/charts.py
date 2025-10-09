@@ -621,3 +621,471 @@ def create_category_winners_chart(df):
     )
     
     return fig
+
+# ============================================================================
+# PLAYER VISUALIZATION FUNCTIONS
+# ============================================================================
+# Add these functions to dashboard/charts.py after the squad chart functions
+
+def create_player_header(player_info):
+    """
+    Create player info header card
+    
+    Args:
+        player_info: Dict with player_name, position, squad, minutes_played, etc.
+        
+    Returns:
+        None (displays directly with st.markdown)
+    """
+    import streamlit as st
+    
+    name = player_info.get('player_name', 'N/A')
+    position = player_info.get('position', 'N/A')
+    primary_pos = player_info.get('primary_position', 'N/A')
+    squad = player_info.get('squad', 'N/A')
+    minutes = player_info.get('minutes_played', 0)
+    matches = player_info.get('matches_played', 0)
+    age = player_info.get('age', 'N/A')
+    
+    # Calculate games played (minutes / 90)
+    games_played = round(minutes / 90, 1) if minutes > 0 else 0
+    
+    st.markdown(f"""
+    <div style="padding: 1rem; background-color: #f0f2f6; border-radius: 0.5rem; margin-bottom: 1rem;">
+        <h3 style="margin: 0 0 0.5rem 0;">{name}</h3>
+        <p style="margin: 0; color: #666;">
+            <strong>Position:</strong> {position} ({primary_pos}) | 
+            <strong>Squad:</strong> {squad} | 
+            <strong>Age:</strong> {age} | 
+            <strong>Minutes:</strong> {minutes:,} ({games_played} games)
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def create_player_dual_radar_chart(player_name, categories, overall_scores, position_scores):
+    """
+    Create professional dual percentile radar chart for a player
+    (Overall league vs position group), styled consistently with create_radar_chart().
+    """
+    if not categories or not overall_scores or not position_scores:
+        return None
+
+    # Prepare readable labels and closed loops for radar
+    readable_categories = [cat.replace('_', ' ').title() for cat in categories]
+    overall_scores_closed = overall_scores + [overall_scores[0]]
+    position_scores_closed = position_scores + [position_scores[0]]
+    categories_closed = readable_categories + [readable_categories[0]]
+
+    fig = go.Figure()
+
+    # Overall league trace
+    fig.add_trace(go.Scatterpolar(
+        r=overall_scores_closed,
+        theta=categories_closed,
+        fill='toself',
+        name='Overall League',
+        line=dict(color='#4169E1', width=3),
+        fillcolor='rgba(65, 105, 225, 0.15)',
+        hovertemplate='<b>%{theta}</b><br>Percentile: %{r:.1f}<extra></extra>'
+    ))
+
+    # Position group trace
+    fig.add_trace(go.Scatterpolar(
+        r=position_scores_closed,
+        theta=categories_closed,
+        fill='toself',
+        name='Position Group',
+        line=dict(color='#DC143C', width=3),
+        fillcolor='rgba(220, 20, 60, 0.15)',
+        hovertemplate='<b>%{theta}</b><br>Percentile: %{r:.1f}<extra></extra>'
+    ))
+
+    # Layout styling (matches create_radar_chart)
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100],
+                tickmode='linear',
+                tick0=0,
+                dtick=25,
+                showline=False,
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                tickfont=dict(size=10)
+            ),
+            angularaxis=dict(
+                linewidth=2,
+                showline=True,
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                tickfont=dict(size=11)
+            ),
+            bgcolor='rgba(0,0,0,0)'
+        ),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.25,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=12)
+        ),
+        title=dict(
+            text=f"{player_name} — Dual Percentile Profile",
+            x=0.5,
+            xanchor='center',
+            font=dict(size=16)
+        ),
+        height=450,
+        margin=dict(l=80, r=80, t=60, b=100),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+
+    return fig
+
+
+def create_player_category_table(category_data):
+    """
+    Create category breakdown table with dual percentiles
+    
+    Args:
+        category_data: List of dicts from extract_player_category_table_data()
+        
+    Returns:
+        Styled DataFrame for st.dataframe()
+    """
+    import pandas as pd
+    
+    if not category_data:
+        return None
+    
+    # Create DataFrame
+    df = pd.DataFrame(category_data)
+    
+    # Rename columns for display
+    display_df = df.copy()
+    display_df['category'] = display_df['category'].str.replace('_', ' ').str.title()
+    
+    display_df = display_df.rename(columns={
+        'category': 'Category',
+        'overall_score': 'Overall',
+        'position_score': 'Position',
+        'metrics_analyzed': 'Metrics'
+    })
+    
+    # Select and reorder columns
+    display_df = display_df[['Category', 'Overall', 'Position', 'Metrics']]
+    
+    # Apply styling
+    def style_percentiles(val):
+        """Color code percentile values"""
+        if pd.isna(val):
+            return 'color: #999;'
+        if val >= 80:
+            return 'color: #16a34a; font-weight: bold;'
+        elif val >= 60:
+            return 'color: #65a30d;'
+        elif val >= 40:
+            return 'color: #eab308;'
+        elif val >= 20:
+            return 'color: #f97316;'
+        else:
+            return 'color: #dc2626;'
+    
+    styled_df = display_df.style.format({
+        'Overall': lambda x: f"{x:.1f}" if pd.notna(x) else "—",
+        'Position': lambda x: f"{x:.1f}" if pd.notna(x) else "—"
+    }).applymap(style_percentiles, subset=['Overall', 'Position'])
+    
+    return styled_df
+
+
+def create_player_comparison_radar(player1_name, categories1, scores1,
+                                   player2_name, categories2, scores2):
+    """
+    Create professional player comparison radar chart (position percentiles)
+    Styled consistently with create_radar_chart().
+    """
+    import plotly.graph_objects as go
+
+    if not categories1 or not scores1 or not categories2 or not scores2:
+        return None
+
+    # Use player1's categories as the base
+    readable_categories = [cat.replace('_', ' ').title() for cat in categories1]
+
+    # Close the radar chart loop
+    scores1_closed = scores1 + [scores1[0]]
+    scores2_closed = scores2 + [scores2[0]]
+    categories_closed = readable_categories + [readable_categories[0]]
+
+    fig = go.Figure()
+
+    # Player 1 trace (Royal Blue)
+    fig.add_trace(go.Scatterpolar(
+        r=scores1_closed,
+        theta=categories_closed,
+        fill='toself',
+        name=player1_name,
+        line=dict(color='#4169E1', width=3),
+        fillcolor='rgba(65, 105, 225, 0.15)',
+        hovertemplate='<b>%{theta}</b><br>Percentile: %{r:.1f}<extra></extra>'
+    ))
+
+    # Player 2 trace (Crimson)
+    fig.add_trace(go.Scatterpolar(
+        r=scores2_closed,
+        theta=categories_closed,
+        fill='toself',
+        name=player2_name,
+        line=dict(color='#DC143C', width=3),
+        fillcolor='rgba(220, 20, 60, 0.15)',
+        hovertemplate='<b>%{theta}</b><br>Percentile: %{r:.1f}<extra></extra>'
+    ))
+
+    # Layout styling (matches create_radar_chart)
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100],
+                tickmode='linear',
+                tick0=0,
+                dtick=25,
+                showline=False,
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                tickfont=dict(size=10)
+            ),
+            angularaxis=dict(
+                linewidth=2,
+                showline=True,
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                tickfont=dict(size=11)
+            ),
+            bgcolor='rgba(0,0,0,0)'
+        ),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.25,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=12)
+        ),
+        title=dict(
+            text="Player Comparison — Position Percentiles",
+            x=0.5,
+            xanchor='center',
+            font=dict(size=16)
+        ),
+        height=450,
+        margin=dict(l=80, r=80, t=60, b=100),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+
+    return fig
+
+
+
+def create_player_comparison_table(player1, player2, category_comparison):
+    """
+    Create category comparison table for two players
+    
+    Args:
+        player1: First player name
+        player2: Second player name
+        category_comparison: Dict from load_player_comparison()
+        
+    Returns:
+        Styled DataFrame for st.dataframe()
+    """
+    import pandas as pd
+    
+    if not category_comparison:
+        return None
+    
+    # Build comparison data
+    table_data = []
+    
+    for category, data in category_comparison.items():
+        score1 = data.get(f'{player1}_score', 0)
+        score2 = data.get(f'{player2}_score', 0)
+        winner = data.get('winner', 'tie')
+        
+        # Determine winner symbol
+        if winner == player1:
+            winner_symbol = player1.split()[-1]  # get last word
+        elif winner == player2:
+            winner_symbol = player2.split()[-1]
+        else:
+            winner_symbol = '—'
+        
+        table_data.append({
+            'Category': category.replace('_', ' ').title(),
+            player1.split()[-1]: f"{score1:.1f}" if score1 is not None else "—",
+            player2.split()[-1]: f"{score2:.1f}" if score2 is not None else "—",
+            'Winner': winner_symbol
+        })
+    
+    df = pd.DataFrame(table_data)
+    
+    # Style the table
+    def highlight_winner(row):
+        """Highlight winner's score in their color"""
+        styles = [''] * len(row)
+        
+        if row['Winner'] == player1.split()[-1]:
+            styles[1] = 'background-color: rgba(59, 130, 246, 0.2); font-weight: bold;'
+        elif row['Winner'] == player2.split()[-1]:
+            styles[2] = 'background-color: rgba(239, 68, 68, 0.2); font-weight: bold;'
+        
+        return styles
+    
+    styled_df = df.style.apply(highlight_winner, axis=1)
+    
+    return styled_df
+
+
+def create_similar_players_table(similar_players_data):
+    """
+    Create table showing similar players with similarity scores
+    
+    Args:
+        similar_players_data: Output from load_similar_players()
+        
+    Returns:
+        Styled DataFrame for st.dataframe()
+    """
+    import pandas as pd
+    
+    if "error" in similar_players_data:
+        return None
+    
+    similar_players = similar_players_data.get('similar_players', [])
+    
+    if not similar_players:
+        return None
+    
+    # Build table data
+    table_data = []
+    
+    for i, player in enumerate(similar_players, 1):
+        similarity = player['similarity_score']
+        
+        # Generate star rating
+        if similarity >= 90:
+            stars = "★★★★★"
+        elif similarity >= 85:
+            stars = "★★★★☆"
+        elif similarity >= 80:
+            stars = "★★★☆☆"
+        elif similarity >= 75:
+            stars = "★★☆☆☆"
+        else:
+            stars = "★☆☆☆☆"
+        
+        table_data.append({
+            'Rank': i,
+            'Player': player['player_name'],
+            'Position': player['position'],
+            'Similarity': f"{similarity:.1f}%",
+            'Rating': stars
+        })
+    
+    df = pd.DataFrame(table_data)
+    
+    # Apply color gradient to similarity scores
+    def color_similarity(val):
+        """Color code similarity percentage"""
+        # Extract numeric value
+        pct = float(val.rstrip('%'))
+        
+        if pct >= 90:
+            return 'color: #16a34a; font-weight: bold;'
+        elif pct >= 85:
+            return 'color: #65a30d; font-weight: bold;'
+        elif pct >= 80:
+            return 'color: #eab308;'
+        elif pct >= 75:
+            return 'color: #f97316;'
+        else:
+            return 'color: #dc2626;'
+    
+    styled_df = df.style.applymap(color_similarity, subset=['Similarity'])
+    
+    return styled_df
+
+
+def create_player_metric_drilldown_table(player_name, metrics_data):
+    """
+    Create detailed metric breakdown table for category drill-down
+    
+    Args:
+        player_name: Player name
+        metrics_data: List of metric dicts from category breakdown
+        
+    Returns:
+        Styled DataFrame for st.dataframe()
+    """
+    import pandas as pd
+    
+    if not metrics_data:
+        return pd.DataFrame()
+    
+    # Build table data
+    table_data = []
+    
+    for metric in metrics_data:
+        metric_name = metric.get('metric', 'Unknown')
+        value = metric.get('value')
+        overall_pct = metric.get('overall_percentile')
+        position_pct = metric.get('position_percentile')
+        
+        # Format value
+        if value is not None:
+            if isinstance(value, float):
+                value_str = f"{value:.1f}" if value < 100 else f"{value:.0f}"
+            else:
+                value_str = str(value)
+        else:
+            value_str = "—"
+        
+        # Format percentiles
+        overall_str = f"{overall_pct:.1f}%" if overall_pct is not None else "—"
+        position_str = f"{position_pct:.1f}%" if position_pct is not None else "—"
+        
+        table_data.append({
+            'Metric': metric_name.replace('_', ' ').title(),
+            'Value': value_str,
+            'Overall': overall_str,
+            'Position': position_str
+        })
+    
+    df = pd.DataFrame(table_data)
+    
+    # Apply styling
+    def style_percentiles(val):
+        """Color code percentile values"""
+        if val == "—":
+            return 'color: #999;'
+        
+        pct = float(val.rstrip('%'))
+        
+        if pct >= 80:
+            return 'color: #16a34a; font-weight: bold;'
+        elif pct >= 60:
+            return 'color: #65a30d;'
+        elif pct >= 40:
+            return 'color: #eab308;'
+        elif pct >= 20:
+            return 'color: #f97316;'
+        else:
+            return 'color: #dc2626;'
+    
+    styled_df = df.style.applymap(style_percentiles, subset=['Overall', 'Position'])
+    
+    return styled_df

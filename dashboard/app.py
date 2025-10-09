@@ -27,8 +27,17 @@ from data_loader import (
     extract_category_comparison_table,
     extract_metric_breakdown,
     get_squad_league_context,
-    load_league_overview,              # NEW
-    load_category_leaderboard          # NEW
+    load_league_overview,      
+    load_category_leaderboard,  
+    get_available_players,   
+    get_player_filters,      
+    load_player_profile,     
+    load_player_comparison,  
+    load_player_category_breakdown,
+    load_similar_players,    
+    extract_player_radar_data,
+    extract_player_category_table_data,
+    extract_player_basic_info
 )
 
 from charts import (
@@ -36,11 +45,18 @@ from charts import (
     create_category_table,
     create_metric_drilldown_table,
     extract_basic_info,
-    create_league_table,               # NEW
-    create_category_heatmap,           # NEW
-    create_category_leaderboard,       # NEW
+    create_league_table,       
+    create_category_heatmap,   
+    create_category_leaderboard,
     create_category_winners_chart,
-    create_position_vs_quality_scatter
+    create_position_vs_quality_scatter,
+    create_player_header,           
+    create_player_dual_radar_chart,
+    create_player_category_table,  
+    create_player_comparison_radar,
+    create_player_comparison_table,
+    create_similar_players_table,  
+    create_player_metric_drilldown_table 
 )
 
 # ============================================================================
@@ -145,9 +161,9 @@ with st.sidebar:
     # ========================================================================
     page = st.radio(
         "Navigate",
-        ["League Overview", "Squad Comparison"],
+        ["League Overview", "Squad Comparison", "Player Analysis"],
         index=0,
-        label_visibility="collapsed"  # Hide the "Navigate" label
+        label_visibility="collapsed"
     )
     
     st.markdown("---")
@@ -155,6 +171,8 @@ with st.sidebar:
     # ========================================================================
     # SEASON SELECTOR (ALWAYS VISIBLE)
     # ========================================================================
+    st.subheader("⚙️ Settings")
+    
     seasons = get_available_seasons()
     
     if seasons:
@@ -186,25 +204,104 @@ with st.sidebar:
             st.error("Not enough squads available")
             st.stop()
         
-        squad1 = st.selectbox(
-            "Squad 1",
-            squads,
-            index=0
-        )
-        
-        squad2 = st.selectbox(
-            "Squad 2",
-            squads,
-            index=1 if len(squads) > 1 else 0
-        )
+        squad1 = st.selectbox("Squad 1", squads, index=0)
+        squad2 = st.selectbox("Squad 2", squads, index=1 if len(squads) > 1 else 0)
     
     # ========================================================================
-    # FOOTER INFO
+    # PLAYER SELECTORS (ONLY FOR PLAYER ANALYSIS PAGE)
     # ========================================================================
+    if page == "Player Analysis":
+        st.markdown("---")
+        
+        # Get initial filter options with default values
+        filter_options = get_player_filters(timeframe, min_minutes=90)
+        
+        # Advanced filters (collapsible) - BEFORE player selection
+        with st.expander("🔍 Filters", expanded=False):
+            position_filter = st.selectbox(
+                "Position",
+                ["All"] + filter_options['positions'],
+                index=0
+            )
+            
+            squad_filter = st.selectbox(
+                "Squad",
+                ["All"] + filter_options['squads'],
+                index=0
+            )
+            
+            min_minutes = st.slider(
+                "Minimum Minutes",
+                min_value=90,
+                max_value=630,
+                value=180,
+                step=90,
+                help="Filter players by minimum minutes played"
+            )
+            
+            same_position_only = st.checkbox(
+                "Same position only (similar players)",
+                value=True,
+                help="Limit similar players to same position group"
+            )
+            
+            min_similarity = st.slider(
+                "Similarity Threshold",
+                min_value=50,
+                max_value=95,
+                value=75,
+                step=5,
+                help="Minimum similarity % for similar players section"
+            )
+        
+        # Get filtered player list based on filters (if expander was opened and changed)
+        # Use defaults if filters not changed
+        try:
+            pos_filter = position_filter if position_filter != "All" else None
+        except:
+            pos_filter = None
+        
+        try:
+            sq_filter = squad_filter if squad_filter != "All" else None
+        except:
+            sq_filter = None
+        
+        try:
+            min_mins = min_minutes
+        except:
+            min_mins = 180
+        
+        try:
+            same_pos = same_position_only
+        except:
+            same_pos = True
+        
+        try:
+            min_sim = min_similarity
+        except:
+            min_sim = 75
+        
+        available_players = get_available_players(
+            timeframe,
+            pos_filter,
+            sq_filter,
+            min_mins
+        )
+        
+        if not available_players:
+            st.error("No players found with selected filters")
+            st.stop()
+        
+        # Main player selector - AFTER filters
+        selected_player = st.selectbox(
+            "Select Player",
+            available_players,
+            index=0
+        )
+    
     st.markdown("---")
     st.caption("💾 Data refreshes after each gameweek")
-    st.caption("📊 9 statistical categories analyzed")
-
+    st.caption("📊 8 statistical categories analyzed")
 
 # ============================================================================
 # LEAGUE OVERVIEW PAGE
@@ -308,6 +405,395 @@ def show_league_overview():
                     hide_index=True,
                     use_container_width=True
                 )
+
+# ============================================================================
+# PLAYER ANALYSIS PAGE
+# ============================================================================
+# Add this function to dashboard/app.py after show_league_overview()
+
+
+def show_player_analysis(timeframe, selected_player, min_similarity, same_position_only):
+    """
+    Player Analysis page - all sections use the selected_player from sidebar
+    
+    Args:
+        timeframe: Season timeframe
+        selected_player: Player selected in sidebar
+        min_similarity: Minimum similarity threshold from sidebar
+        same_position_only: Whether to limit similar players to same position
+    """
+    
+    # ========================================================================
+    # HEADER & TITLE
+    # ========================================================================
+    
+    st.markdown(f'<div class="main-title">Premier League Player Analysis</div>', unsafe_allow_html=True)
+
+    # Load player profile
+    player_profile = load_player_profile(selected_player, timeframe)
+
+    # Extract data
+    player_info = extract_player_basic_info(player_profile)
+    categories, overall_scores, position_scores = extract_player_radar_data(player_profile)
+    category_table_data = extract_player_category_table_data(player_profile)
+
+    if position_scores:
+        overall_avg = sum(position_scores) / len(position_scores)
+
+    st.markdown(f"#### {selected_player}   |   Overall Score: {overall_avg:.1f}", unsafe_allow_html=True)
+    st.caption(f"**Season**: {timeframe} | **Position:** {player_info.get('position', 'N/A')} | **Squad**: {player_info.get('squad', 'N/A')} | **Minutes**: {player_info.get('minutes_played', 0)}")
+    
+    if "error" in player_profile:
+        st.error(f"Error loading player profile: {player_profile['error']}")
+        return
+    
+    context_col1, context_col2 = st.columns(2)
+
+    # ========================================================================
+    # SECTION 1: PERFORMANCE OVERVIEW
+    # ========================================================================
+    
+    st.markdown('<div class="section-header">Performance Overview</div>', unsafe_allow_html=True)
+    st.caption("Percentile rankings across 8 categories (dual percentile: overall league vs position group)")
+    
+    # Two columns: Radar chart and Category table
+    col_left, col_right = st.columns([1, 1])
+    
+    with col_left:
+        st.subheader("Radar Chart")
+        st.caption("Visual performance profile")
+        
+        radar_fig = create_player_dual_radar_chart(
+            selected_player,
+            categories,
+            overall_scores,
+            position_scores
+        )
+        if radar_fig:
+            st.plotly_chart(radar_fig, use_container_width=True)
+        st.caption("Blue = Overall League | Red = Position Group")
+    
+    with col_right:
+        st.subheader("Category Breakdown")
+        st.caption("Overall and position-specific percentiles")
+        
+        category_table = create_player_category_table(category_table_data)
+        if category_table is not None:
+            st.dataframe(
+                category_table,
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.warning("No category data available")
+    
+    # ========================================================================
+    # DETAILED METRICS - EXPANDABLE DRILL-DOWN
+    # ========================================================================
+    
+    st.markdown('<div class="section-header">Detailed Metric Breakdown</div>', unsafe_allow_html=True)
+    st.caption("Expand any category to see individual metrics with dual percentiles")
+    
+    category_scores = player_profile['dual_percentiles']['category_scores']
+    
+    for category_name, category_data in category_scores.items():
+        category_display = category_name.replace('_', ' ').title()
+        
+        with st.expander(f"📊 {category_display}", expanded=False):
+            st.caption(category_data.get('description', ''))
+            
+            # Load detailed breakdown
+            breakdown = load_player_category_breakdown(selected_player, category_name, timeframe)
+            
+            if "error" not in breakdown:
+                metrics_data = breakdown.get('metric_details', [])
+                
+                if metrics_data:
+                    # Create metrics table
+                    table_rows = []
+                    for metric in metrics_data:
+                        metric_name = metric.get('metric', 'Unknown')
+                        value = metric.get('value')
+                        overall_pct = metric.get('overall_percentile')
+                        position_pct = metric.get('position_percentile')
+                        
+                        # Format value
+                        if value is not None:
+                            if isinstance(value, float):
+                                value_str = f"{value:.1f}" if value < 100 else f"{value:.0f}"
+                            else:
+                                value_str = str(value)
+                        else:
+                            value_str = "—"
+                        
+                        # Format percentiles
+                        overall_str = f"{overall_pct:.1f}%" if overall_pct is not None else "—"
+                        position_str = f"{position_pct:.1f}%" if position_pct is not None else "—"
+                        
+                        table_rows.append({
+                            'Metric': metric_name.replace('_', ' ').title(),
+                            'Value': value_str,
+                            'Overall': overall_str,
+                            'Position': position_str
+                        })
+                    
+                    import pandas as pd
+                    metrics_df = pd.DataFrame(table_rows)
+                    
+                    st.dataframe(
+                        metrics_df,
+                        use_container_width=True,
+                        hide_index=True,
+                        height=400
+                    )
+                else:
+                    st.info("No metrics available for this category")
+    
+    # ========================================================================
+    # SECTION 2: PLAYER COMPARISON
+    # ========================================================================
+    
+    st.markdown("---")
+    st.markdown('<div class="section-header">Player Comparison</div>', unsafe_allow_html=True)
+    st.caption("Compare against another player using position percentiles")
+    
+    # Get available players for comparison (same filters as sidebar)
+    available_players = get_available_players(timeframe, None, None, 180)
+    
+    # Only need to select Player 2 (Player 1 is already selected in sidebar)
+    player2 = st.selectbox(
+        "Compare against:",
+        [p for p in available_players if p != selected_player],  # Exclude selected player
+        index=0
+    )
+    
+    # Load comparison data (player1 = selected_player, player2 = dropdown selection)
+    comparison = load_player_comparison(selected_player, player2, timeframe)
+    
+    if "error" in comparison:
+        st.error(f"Error loading comparison: {comparison['error']}")
+    else:
+        # Load individual profiles
+        profile1 = player_profile  # Already loaded above
+        profile2 = load_player_profile(player2, timeframe)
+        
+        # Extract data
+        info1 = player_info  # Already extracted above
+        info2 = extract_player_basic_info(profile2)
+        
+        cats1, overall1, position1 = extract_player_radar_data(profile1)
+        cats2, overall2, position2 = extract_player_radar_data(profile2)
+        
+        # Player context side by side
+        st.markdown(f"#### {selected_player} vs {player2}")
+        
+        context_col1, context_col2 = st.columns(2)
+        
+        with context_col1:
+            st.markdown(f"**{selected_player}**")
+            st.caption(f"{info1.get('position', 'N/A')} • {info1.get('squad', 'N/A')} • {info1.get('minutes_played', 0):,} min")
+        
+        with context_col2:
+            st.markdown(f"**{player2}**")
+            st.caption(f"{info2.get('position', 'N/A')} • {info2.get('squad', 'N/A')} • {info2.get('minutes_played', 0):,} min")
+        
+        # Winner badge
+        summary = comparison.get('summary', {})
+        overall_winner = summary.get('overall_winner', 'balanced')
+        category_wins = summary.get('category_wins', {})
+        
+        if overall_winner != 'balanced':
+            st.markdown(f"""
+            <div class="winner-badge">
+                🏆 Winner: {overall_winner} ({category_wins.get(selected_player, 0)}-{category_wins.get(player2, 0)} categories)
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Key insights
+        category_comparison = comparison.get('category_comparison', {})
+
+        differences = []
+        for category, data in category_comparison.items():
+            diff = abs(data.get('difference', 0))
+            winner = data.get('winner', 'tie')
+            if winner != 'tie' and diff > 0:
+                differences.append({
+                    'category': category.replace('_', ' ').title(),
+                    'difference': diff,
+                    'winner': winner
+                })
+        
+        differences.sort(key=lambda x: x['difference'], reverse=True)
+        
+        if differences:
+            st.markdown("**Key Insights:**")
+
+            # Find top 3 gaps
+            diff_top3 = differences[:3]
+            
+            col1, col2, col3 = st.columns(3)
+            
+            for idx, diff in enumerate(diff_top3):
+                with [col1, col2, col3][idx]:
+                    st.markdown(f"""
+                    <div class="insight-box">
+                        • <strong>{diff['category']}</strong>: {diff['winner']} leads by {diff['difference']:.1f} points
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Two columns: Radar and comparison table
+        comp_viz_col1, comp_viz_col2 = st.columns([1, 1])
+        
+        with comp_viz_col1:
+            st.subheader("Radar Chart")
+            st.caption("Position percentiles for fair comparison")
+            
+            comp_radar = create_player_comparison_radar(
+                selected_player, cats1, position1,
+                player2, cats2, position2
+            )
+            if comp_radar:
+                st.plotly_chart(comp_radar, use_container_width=True)
+        
+        with comp_viz_col2:
+            st.subheader("Category Breakdown")
+            st.caption("Position percentiles and winners")
+            
+            comp_table = create_player_comparison_table(selected_player, player2, category_comparison)
+            if comp_table is not None:
+                st.dataframe(
+                    comp_table,
+                    use_container_width=True,
+                    hide_index=True
+                )
+        
+        # Detailed metrics comparison drill-down
+        st.markdown('<div class="section-header">Detailed Metric Breakdown</div>', unsafe_allow_html=True)
+        st.caption("Expand any category to see individual metric comparisons")
+        
+        for category_name, data in category_comparison.items():
+            category_display = category_name.replace('_', ' ').title()
+            
+            with st.expander(f"📊 {category_display}", expanded=False):
+                st.caption(data.get('category_description', ''))
+                
+                # Load breakdowns for both players
+                breakdown1 = load_player_category_breakdown(selected_player, category_name, timeframe)
+                breakdown2 = load_player_category_breakdown(player2, category_name, timeframe)
+                
+                if "error" not in breakdown1 and "error" not in breakdown2:
+                    metrics1 = {m['metric']: m for m in breakdown1.get('metric_details', [])}
+                    metrics2 = {m['metric']: m for m in breakdown2.get('metric_details', [])}
+                    
+                    # Get union of all metrics
+                    all_metrics = sorted(set(metrics1.keys()) | set(metrics2.keys()))
+                    
+                    # Build comparison table
+                    comp_rows = []
+                    for metric_name in all_metrics:
+                        m1 = metrics1.get(metric_name, {})
+                        m2 = metrics2.get(metric_name, {})
+                        
+                        val1 = m1.get('value')
+                        val2 = m2.get('value')
+                        
+                        # Format values
+                        if val1 is not None:
+                            val1_str = f"{val1:.1f}" if isinstance(val1, float) and val1 < 100 else str(int(val1)) if val1 is not None else "—"
+                        else:
+                            val1_str = "—"
+                        
+                        if val2 is not None:
+                            val2_str = f"{val2:.1f}" if isinstance(val2, float) and val2 < 100 else str(int(val2)) if val2 is not None else "—"
+                        else:
+                            val2_str = "—"
+                        
+                        # Determine winner
+                        if val1 is not None and val2 is not None:
+                            if val1 > val2:
+                                winner_str = selected_player
+                            elif val2 > val1:
+                                winner_str = player2
+                            else:
+                                winner_str = "Tie"
+                        else:
+                            winner_str = "—"
+                        
+                        comp_rows.append({
+                            'Metric': metric_name.replace('_', ' ').title(),
+                            selected_player: val1_str,
+                            player2: val2_str,
+                            'Winner': winner_str
+                        })
+                    
+                    import pandas as pd
+                    comp_df = pd.DataFrame(comp_rows)
+                    
+                    # Apply styling
+                    def highlight_metric_winner(row):
+                        if row['Winner'] == selected_player:
+                            return ['background-color: rgba(65, 105, 225, 0.1)'] * len(row)
+                        elif row['Winner'] == player2:
+                            return ['background-color: rgba(220, 20, 60, 0.1)'] * len(row)
+                        elif row['Winner'] == "Tie":
+                            return ['background-color: rgba(128, 128, 128, 0.05)'] * len(row)
+                        else:
+                            return [''] * len(row)
+                    
+                    styled_comp = comp_df.style.apply(highlight_metric_winner, axis=1)
+                    
+                    st.dataframe(
+                        styled_comp,
+                        use_container_width=True,
+                        hide_index=True,
+                        height=400
+                    )
+    
+    # ========================================================================
+    # SECTION 3: SIMILAR PLAYERS
+    # ========================================================================
+    
+    st.markdown("---")
+    st.markdown('<div class="section-header">Similar Players</div>', unsafe_allow_html=True)
+    st.caption(f"Players with similar statistical profiles to {selected_player}")
+    
+    # Load similar players (using selected_player, same_position_only and min_similarity from sidebar)
+    similar_data = load_similar_players(selected_player, timeframe, top_n=10, same_position_only=same_position_only)
+    
+    if "error" in similar_data:
+        st.error(f"Error finding similar players: {similar_data['error']}")
+    else:
+        # Filter by minimum similarity (from sidebar)
+        similar_players = similar_data.get('similar_players', [])
+        filtered_similar = [p for p in similar_players if p['similarity_score'] >= min_similarity]
+        
+        if not filtered_similar:
+            st.warning(f"⚠️ No players found with >= {min_similarity}% similarity. Adjust the threshold in the sidebar filters.")
+        else:
+            st.success(f"✅ Found {len(filtered_similar)} similar players")
+            
+            # Display similar players table
+            similar_table_data = {
+                'target_player': similar_data['target_player'],
+                'similar_players': filtered_similar,
+                'comparison_method': similar_data['comparison_method'],
+                'categories_compared': similar_data['categories_compared']
+            }
+            
+            similar_table = create_similar_players_table(similar_table_data)
+            if similar_table is not None:
+                st.dataframe(
+                    similar_table,
+                    use_container_width=True,
+                    hide_index=True
+                )
+            
+            st.caption(f"Comparison: {similar_data['comparison_method']} | Categories: {len(similar_data['categories_compared'])}")
+
 
 # ============================================================================
 # SQUAD COMPARISON PAGE (EXISTING CODE - UNCHANGED)
@@ -633,3 +1119,5 @@ if page == "Squad Comparison":
 
 elif page == "League Overview":
     show_league_overview()
+elif page == "Player Analysis":
+    show_player_analysis(timeframe, selected_player, min_sim, same_pos)

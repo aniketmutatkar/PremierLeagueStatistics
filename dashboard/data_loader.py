@@ -17,7 +17,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / 'analysis'))
 
 from squad_analyzer import SquadAnalyzer # type: ignore
-
+from player_analyzer import PlayerAnalyzer # type: ignore
 
 # ============================================================================
 # BASIC DATA QUERIES
@@ -412,3 +412,298 @@ def load_category_leaderboard(category, timeframe="current", n=5):
     
     # Return only the columns we need
     return top_n[['rank', 'squad_name', 'composite_score']].copy()
+
+# ============================================================================
+# PLAYER DATA QUERIES
+# ============================================================================
+# Add these functions to dashboard/data_loader.py after the squad functions
+
+@st.cache_data(ttl=3600)
+def get_available_players(timeframe="current", position_filter=None, squad_filter=None, min_minutes=180):
+    """
+    Get list of available players with optional filters
+    
+    Args:
+        timeframe: "current" or "season_YYYY-YYYY"
+        position_filter: Filter by position group (e.g., "FW", "MF", "DF", "GK") or None for all
+        squad_filter: Filter by squad name or None for all
+        min_minutes: Minimum minutes played (default 180 = 2 games)
+        
+    Returns:
+        list: Player names sorted by minutes played (descending)
+    """    
+
+    with PlayerAnalyzer() as analyzer:
+        filter_clause, _ = analyzer._parse_timeframe(timeframe)
+        
+        # Build query with filters
+        query = f"""
+            SELECT DISTINCT player_name, position, squad, minutes_played
+            FROM analytics_players 
+            WHERE {filter_clause} AND minutes_played >= {min_minutes}
+        """
+        
+        # Add position filter if specified
+        if position_filter and position_filter != "All":
+            # Use position groups to handle hybrid positions
+            if position_filter == "FW":
+                position_list = "'FW', 'FW,MF', 'MF,FW', 'FW,DF', 'DF,FW'"
+            elif position_filter == "MF":
+                position_list = "'MF', 'MF,FW', 'FW,MF', 'DF,MF', 'MF,DF'"
+            elif position_filter == "DF":
+                position_list = "'DF', 'DF,MF', 'MF,DF', 'DF,FW', 'FW,DF'"
+            elif position_filter == "GK":
+                position_list = "'GK'"
+            else:
+                position_list = f"'{position_filter}'"
+            
+            query += f" AND position IN ({position_list})"
+        
+        # Add squad filter if specified
+        if squad_filter and squad_filter != "All":
+            query += f" AND squad = '{squad_filter}'"
+        
+        query += " ORDER BY minutes_played DESC"
+        
+        players_df = analyzer.conn.execute(query).fetchdf()
+        return players_df['player_name'].tolist()
+
+
+@st.cache_data(ttl=3600)
+def get_player_filters(timeframe="current", min_minutes=180):
+    """
+    Get available filter options for players
+    
+    Args:
+        timeframe: "current" or "season_YYYY-YYYY"
+        min_minutes: Minimum minutes played
+        
+    Returns:
+        dict: {
+            'positions': list of unique positions,
+            'squads': list of unique squads
+        }
+    """
+    
+    with PlayerAnalyzer() as analyzer:
+        filter_clause, _ = analyzer._parse_timeframe(timeframe)
+        
+        # Get unique positions
+        positions_query = f"""
+            SELECT DISTINCT position
+            FROM analytics_players
+            WHERE {filter_clause} AND minutes_played >= {min_minutes}
+            ORDER BY position
+        """
+        positions_df = analyzer.conn.execute(positions_query).fetchdf()
+        
+        # Map positions to primary groups
+        position_groups = set()
+        for pos in positions_df['position'].tolist():
+            if 'GK' in pos:
+                position_groups.add('GK')
+            elif 'FW' in pos:
+                position_groups.add('FW')
+            elif 'MF' in pos:
+                position_groups.add('MF')
+            elif 'DF' in pos:
+                position_groups.add('DF')
+        
+        # Get unique squads
+        squads_query = f"""
+            SELECT DISTINCT squad
+            FROM analytics_players
+            WHERE {filter_clause} AND minutes_played >= {min_minutes}
+            ORDER BY squad
+        """
+        squads_df = analyzer.conn.execute(squads_query).fetchdf()
+        
+        return {
+            'positions': sorted(list(position_groups)),
+            'squads': squads_df['squad'].tolist()
+        }
+
+
+# ============================================================================
+# PLAYER PROFILE LOADING
+# ============================================================================
+
+@st.cache_data(ttl=3600)
+def load_player_profile(player_name, timeframe="current"):
+    """
+    Load comprehensive player profile with dual percentiles
+    
+    Args:
+        player_name: Player name
+        timeframe: "current" or "season_YYYY-YYYY"
+        
+    Returns:
+        dict: Comprehensive profile with:
+            - basic_info: player name, position, squad, minutes
+            - dual_percentiles: category_scores with overall and position percentiles
+            - player_insights: strengths, weaknesses, versatility
+    """
+    
+    with PlayerAnalyzer() as analyzer:
+        return analyzer.get_comprehensive_player_profile(player_name, timeframe)
+
+
+# ============================================================================
+# PLAYER COMPARISON LOADING
+# ============================================================================
+
+@st.cache_data(ttl=3600)
+def load_player_comparison(player1, player2, timeframe="current"):
+    """
+    Load head-to-head player comparison
+    
+    Args:
+        player1: First player name
+        player2: Second player name
+        timeframe: "current" or "season_YYYY-YYYY"
+        
+    Returns:
+        dict: Comparison with structure:
+            - players: [player1, player2]
+            - timeframe_info: description
+            - category_comparison: {category: {scores, winner, difference}}
+            - summary: {category_wins, overall_winner}
+    """
+    
+    with PlayerAnalyzer() as analyzer:
+        return analyzer.compare_players_comprehensive(player1, player2, timeframe)
+
+
+# ============================================================================
+# PLAYER CATEGORY BREAKDOWN LOADING
+# ============================================================================
+
+@st.cache_data(ttl=3600)
+def load_player_category_breakdown(player_name, category, timeframe="current"):
+    """
+    Load detailed breakdown of a specific category for a player
+    
+    Args:
+        player_name: Player name
+        category: Category name (e.g., 'attacking_output')
+        timeframe: "current" or "season_YYYY-YYYY"
+        
+    Returns:
+        dict: Category breakdown with:
+            - player_name
+            - category
+            - description
+            - composite_score
+            - metric_details: list of metrics with overall and position percentiles
+    """
+    
+    with PlayerAnalyzer() as analyzer:
+        return analyzer.get_category_breakdown(player_name, category, timeframe)
+
+
+# ============================================================================
+# SIMILAR PLAYERS LOADING
+# ============================================================================
+
+@st.cache_data(ttl=3600)
+def load_similar_players(player_name, timeframe="current", top_n=10, same_position_only=True):
+    """
+    Find statistically similar players
+    
+    Args:
+        player_name: Target player name
+        timeframe: "current" or "season_YYYY-YYYY"
+        top_n: Number of similar players to return (default 10)
+        same_position_only: Limit to same position group (default True)
+        
+    Returns:
+        dict: Similar players with:
+            - target_player: {name, position, category_profile}
+            - similar_players: list of {player_name, position, similarity_score}
+            - comparison_method: string
+            - categories_compared: list
+    """
+    
+    
+    with PlayerAnalyzer() as analyzer:
+        return analyzer.find_similar_players(player_name, timeframe, top_n, same_position_only)
+
+
+# ============================================================================
+# HELPER FUNCTIONS FOR PLAYER DATA TRANSFORMATION
+# ============================================================================
+
+def extract_player_radar_data(player_profile):
+    """
+    Extract dual percentile data for radar chart from player profile
+    
+    Args:
+        player_profile: Output from load_player_profile()
+        
+    Returns:
+        tuple: (categories, overall_scores, position_scores)
+            - categories: list of category names
+            - overall_scores: list of overall percentiles (0-100)
+            - position_scores: list of position percentiles (0-100)
+    """
+    if "error" in player_profile:
+        return [], [], []
+    
+    category_scores = player_profile['dual_percentiles']['category_scores']
+    
+    categories = []
+    overall_scores = []
+    position_scores = []
+    
+    for category, data in category_scores.items():
+        categories.append(category)
+        overall_scores.append(data['overall_score'] if data['overall_score'] is not None else 0)
+        position_scores.append(data['position_score'] if data['position_score'] is not None else 0)
+    
+    return categories, overall_scores, position_scores
+
+
+def extract_player_category_table_data(player_profile):
+    """
+    Extract category breakdown for table display
+    
+    Args:
+        player_profile: Output from load_player_profile()
+        
+    Returns:
+        list: List of dicts with category data for table
+    """
+    if "error" in player_profile:
+        return []
+    
+    category_scores = player_profile['dual_percentiles']['category_scores']
+    
+    table_data = []
+    for category, data in category_scores.items():
+        table_data.append({
+            'category': category,
+            'description': data['description'],
+            'overall_score': data['overall_score'],
+            'position_score': data['position_score'],
+            'metrics_analyzed': data['metrics_analyzed']
+        })
+    
+    return table_data
+
+
+def extract_player_basic_info(player_profile):
+    """Extract basic player info for display"""
+    if "error" in player_profile:
+        return {}
+    
+    basic = player_profile.get('basic_info', {})
+    
+    return {
+        'player_name': basic.get('player_name', 'N/A'),
+        'position': basic.get('position', 'N/A'),
+        'primary_position': basic.get('primary_position', 'N/A'),
+        'squad': basic.get('squad', 'N/A'),
+        'age': basic.get('age', 'N/A'),
+        'minutes_played': basic.get('minutes_played', 0),
+        'matches_played': basic.get('matches_played', 0)
+    }
