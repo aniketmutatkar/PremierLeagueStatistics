@@ -16,6 +16,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / 'dashboard'))
 sys.path.insert(0, str(project_root / 'analysis'))
 
+from player_analyzer import PlayerAnalyzer #type: ignore
+
 from data_loader import (
     get_available_squads,
     get_available_seasons,
@@ -37,28 +39,30 @@ from data_loader import (
     load_similar_players,    
     extract_player_radar_data,
     extract_player_category_table_data,
-    extract_player_basic_info
+    extract_player_basic_info,
+    load_player_overview,
+    load_player_category_leaderboard
 )
 
 from charts import (
     create_radar_chart,
     create_category_table,
     create_metric_drilldown_table,
-    extract_basic_info,
     create_league_table,       
     create_category_heatmap,   
     create_category_leaderboard,
     create_category_winners_chart,
-    create_position_vs_quality_scatter,
-    create_player_header,           
+    create_position_vs_quality_scatter,       
     create_player_dual_radar_chart,
     create_player_category_table,  
     create_player_comparison_radar,
     create_player_comparison_table,
     create_similar_players_table,  
-    create_player_metric_drilldown_table 
+    create_player_rankings_table,
+    create_player_category_heatmap,
+    create_player_category_leaderboard_table,
+    create_squad_dominance_charts
 )
-
 # ============================================================================
 # HELPER FUNCTION
 # ============================================================================
@@ -74,14 +78,23 @@ def _get_ordinal_suffix(n):
 def is_negative_metric(metric_name):
     """Check if a metric is negative (lower is better)"""
     # Import PlayerAnalyzer to access NEGATIVE_METRICS
-    import sys
-    from pathlib import Path
-    project_root = Path(__file__).parent.parent
-    sys.path.insert(0, str(project_root / 'analysis'))
-    from player_analyzer import PlayerAnalyzer #type: ignore
-    
     with PlayerAnalyzer() as analyzer:
         return metric_name in analyzer.NEGATIVE_METRICS
+
+@st.cache_data(ttl=3600)
+def get_player_position(player_name, timeframe="current"):
+    """Get player position quickly without loading full profile"""
+    with PlayerAnalyzer() as analyzer:
+        filter_clause, _ = analyzer._parse_timeframe(timeframe)
+        
+        result = analyzer.conn.execute(f"""
+            SELECT position
+            FROM analytics_players
+            WHERE player_name = ? AND {filter_clause}
+            LIMIT 1
+        """, [player_name]).fetchone()
+        
+        return result[0] if result else ""
 
 # ============================================================================
 # PAGE CONFIG
@@ -173,7 +186,7 @@ with st.sidebar:
     # ========================================================================
     page = st.radio(
         "Navigate",
-        ["League Overview", "Squad Comparison", "Player Analysis"],
+        ["League Overview", "Squad Comparison",  "Player Overview", "Player Analysis"],
         index=0,
         label_visibility="collapsed"
     )
@@ -463,8 +476,12 @@ def show_player_analysis(timeframe, selected_player, min_similarity, same_positi
     categories, overall_scores, position_scores = extract_player_radar_data(player_profile)
     category_table_data = extract_player_category_table_data(player_profile)
 
-    if position_scores:
+    if overall_scores:
+        overall_avg = sum(overall_scores) / len(overall_scores)
+    elif position_scores:
         overall_avg = sum(position_scores) / len(position_scores)
+    else:
+        overall_avg = 0.0
 
     st.markdown(f"#### {selected_player}   |   Overall Score: {overall_avg:.1f}", unsafe_allow_html=True)
     st.caption(f"**Season**: {timeframe} | **Position:** {player_info.get('position', 'N/A')} | **Squad**: {player_info.get('squad', 'N/A')} | **Minutes**: {player_info.get('minutes_played', 0)}")
@@ -583,15 +600,27 @@ def show_player_analysis(timeframe, selected_player, min_similarity, same_positi
     st.markdown('<div class="section-header">Player Comparison</div>', unsafe_allow_html=True)
     st.caption("Compare against another player using position percentiles")
     
-    # Get available players for comparison (same filters as sidebar)
-    available_players = get_available_players(timeframe, None, None, 180)
-    
-    # Only need to select Player 2 (Player 1 is already selected in sidebar)
-    player2 = st.selectbox(
-        "Compare against:",
-        [p for p in available_players if p != selected_player],  # Exclude selected player
-        index=0
-    )
+    # Get available players for comparison
+    if player_info.get('position') and 'GK' in player_info.get('position', ''):
+        # If selected player is GK, only show other GKs
+        available_players = get_available_players(timeframe, position_filter="GK", squad_filter=None, min_minutes=180)
+    else:
+        # If outfield player, show all outfield players (exclude GKs)
+        available_players = get_available_players(timeframe, position_filter=None, squad_filter=None, min_minutes=180)
+        # Filter out any GKs that might have slipped through
+        available_players = [p for p in available_players if p != selected_player]
+
+    # Remove the selected player from comparison options
+    available_players = [p for p in available_players if p != selected_player]
+
+    if len(available_players) == 0:
+        st.warning("No other players available for comparison with the current filters.")
+    else:
+        player2 = st.selectbox(
+            "Compare against:",
+            available_players,
+            index=0
+        )
     
     # Load comparison data (player1 = selected_player, player2 = dropdown selection)
     comparison = load_player_comparison(selected_player, player2, timeframe)
@@ -679,8 +708,8 @@ def show_player_analysis(timeframe, selected_player, min_similarity, same_positi
             st.caption("Position percentiles (50% baseline = average)")
             
             comp_radar = create_player_comparison_radar(
-                selected_player, cats1, position1,
-                player2, cats2, position2
+                selected_player, cats1, overall1,
+                player2, cats2, overall2
             )
             if comp_radar:
                 st.plotly_chart(comp_radar, use_container_width=True)
@@ -832,7 +861,206 @@ def show_player_analysis(timeframe, selected_player, min_similarity, same_positi
 
 
 # ============================================================================
-# SQUAD COMPARISON PAGE (EXISTING CODE - UNCHANGED)
+# PLAYER OVERVIEW PAGE - ADD TO dashboard/app.py
+# ============================================================================
+
+def show_player_overview(timeframe):
+    """
+    Player Overview page showing all players with rankings, distribution, heatmap, and leaderboards
+    Similar to League Overview but for players
+    
+    Args:
+        timeframe: Season timeframe
+    """
+    
+    st.markdown('<div class="main-title">Premier League Player Overview</div>', unsafe_allow_html=True)
+    st.caption(f"Season: {selected_season}")
+    st.markdown("---")
+    
+    # ========================================================================
+    # FILTERS (HORIZONTAL ROW)
+    # ========================================================================
+    filter_col1, filter_col2 = st.columns([1, 1])
+    
+    with filter_col1:
+        position_filter = st.selectbox(
+            "Position",
+            ["All", "GK", "DF", "MF", "FW"],
+            index=0,
+            help="Filter players by primary position group"
+        )
+    
+    with filter_col2:
+        min_minutes = st.slider(
+            "Minimum Minutes",
+            min_value=90,
+            max_value=630,
+            value=180,
+            step=90,
+            help="Filter players by minimum minutes played"
+        )
+    
+    # Convert position filter
+    pos_filter = None if position_filter == "All" else position_filter
+    
+    # Load data
+    with st.spinner("Loading player data..."):
+        df = load_player_overview(timeframe, pos_filter, min_minutes)
+    
+    if df.empty:
+        st.error("No players found with selected filters")
+        return
+    
+    st.caption(f"✅ Loaded {len(df)} players")
+    
+    # ========================================================================
+    # SECTION 1: PLAYER RANKINGS & DISTRIBUTION (SIDE BY SIDE)
+    # ========================================================================
+    st.markdown('<div class="section-header">Player Rankings & Score Distribution</div>', unsafe_allow_html=True)
+    
+    col_left, col_right = st.columns([0.55, 0.45])
+    
+    with col_left:
+        st.subheader("Player Rankings")
+        st.caption("All players ranked by overall score (avg of position percentiles)")
+        
+        # Create rankings table
+        rankings_table = create_player_rankings_table(df)
+        
+        # Display with scrollable container
+        st.dataframe(
+            rankings_table,
+            hide_index=True,
+            use_container_width=True,
+            height=450
+        )
+        
+        st.caption("💡 Click a player row to navigate to their full profile")
+    
+    with col_right:
+        st.subheader("Squad Dominance")
+        
+        # Create combined squad dominance chart
+        dominance_chart = create_squad_dominance_charts(df, top_n_players=100)
+        st.plotly_chart(dominance_chart, use_container_width=True)
+    
+    # ========================================================================
+    # SECTION 2: CATEGORY PERFORMANCE HEATMAP (BY POSITION)
+    # ========================================================================
+    st.markdown("---")
+    st.markdown('<div class="section-header">Category Performance Heatmap</div>', unsafe_allow_html=True)
+    st.markdown("Top 10 players per position across all categories. Numbers show position-specific rank, colors show position percentile.")
+    
+    # Sortable dropdown (applies to all position tabs)
+    sort_col1, sort_col2 = st.columns([1, 3])
+    
+    with sort_col1:
+        category_options = [
+            ('Overall Score', None),
+            ('Attacking Output', 'attacking_output'),
+            ('Creativity', 'creativity'),
+            ('Passing', 'passing'),
+            ('Ball Progression', 'ball_progression'),
+            ('Defending', 'defending'),
+            ('Physical Duels', 'physical_duels'),
+            ('Ball Involvement', 'ball_involvement'),
+            ('Discipline', 'discipline_reliability')
+        ]
+        
+        sort_choice = st.selectbox(
+            "Sort heatmaps by:",
+            options=[opt[0] for opt in category_options],
+            index=0,
+            help="Re-sort players by selected category (applies to all position tabs)"
+        )
+        
+        sort_category = next((opt[1] for opt in category_options if opt[0] == sort_choice), None)
+    
+    # Create tabs - REORDERED: FW, MF, DF, GK
+    tab_fw, tab_mf, tab_df, tab_gk = st.tabs(["⚡ Forwards", "⚙️ Midfielders", "🛡️ Defenders", "🧤 Goalkeepers"])
+    
+    with tab_fw:
+        if sort_category:
+            st.subheader(f"Top 10 Forwards (Sorted by {sort_choice})")
+        else:
+            st.subheader("Top 10 Forwards")
+        heatmap_fw = create_player_category_heatmap(df, sort_category, 'FW')
+        st.plotly_chart(heatmap_fw, use_container_width=True)
+        st.caption("Position percentiles • #1 = Highest rank")
+    
+    with tab_mf:
+        if sort_category:
+            st.subheader(f"Top 10 Midfielders (Sorted by {sort_choice})")
+        else:
+            st.subheader("Top 10 Midfielders")
+        heatmap_mf = create_player_category_heatmap(df, sort_category, 'MF')
+        st.plotly_chart(heatmap_mf, use_container_width=True)
+        st.caption("Position percentiles • #1 = Highest rank")
+    
+    with tab_df:
+        if sort_category:
+            st.subheader(f"Top 10 Defenders (Sorted by {sort_choice})")
+        else:
+            st.subheader("Top 10 Defenders")
+        heatmap_df_pos = create_player_category_heatmap(df, sort_category, 'DF')
+        st.plotly_chart(heatmap_df_pos, use_container_width=True)
+        st.caption("Position percentiles • #1 = Highest rank")
+    
+    with tab_gk:
+        if sort_category:
+            st.subheader(f"Top 10 Goalkeepers (Sorted by {sort_choice})")
+        else:
+            st.subheader("Top 10 Goalkeepers")
+        heatmap_gk = create_player_category_heatmap(df, sort_category, 'GK')
+        st.plotly_chart(heatmap_gk, use_container_width=True)
+        st.caption("Position percentiles • #1 = Highest rank")
+    
+    # ========================================================================
+    # SECTION 3: TOP 10 BY CATEGORY (EXPANDABLE)
+    # ========================================================================
+    st.markdown("---")
+    st.markdown('<div class="section-header">Top 10 by Category</div>', unsafe_allow_html=True)
+    st.markdown("League-wide leaders for each category (overall percentiles across all positions).")
+    
+    # Get all categories
+    categories = [
+        ('attacking_output', 'Attacking Output'),
+        ('creativity', 'Creativity'),
+        ('passing', 'Passing'),
+        ('ball_progression', 'Ball Progression'),
+        ('defending', 'Defending'),
+        ('physical_duels', 'Physical Duels'),
+        ('ball_involvement', 'Ball Involvement'),
+        ('discipline_reliability', 'Discipline & Reliability')
+    ]
+    
+    for category_key, category_display in categories:
+        with st.expander(f"📊 {category_display}", expanded=False):
+            # Load leaderboard
+            leaderboard_df = load_player_category_leaderboard(
+                category_key, 
+                timeframe, 
+                pos_filter, 
+                n=10
+            )
+            
+            if leaderboard_df.empty:
+                st.info("No data available for this category")
+            else:
+                # Create styled table
+                styled_table = create_player_category_leaderboard_table(leaderboard_df, category_display)
+                
+                st.dataframe(
+                    styled_table,
+                    hide_index=True,
+                    use_container_width=True
+                )
+                
+                st.caption(f"Top 10 players by {category_display.lower()} (overall percentile - league-wide comparison)")
+
+
+# ============================================================================
+# SQUAD COMPARISON PAGE
 # ============================================================================
 
 if page == "Squad Comparison":
@@ -1157,3 +1385,5 @@ elif page == "League Overview":
     show_league_overview()
 elif page == "Player Analysis":
     show_player_analysis(timeframe, selected_player, min_sim, same_pos)
+elif page == "Player Overview":
+    show_player_overview(timeframe)

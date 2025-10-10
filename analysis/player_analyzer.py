@@ -54,7 +54,12 @@ class PlayerAnalyzer:
             'penalty_kicks_conceded',
             
             # Blocked (when YOUR passes are blocked)
-            'blocked_passes'
+            'blocked_passes',
+
+            # Goalkeeper stats
+            'goals_against', 'goals_against_per_90', 'shots_on_target_against',
+            'penalty_goals_against', 'free_kick_goals_against',
+            'corner_kick_goals_against', 'crosses_faced', 'losses'
         }
 
         # Cleaned stat categories - removed misleading role-specific metrics
@@ -131,6 +136,77 @@ class PlayerAnalyzer:
                     'miscontrols', 'dispossessed', 'errors', 'offsides', 'take_ons_tackled_rate'
                 ],
                 'description': 'Discipline and ball security (lower is better for most)'
+            }
+        }
+
+        self.goalkeeper_categories = {
+            'shot_stopping': {
+                'metrics': [
+                    'saves', 'save_percentage', 'shots_on_target_against',
+                    'post_shot_expected_goals', 'post_shot_xg_per_shot',
+                    'post_shot_xg_performance', 'post_shot_xg_performance_per_90',
+                    'goals_against', 'goals_against_per_90'
+                ],
+                'description': 'Shot stopping ability and saves'
+            },
+            
+            'distribution': {
+                'metrics': [
+                    'goalkeeper_long_passes_completed', 'goalkeeper_long_passes_attempted',
+                    'goalkeeper_long_pass_accuracy', 'goalkeeper_pass_attempts',
+                    'launch_percentage', 'average_pass_length',
+                    'goal_kicks_attempted', 'goal_kick_launch_percentage',
+                    'goal_kick_average_length'
+                ],
+                'description': 'Passing and distribution from the back'
+            },
+            
+            'sweeping': {
+                'metrics': [
+                    'defensive_actions_outside_penalty_area',
+                    'defensive_actions_outside_penalty_area_per_90',
+                    'average_distance_defensive_actions'
+                ],
+                'description': 'Sweeper keeper actions outside the penalty area'
+            },
+            
+            'penalty_saving': {
+                'metrics': [
+                    'penalty_kicks_saved', 'penalty_save_percentage',
+                    'penalty_kicks_against', 'penalty_kicks_attempted_against',
+                    'penalty_goals_against'
+                ],
+                'description': 'Penalty kick saving performance'
+            },
+            
+            'cross_claiming': {
+                'metrics': [
+                    'crosses_stopped', 'cross_stop_percentage', 'crosses_faced'
+                ],
+                'description': 'Ability to claim crosses and deal with aerial balls'
+            },
+            
+            'clean_sheets': {
+                'metrics': [
+                    'clean_sheets', 'clean_sheet_percentage', 'wins', 'draws', 'losses'
+                ],
+                'description': 'Clean sheets and match results'
+            },
+            
+            'goals_prevented': {
+                'metrics': [
+                    'post_shot_xg_performance', 'post_shot_xg_performance_per_90',
+                    'goals_against', 'post_shot_expected_goals'
+                ],
+                'description': 'Goals prevented above expectation (PSxG - GA)'
+            },
+            
+            'ball_playing': {
+                'metrics': [
+                    'throws', 'goalkeeper_pass_attempts', 'passes_completed',
+                    'pass_completion_rate', 'progressive_passes'
+                ],
+                'description': 'Ball playing and progressive passing from keeper'
             }
         }
         
@@ -211,6 +287,7 @@ class PlayerAnalyzer:
         """Get basic player information with timeframe context"""
         filter_clause, timeframe_desc = self._parse_timeframe(timeframe)
         
+        # Try analytics_players first
         query = f"""
             SELECT player_name, position, squad, season, minutes_played, matches_played
             FROM analytics_players
@@ -220,6 +297,17 @@ class PlayerAnalyzer:
         """
         
         result = self.conn.execute(query, [player_name]).fetchone()
+        
+        # If not found, try analytics_keepers
+        if not result:
+            query = f"""
+                SELECT player_name, position, squad, season, minutes_played, matches_played
+                FROM analytics_keepers
+                WHERE player_name = ? AND {filter_clause}
+                ORDER BY gameweek DESC
+                LIMIT 1
+            """
+            result = self.conn.execute(query, [player_name]).fetchone()
         
         if not result:
             return {"error": f"No data found for {player_name} in timeframe: {timeframe_desc}"}
@@ -234,91 +322,113 @@ class PlayerAnalyzer:
             'timeframe': timeframe,
             'timeframe_description': timeframe_desc
         }
-    
+
     def calculate_dual_percentiles(self, player_name: str, timeframe: str = "current") -> Dict:
-        """Calculate both overall and position-specific percentiles with per-90 normalization"""
+        """
+        Calculate both overall and position-specific percentiles.
+        Keeps goalkeepers and outfield players completely separate.
+        """
         filter_clause, timeframe_desc = self._parse_timeframe(timeframe)
         
-        # Get player data
-        player_data = self.conn.execute(f"""
-            SELECT *
-            FROM analytics_players
-            WHERE player_name = ?
-            AND {filter_clause}
-        """, [player_name]).fetchdf()
+        # Step 1: Determine if this player is a goalkeeper
+        player_in_keepers = self.conn.execute(f"""
+            SELECT COUNT(*) FROM analytics_keepers 
+            WHERE player_name = ? AND {filter_clause}
+        """, [player_name]).fetchone()[0]
+
+        is_goalkeeper = player_in_keepers > 0
         
+        # Step 2: Get player data from correct table
+        if is_goalkeeper:
+            player_table = "analytics_keepers"
+            categories_to_use = self.goalkeeper_categories
+        else:
+            player_table = "analytics_players"
+            categories_to_use = self.stat_categories
+        
+        player_data = self.conn.execute(f"""
+            SELECT * FROM {player_table}
+            WHERE player_name = ? AND {filter_clause}
+        """, [player_name]).fetchdf()
+
         if player_data.empty:
             return {"error": f"No data found for {player_name}"}
         
-        # APPLY PER-90 NORMALIZATION
+        # Apply per-90 normalization
         player_data = self._normalize_to_per_90(player_data)
         
         # Handle multiple records (career mode)
         if len(player_data) > 1:
-            # For career mode, aggregate appropriately
-            # Per-90 stats should be averaged (weighted by minutes would be better but complex)
-            player_data = player_data.head(1)  # For now, use most recent
+            player_data = player_data.head(1)
         
         player_record = player_data.iloc[0]
         player_position = player_record['position']
         position_group_list, primary_position = self._get_position_group(player_position)
         
-        # Get overall comparison data
-        overall_comparison = self.conn.execute(f"""
-            SELECT * FROM analytics_players WHERE {filter_clause}
-        """).fetchdf()
+        # Step 3: Get comparison data - SEPARATE for GK vs Outfield
+        if is_goalkeeper:
+            # For goalkeepers: compare only to other goalkeepers
+            overall_comparison = self.conn.execute(f"""
+                SELECT * FROM analytics_keepers WHERE {filter_clause}
+            """).fetchdf()
+            
+            position_comparison = overall_comparison.copy()  # Same thing for GKs
+            
+        else:
+            # For outfield players: compare only to other outfield players
+            overall_comparison = self.conn.execute(f"""
+                SELECT * FROM analytics_players WHERE {filter_clause}
+            """).fetchdf()
+            
+            # Position-specific comparison
+            position_filter = "', '".join(position_group_list)
+            position_comparison = self.conn.execute(f"""
+                SELECT * FROM analytics_players 
+                WHERE {filter_clause} AND position IN ('{position_filter}')
+            """).fetchdf()
         
-        # NORMALIZE COMPARISON DATA TOO
+        # Normalize comparison data
         overall_comparison = self._normalize_to_per_90(overall_comparison)
-        
-        # Get position-specific comparison data
-        position_filter = "', '".join(position_group_list)
-        position_comparison = self.conn.execute(f"""
-            SELECT * FROM analytics_players 
-            WHERE {filter_clause} AND position IN ('{position_filter}')
-        """).fetchdf()
-        
-        # NORMALIZE POSITION COMPARISON DATA
         position_comparison = self._normalize_to_per_90(position_comparison)
         
-        # Calculate category scores with dual percentiles
+        # Step 4: Calculate category scores using appropriate categories
         category_scores = {}
         
-        for category_name, category_info in self.stat_categories.items():
+        for category_name, category_info in categories_to_use.items():
             metrics = category_info['metrics']
             metric_breakdown = {}
             overall_percentiles = []
             position_percentiles = []
             
             for metric in metrics:
-                # GET THE CORRECT METRIC (prefer per_90 versions)
+                # Get the metric value (handles per-90 conversion if needed)
                 metric_to_use, player_value = self._get_metric_for_percentile(metric, player_data)
                 
                 if player_value is None or pd.isna(player_value):
                     continue
                 
-                # Overall percentile
+                # Calculate overall percentile
+                overall_pct = None
                 if metric_to_use in overall_comparison.columns:
                     overall_values = overall_comparison[metric_to_use].dropna()
-                    overall_pct = self._calculate_percentile_with_polarity(
-                        metric, player_value, overall_values  # Use ORIGINAL metric name for polarity check
-                    )
-                else:
-                    overall_pct = None
+                    if len(overall_values) > 0:
+                        overall_pct = self._calculate_percentile_with_polarity(
+                            metric, player_value, overall_values
+                        )
                 
-                # Position-specific percentile
+                # Calculate position percentile
+                position_pct = None
                 if metric_to_use in position_comparison.columns:
                     position_values = position_comparison[metric_to_use].dropna()
-                    position_pct = self._calculate_percentile_with_polarity(
-                        metric, player_value, position_values  # Use ORIGINAL metric name for polarity check
-                    )
-                else:
-                    position_pct = None
+                    if len(position_values) > 0:
+                        position_pct = self._calculate_percentile_with_polarity(
+                            metric, player_value, position_values
+                        )
                 
                 if overall_pct is not None or position_pct is not None:
                     metric_breakdown[metric] = {
                         'value': float(player_value),
-                        'metric_used': metric_to_use,  # Track which metric was actually used
+                        'metric_used': metric_to_use,
                         'overall_percentile': round(overall_pct, 1) if overall_pct is not None else None,
                         'position_percentile': round(position_pct, 1) if position_pct is not None else None,
                         'overall_sample_size': len(overall_values) if overall_pct is not None else 0,
@@ -346,7 +456,8 @@ class PlayerAnalyzer:
                 'name': player_name,
                 'position': player_position,
                 'primary_position': primary_position,
-                'comparison_group': position_group_list
+                'comparison_group': position_group_list,
+                'is_goalkeeper': is_goalkeeper
             },
             'category_scores': category_scores,
             'timeframe_info': {
@@ -536,7 +647,7 @@ class PlayerAnalyzer:
         }
     
     def compare_players_comprehensive(self, player1: str, player2: str, timeframe: str = "current") -> Dict:
-        """Enhanced comparison with detailed breakdowns"""
+        """Enhanced comparison with detailed breakdowns - blocks GK vs outfield"""
         profile1 = self.get_comprehensive_player_profile(player1, timeframe)
         profile2 = self.get_comprehensive_player_profile(player2, timeframe)
         
@@ -544,6 +655,15 @@ class PlayerAnalyzer:
             return {"error": f"Player 1 ({player1}): {profile1['error']}"}
         if "error" in profile2:
             return {"error": f"Player 2 ({player2}): {profile2['error']}"}
+        
+        # Check if cross-position comparison (GK vs outfield)
+        player1_is_gk = profile1['dual_percentiles']['player_info'].get('is_goalkeeper', False)
+        player2_is_gk = profile2['dual_percentiles']['player_info'].get('is_goalkeeper', False)
+        
+        if player1_is_gk != player2_is_gk:
+            return {
+                "error": "Cannot compare goalkeepers to outfield players. Please select two goalkeepers or two outfield players."
+            }
         
         # Extract category scores
         categories1 = profile1['dual_percentiles']['category_scores']
@@ -557,15 +677,26 @@ class PlayerAnalyzer:
             'summary': {}
         }
         
-        # Category-by-category comparison
+        # Determine which categories to use
+        if player1_is_gk:
+            categories_to_compare = self.goalkeeper_categories.keys()
+        else:
+            categories_to_compare = self.stat_categories.keys()
+        
+        # Category-by-category comparison using OVERALL percentiles
         player1_wins = 0
         player2_wins = 0
         
-        for category in self.stat_categories.keys():
+        for category in categories_to_compare:
             if category in categories1 and category in categories2:
-                # Use position percentiles for comparison if available
-                score1 = categories1[category]['position_score'] or categories1[category]['overall_score']
-                score2 = categories2[category]['position_score'] or categories2[category]['overall_score']
+                # Use OVERALL percentiles for objective comparison
+                score1 = categories1[category]['overall_score']
+                if score1 is None:
+                    score1 = categories1[category]['position_score']
+                
+                score2 = categories2[category]['overall_score']
+                if score2 is None:
+                    score2 = categories2[category]['position_score']
                 
                 if score1 is not None and score2 is not None:
                     difference = score1 - score2
@@ -590,7 +721,7 @@ class PlayerAnalyzer:
         }
         
         return comparison
-    
+
     # Helper methods
     def _assess_position_expectation(self, score: float, priority_level: str) -> str:
         """Assess if score meets position expectations"""
@@ -850,16 +981,26 @@ class PlayerAnalyzer:
         if same_position_only:
             position_group, _ = self._get_position_group(target_position)
             position_filter = "', '".join(position_group)
-            player_query = f"""
-                SELECT DISTINCT player_name, position
-                FROM analytics_players
-                WHERE {filter_clause} AND position IN ('{position_filter}')
-            """
+            
+            # Check if target is a goalkeeper
+            if 'GK' in target_position:
+                player_query = f"""
+                    SELECT DISTINCT player_name, position
+                    FROM analytics_keepers
+                    WHERE {filter_clause}
+                """
+            else:
+                player_query = f"""
+                    SELECT DISTINCT player_name, position
+                    FROM analytics_players
+                    WHERE {filter_clause} AND position IN ('{position_filter}')
+                """
         else:
+            # For cross-position search, union both tables
             player_query = f"""
-                SELECT DISTINCT player_name, position
-                FROM analytics_players
-                WHERE {filter_clause}
+                SELECT DISTINCT player_name, position FROM analytics_players WHERE {filter_clause}
+                UNION ALL
+                SELECT DISTINCT player_name, position FROM analytics_keepers WHERE {filter_clause}
             """
         
         potential_players = self.conn.execute(player_query).fetchdf()
@@ -1219,6 +1360,25 @@ class PlayerAnalyzer:
             return metric, player_data[metric].iloc[0] if len(player_data) > 0 else None
         else:
             return metric, None
+        
+    def is_goalkeeper(self, position: str) -> bool:
+        """Check if position is goalkeeper"""
+        return 'GK' in position.upper()
+
+    def get_categories_for_position(self, position: str) -> dict:
+        """
+        Get appropriate stat categories based on position
+        
+        Args:
+            position: Player position string
+            
+        Returns:
+            dict: Either goalkeeper_categories or stat_categories (outfield)
+        """
+        if self.is_goalkeeper(position):
+            return self.goalkeeper_categories
+        else:
+            return self.stat_categories
 
 
 # Test function

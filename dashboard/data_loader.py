@@ -421,85 +421,85 @@ def load_category_leaderboard(category, timeframe="current", n=5):
 @st.cache_data(ttl=3600)
 def get_available_players(timeframe="current", position_filter=None, squad_filter=None, min_minutes=180):
     """
-    Get list of available players with optional filters
-    
-    Args:
-        timeframe: "current" or "season_YYYY-YYYY"
-        position_filter: Filter by position group (e.g., "FW", "MF", "DF", "GK") or None for all
-        squad_filter: Filter by squad name or None for all
-        min_minutes: Minimum minutes played (default 180 = 2 games)
-        
-    Returns:
-        list: Player names sorted by minutes played (descending)
-    """    
-
+    Get list of available players INCLUDING GOALKEEPERS (from both tables)
+    """
     with PlayerAnalyzer() as analyzer:
         filter_clause, _ = analyzer._parse_timeframe(timeframe)
         
-        # Build query with filters
-        query = f"""
+        # Build base queries for both tables
+        outfield_query = f"""
             SELECT DISTINCT player_name, position, squad, minutes_played
             FROM analytics_players 
             WHERE {filter_clause} AND minutes_played >= {min_minutes}
         """
         
-        # Add position filter if specified
+        keeper_query = f"""
+            SELECT DISTINCT player_name, position, squad, minutes_played
+            FROM analytics_keepers
+            WHERE {filter_clause} AND minutes_played >= {min_minutes}
+        """
+        
+        # Apply position filter
         if position_filter and position_filter != "All":
-            # Use position groups to handle hybrid positions
-            if position_filter == "FW":
+            if position_filter == "GK":
+                # Only get keepers, exclude all outfield
+                outfield_query += " AND 1=0"  
+                keeper_query += " AND position LIKE '%GK%'"
+            elif position_filter == "FW":
                 position_list = "'FW', 'FW,MF', 'MF,FW', 'FW,DF', 'DF,FW'"
+                outfield_query += f" AND position IN ({position_list})"
+                keeper_query += " AND 1=0"  # Exclude keepers
             elif position_filter == "MF":
                 position_list = "'MF', 'MF,FW', 'FW,MF', 'DF,MF', 'MF,DF'"
+                outfield_query += f" AND position IN ({position_list})"
+                keeper_query += " AND 1=0"
             elif position_filter == "DF":
                 position_list = "'DF', 'DF,MF', 'MF,DF', 'DF,FW', 'FW,DF'"
-            elif position_filter == "GK":
-                position_list = "'GK'"
-            else:
-                position_list = f"'{position_filter}'"
-            
-            query += f" AND position IN ({position_list})"
+                outfield_query += f" AND position IN ({position_list})"
+                keeper_query += " AND 1=0"
         
-        # Add squad filter if specified
+        # Apply squad filter to both
         if squad_filter and squad_filter != "All":
-            query += f" AND squad = '{squad_filter}'"
+            outfield_query += f" AND squad = '{squad_filter}'"
+            keeper_query += f" AND squad = '{squad_filter}'"
         
-        query += " ORDER BY minutes_played DESC"
+        # UNION both queries
+        combined_query = f"""
+            {outfield_query}
+            UNION ALL
+            {keeper_query}
+            ORDER BY minutes_played DESC
+        """
         
-        players_df = analyzer.conn.execute(query).fetchdf()
+        players_df = analyzer.conn.execute(combined_query).fetchdf()
         return players_df['player_name'].tolist()
 
 
 @st.cache_data(ttl=3600)
 def get_player_filters(timeframe="current", min_minutes=180):
-    """
-    Get available filter options for players
-    
-    Args:
-        timeframe: "current" or "season_YYYY-YYYY"
-        min_minutes: Minimum minutes played
-        
-    Returns:
-        dict: {
-            'positions': list of unique positions,
-            'squads': list of unique squads
-        }
-    """
-    
+    """Get available filter options INCLUDING GK from both tables"""    
     with PlayerAnalyzer() as analyzer:
         filter_clause, _ = analyzer._parse_timeframe(timeframe)
         
-        # Get unique positions
-        positions_query = f"""
+        # Get positions from BOTH tables
+        positions_outfield = analyzer.conn.execute(f"""
             SELECT DISTINCT position
             FROM analytics_players
             WHERE {filter_clause} AND minutes_played >= {min_minutes}
-            ORDER BY position
-        """
-        positions_df = analyzer.conn.execute(positions_query).fetchdf()
+        """).fetchdf()
         
-        # Map positions to primary groups
+        positions_keepers = analyzer.conn.execute(f"""
+            SELECT DISTINCT position
+            FROM analytics_keepers
+            WHERE {filter_clause} AND minutes_played >= {min_minutes}
+        """).fetchdf()
+        
+        # Combine and map to primary groups
+        import pandas as pd
+        all_positions = pd.concat([positions_outfield, positions_keepers])['position'].unique()
+        
         position_groups = set()
-        for pos in positions_df['position'].tolist():
+        for pos in all_positions:
             if 'GK' in pos:
                 position_groups.add('GK')
             elif 'FW' in pos:
@@ -509,20 +509,23 @@ def get_player_filters(timeframe="current", min_minutes=180):
             elif 'DF' in pos:
                 position_groups.add('DF')
         
-        # Get unique squads
-        squads_query = f"""
-            SELECT DISTINCT squad
-            FROM analytics_players
+        # Get squads from BOTH tables
+        squads_outfield = analyzer.conn.execute(f"""
+            SELECT DISTINCT squad FROM analytics_players
             WHERE {filter_clause} AND minutes_played >= {min_minutes}
-            ORDER BY squad
-        """
-        squads_df = analyzer.conn.execute(squads_query).fetchdf()
+        """).fetchdf()
+        
+        squads_keepers = analyzer.conn.execute(f"""
+            SELECT DISTINCT squad FROM analytics_keepers
+            WHERE {filter_clause} AND minutes_played >= {min_minutes}
+        """).fetchdf()
+        
+        all_squads = pd.concat([squads_outfield, squads_keepers])['squad'].unique()
         
         return {
             'positions': sorted(list(position_groups)),
-            'squads': squads_df['squad'].tolist()
+            'squads': sorted(list(all_squads))
         }
-
 
 # ============================================================================
 # PLAYER PROFILE LOADING
@@ -707,3 +710,139 @@ def extract_player_basic_info(player_profile):
         'minutes_played': basic.get('minutes_played', 0),
         'matches_played': basic.get('matches_played', 0)
     }
+
+# ============================================================================
+# PLAYER OVERVIEW LOADING - ADD TO dashboard/data_loader.py
+# ============================================================================
+
+@st.cache_data(ttl=3600)
+def load_player_overview(timeframe="current", position_filter=None, min_minutes=180):
+    """
+    Load comprehensive player overview with position percentiles for all players
+    
+    Args:
+        timeframe: "current" or "season_YYYY-YYYY"
+        position_filter: "GK", "DF", "MF", "FW", or None for all positions
+        min_minutes: Minimum minutes threshold (default 180)
+        
+    Returns:
+        pd.DataFrame with columns:
+            - player_name, position, primary_position, squad, minutes_played
+            - overall_score (average of 8 position percentiles)
+            - 8 category position percentiles
+    """
+    
+    with PlayerAnalyzer() as analyzer:
+        # Get filtered player list
+        available_players = get_available_players(timeframe, position_filter, None, min_minutes)
+        
+        if not available_players:
+            return pd.DataFrame()
+        
+        player_records = []
+        
+        for player_name in available_players:
+            # Get dual percentiles (cached)
+            profile = analyzer.calculate_dual_percentiles(player_name, timeframe)
+            
+            if "error" in profile:
+                continue
+            
+            player_info = profile['player_info']
+            category_scores = profile['category_scores']
+            
+            # Get basic info (cached)
+            basic_info = analyzer.get_player_basic_info(player_name, timeframe)
+            
+            if "error" in basic_info:
+                continue
+            
+            # Extract position percentiles for 8 categories
+            position_percentiles = []
+            category_data = {}
+            
+            for category, data in category_scores.items():
+                pos_score = data.get('position_score')
+                category_data[f"{category}_pos"] = pos_score
+                
+                if pos_score is not None:
+                    position_percentiles.append(pos_score)
+            
+            # Calculate overall score (average of position percentiles)
+            if position_percentiles:
+                overall_score = round(sum(position_percentiles) / len(position_percentiles), 1)
+            else:
+                overall_score = None
+            
+            # Build record
+            record = {
+                'player_name': player_name,
+                'position': player_info['position'],
+                'primary_position': player_info['primary_position'],
+                'squad': basic_info['squad'],
+                'minutes_played': basic_info['minutes_played'],
+                'overall_score': overall_score,
+                **category_data  # Unpack 8 category columns
+            }
+            
+            player_records.append(record)
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(player_records)
+        
+        # Sort by overall_score descending
+        if not df.empty and 'overall_score' in df.columns:
+            df = df.sort_values('overall_score', ascending=False).reset_index(drop=True)
+        
+        return df
+
+@st.cache_data(ttl=3600)
+def load_player_category_leaderboard(category, timeframe="current", position_filter=None, n=10):
+    """
+    Get top N players for a specific category (by OVERALL percentile for league-wide comparison)
+    """
+    
+    with PlayerAnalyzer() as analyzer:
+        available_players = get_available_players(timeframe, position_filter, None, min_minutes=180)
+        
+        if not available_players:
+            return pd.DataFrame(columns=['rank', 'player_name', 'position', 'squad', 'score'])
+        
+        player_records = []
+        
+        for player_name in available_players:
+            profile = analyzer.calculate_dual_percentiles(player_name, timeframe)
+            
+            if "error" in profile:
+                continue
+            
+            player_info = profile['player_info']
+            category_scores = profile['category_scores']
+            
+            basic_info = analyzer.get_player_basic_info(player_name, timeframe)
+            
+            if "error" in basic_info:
+                continue
+            
+            if category in category_scores:
+                overall_score = category_scores[category].get('overall_score')
+                
+                if overall_score is not None:
+                    player_records.append({
+                        'player_name': player_name,
+                        'position': player_info['position'],
+                        'squad': basic_info['squad'],
+                        'score': overall_score
+                    })
+        
+        df = pd.DataFrame(player_records)
+        
+        if df.empty:
+            return pd.DataFrame(columns=['rank', 'player_name', 'position', 'squad', 'score'])
+        
+        df = df.sort_values('score', ascending=False)
+        top_n = df.head(n)
+        top_n = top_n.copy()
+        top_n.insert(0, 'rank', range(1, len(top_n) + 1))
+        
+        return top_n[['rank', 'player_name', 'position', 'squad', 'score']]

@@ -248,21 +248,6 @@ def create_metric_drilldown_table(squad1_name, squad1_metrics,
 # HELPER FUNCTIONS
 # ============================================================================
 
-def extract_basic_info(squad_profile):
-    """Extract basic squad info for display"""
-    if "error" in squad_profile:
-        return {}
-    
-    basic = squad_profile.get('basic_info', {})
-    
-    return {
-        'squad_name': basic.get('squad_name', 'N/A'),
-        'season': basic.get('season', 'N/A'),
-        'gameweek': basic.get('gameweek', 'N/A'),
-        'matches_played': basic.get('matches_played', 0),
-        'minutes_played': basic.get('minutes_played', 0)
-    }
-
 def create_league_table(df):
     """
     Create clean league table with traditional stats + overall composite ONLY
@@ -625,43 +610,6 @@ def create_category_winners_chart(df):
 # ============================================================================
 # PLAYER VISUALIZATION FUNCTIONS
 # ============================================================================
-# Add these functions to dashboard/charts.py after the squad chart functions
-
-def create_player_header(player_info):
-    """
-    Create player info header card
-    
-    Args:
-        player_info: Dict with player_name, position, squad, minutes_played, etc.
-        
-    Returns:
-        None (displays directly with st.markdown)
-    """
-    import streamlit as st
-    
-    name = player_info.get('player_name', 'N/A')
-    position = player_info.get('position', 'N/A')
-    primary_pos = player_info.get('primary_position', 'N/A')
-    squad = player_info.get('squad', 'N/A')
-    minutes = player_info.get('minutes_played', 0)
-    matches = player_info.get('matches_played', 0)
-    age = player_info.get('age', 'N/A')
-    
-    # Calculate games played (minutes / 90)
-    games_played = round(minutes / 90, 1) if minutes > 0 else 0
-    
-    st.markdown(f"""
-    <div style="padding: 1rem; background-color: #f0f2f6; border-radius: 0.5rem; margin-bottom: 1rem;">
-        <h3 style="margin: 0 0 0.5rem 0;">{name}</h3>
-        <p style="margin: 0; color: #666;">
-            <strong>Position:</strong> {position} ({primary_pos}) | 
-            <strong>Squad:</strong> {squad} | 
-            <strong>Age:</strong> {age} | 
-            <strong>Minutes:</strong> {minutes:,} ({games_played} games)
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
 
 def create_player_dual_radar_chart(player_name, categories, overall_scores, position_scores):
     """
@@ -1025,73 +973,300 @@ def create_similar_players_table(similar_players_data):
     
     return styled_df
 
+# ============================================================================
+# PLAYER OVERVIEW VISUALIZATION FUNCTIONS - ADD TO dashboard/charts.py
+# ============================================================================
 
-def create_player_metric_drilldown_table(player_name, metrics_data):
+def create_player_rankings_table(df):
     """
-    Create detailed metric breakdown table for category drill-down
+    Create player rankings table for Player Overview
     
     Args:
-        player_name: Player name
-        metrics_data: List of metric dicts from category breakdown
+        df: DataFrame from load_player_overview()
         
     Returns:
-        Styled DataFrame for st.dataframe()
+        Styled dataframe for st.dataframe()
     """
-    import pandas as pd
+    if df.empty:
+        return df
     
-    if not metrics_data:
-        return pd.DataFrame()
+    # Make a copy
+    display_df = df.copy()
     
-    # Build table data
-    table_data = []
+    # Add rank column
+    display_df.insert(0, 'rank', range(1, len(display_df) + 1))
     
-    for metric in metrics_data:
-        metric_name = metric.get('metric', 'Unknown')
-        value = metric.get('value')
-        overall_pct = metric.get('overall_percentile')
-        position_pct = metric.get('position_percentile')
+    # Select columns for display
+    table_cols = ['rank', 'player_name', 'position', 'squad', 'minutes_played', 'overall_score']
+    display_df = display_df[table_cols]
+    
+    # Rename columns
+    display_df = display_df.rename(columns={
+        'rank': 'Rank',
+        'player_name': 'Player',
+        'position': 'Pos',
+        'squad': 'Squad',
+        'minutes_played': 'Minutes',
+        'overall_score': 'Overall'
+    })
+    
+    # Format columns
+    display_df['Minutes'] = display_df['Minutes'].apply(lambda x: f"{x:,}" if pd.notna(x) else "—")
+    display_df['Overall'] = display_df['Overall'].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "—")
+    
+    return display_df
+
+
+def create_player_category_heatmap(df, sort_category=None, position_filter=None):
+    """
+    Create heatmap showing top 10 players for a specific position across 8 categories + overall score
+    """
+    import plotly.graph_objects as go
+    import numpy as np
+    
+    if df.empty or position_filter is None:
+        return go.Figure()
+    
+    pos_df = df[df['primary_position'] == position_filter].copy()
+    
+    if pos_df.empty:
+        return go.Figure()
+    
+    # Sort DESCENDING (highest scores first) - rank 1 should be highest score
+    if sort_category and f"{sort_category}_pos" in pos_df.columns:
+        pos_df = pos_df.sort_values(f"{sort_category}_pos", ascending=False, na_position='last')
+    else:
+        pos_df = pos_df.sort_values('overall_score', ascending=False, na_position='last')
+    
+    # REVERSE the order so #1 is at TOP of heatmap
+    top_players_df = pos_df.head(10)
+    top_players_df = top_players_df.iloc[::-1]  # REVERSE: now #1 is at top
+    
+    if top_players_df.empty:
+        return go.Figure()
+    
+    player_names = top_players_df['player_name'].tolist()
+    
+    # Get category columns (8 categories) + overall score
+    category_cols = [col for col in top_players_df.columns if col.endswith('_pos')]
+    
+    # Add overall_score to the display
+    all_cols = ['overall_score'] + category_cols
+    
+    # Clean category names for display
+    category_labels = ['Overall'] + [col.replace('_pos', '').replace('_', ' ').title() for col in category_cols]
+    
+    # Extract values as 2D array (now includes overall_score)
+    z_values = top_players_df[all_cols].values
+    
+    # Calculate ranks within this position for each category (skip overall_score for ranking)
+    rank_values = np.zeros_like(z_values, dtype=int)
+    
+    # First column is overall_score - calculate its rank
+    overall_scores = pos_df['overall_score'].values
+    valid_overall = ~np.isnan(overall_scores)
+    if valid_overall.sum() > 0:
+        overall_ranks = pd.Series(overall_scores).rank(method='min', ascending=False, na_option='keep').values.astype(int)
         
-        # Format value
-        if value is not None:
-            if isinstance(value, float):
-                value_str = f"{value:.1f}" if value < 100 else f"{value:.0f}"
+        for i, player_name in enumerate(player_names):
+            player_idx_in_full = pos_df[pos_df['player_name'] == player_name].index[0]
+            full_df_loc = pos_df.index.get_loc(player_idx_in_full)
+            rank_values[i, 0] = overall_ranks[full_df_loc] if not np.isnan(overall_scores[full_df_loc]) else 0
+    
+    # Now do category columns (starting from index 1)
+    for j, category_col in enumerate(category_cols, start=1):
+        category_scores = pos_df[category_col].values
+        valid_scores = ~np.isnan(category_scores)
+        if valid_scores.sum() > 0:
+            ranks = pd.Series(category_scores).rank(method='min', ascending=False, na_option='keep').values.astype(int)
+            
+            for i, player_name in enumerate(player_names):
+                player_idx_in_full = pos_df[pos_df['player_name'] == player_name].index[0]
+                full_df_loc = pos_df.index.get_loc(player_idx_in_full)
+                rank_values[i, j] = ranks[full_df_loc] if not np.isnan(category_scores[full_df_loc]) else 0
+    
+    # Create text overlay with ranks
+    text_values = []
+    for i in range(len(player_names)):
+        row_text = []
+        for j in range(len(all_cols)):
+            rank = rank_values[i, j]
+            if rank > 0:
+                row_text.append(f"#{rank}")
             else:
-                value_str = str(value)
-        else:
-            value_str = "—"
-        
-        # Format percentiles
-        overall_str = f"{overall_pct:.1f}%" if overall_pct is not None else "—"
-        position_str = f"{position_pct:.1f}%" if position_pct is not None else "—"
-        
-        table_data.append({
-            'Metric': metric_name.replace('_', ' ').title(),
-            'Value': value_str,
-            'Overall': overall_str,
-            'Position': position_str
-        })
+                row_text.append("")
+        text_values.append(row_text)
     
-    df = pd.DataFrame(table_data)
+    # Create hover text with full details
+    hover_text = []
+    for i, player_name in enumerate(player_names):
+        row_hover = []
+        for j, category in enumerate(category_labels):
+            score = z_values[i][j]
+            rank = rank_values[i, j]
+            if not np.isnan(score) and rank > 0:
+                text = f"{player_name}<br>{category}<br>Score: {score:.1f}<br>Rank: #{rank}/{len(pos_df)}"
+            else:
+                text = f"{player_name}<br>{category}<br>No Data"
+            row_hover.append(text)
+        hover_text.append(row_hover)
     
-    # Apply styling
-    def style_percentiles(val):
-        """Color code percentile values"""
-        if val == "—":
-            return 'color: #999;'
+    fig = go.Figure(data=go.Heatmap(
+        z=z_values,
+        x=category_labels,
+        y=player_names,
+        colorscale='RdYlGn',
+        zmid=50,
+        zmin=0,
+        zmax=100,
+        text=text_values,
+        texttemplate='%{text}',
+        textfont=dict(size=10, color='black'),
+        hovertext=hover_text,
+        hovertemplate='%{hovertext}<extra></extra>',
+        colorbar=dict(
+            title="Percentile",
+            titleside="right",
+            tickmode="linear",
+            tick0=0,
+            dtick=20
+        )
+    ))
+    
+    # Remove title completely - let Streamlit handle it
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="",
+        height=500,
+        xaxis=dict(side='top'),
+        font=dict(size=11),
+        margin=dict(t=10, b=10, l=150, r=10),
+        showlegend=False
+    )
+    
+    return fig
+
+
+def create_player_category_leaderboard_table(df, category):
+    """
+    Create simple top 10 leaderboard for a category
+    
+    Args:
+        df: DataFrame from load_player_category_leaderboard()
+        category: Category name for display
         
-        pct = float(val.rstrip('%'))
-        
-        if pct >= 80:
-            return 'color: #16a34a; font-weight: bold;'
-        elif pct >= 60:
-            return 'color: #65a30d;'
-        elif pct >= 40:
-            return 'color: #eab308;'
-        elif pct >= 20:
-            return 'color: #f97316;'
-        else:
-            return 'color: #dc2626;'
+    Returns:
+        Styled dataframe
+    """
+    if df.empty:
+        return df
     
-    styled_df = df.style.applymap(style_percentiles, subset=['Overall', 'Position'])
+    # Make a copy
+    display_df = df.copy()
     
-    return styled_df
+    # Rename columns for display
+    display_df = display_df.rename(columns={
+        'rank': 'Rank',
+        'player_name': 'Player',
+        'position': 'Pos',
+        'squad': 'Squad',
+        'score': 'Score'
+    })
+    
+    # Format score to 1 decimal
+    display_df['Score'] = display_df['Score'].apply(
+        lambda x: f"{x:.1f}" if pd.notna(x) else "—"
+    )
+    
+    return display_df
+
+
+def create_squad_dominance_charts(df, top_n_players=100):
+    """
+    Create squad dominance chart with position breakdown + squad average as text
+    LEFT: Player count by position (stacked bar)
+    RIGHT: Just text showing squad average score
+    """
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    
+    if df.empty or 'overall_score' not in df.columns:
+        return go.Figure()
+    
+    # Get top N players by overall score
+    top_players = df.nlargest(top_n_players, 'overall_score')
+    
+    if top_players.empty:
+        return go.Figure()
+    
+    # Group by squad and position
+    squad_position_counts = top_players.groupby(['squad', 'primary_position']).size().unstack(fill_value=0)
+    squad_position_counts['Total'] = squad_position_counts.sum(axis=1)
+    squad_position_counts = squad_position_counts.sort_values('Total', ascending=True).tail(15)
+    
+    # Calculate OVERALL squad average (all players, not just elite)
+    squad_avg_all = df.groupby('squad')['overall_score'].mean()
+    squad_avg_all = squad_avg_all[squad_position_counts.index]
+    
+    # Create figure with subplots
+    fig = make_subplots(
+        rows=1, cols=2,
+        column_widths=[0.75, 0.25],
+        subplot_titles=(f'Elite Player Count (Top {top_n_players})', 'Squad Avg'),
+        horizontal_spacing=0.02
+    )
+    
+    # ========================================================================
+    # LEFT: Stacked position bars (DON'T TOUCH)
+    # ========================================================================
+    
+    positions = ['FW', 'MF', 'DF', 'GK']
+    colors = {'FW': '#DC143C', 'MF': '#4169E1', 'DF': '#2E8B57', 'GK': '#FF8C00'}
+    
+    for pos in positions:
+        if pos in squad_position_counts.columns:
+            fig.add_trace(go.Bar(
+                name=pos,
+                y=squad_position_counts.index,
+                x=squad_position_counts[pos],
+                orientation='h',
+                marker=dict(color=colors.get(pos, '#666666')),
+                text=squad_position_counts[pos].apply(lambda x: str(int(x)) if x > 0 else ''),
+                textposition='inside',
+                textfont=dict(color='white', size=10),
+                hovertemplate='<b>%{y}</b><br>' + pos + ': %{x}<extra></extra>',
+                showlegend=True
+            ), row=1, col=1)
+    
+    # ========================================================================
+    # RIGHT: Just text annotations (no bars)
+    # ========================================================================
+    
+    for i, (squad, avg_score) in enumerate(squad_avg_all.items()):
+        fig.add_annotation(
+            x=0.5,
+            y=i,
+            text=f"{avg_score:.1f}",
+            xref='x2',
+            yref='y2',
+            showarrow=False,
+            font=dict(size=14, color='white'),
+            xanchor='center'
+        )
+    
+    # Update layout
+    fig.update_layout(
+        barmode='stack',
+        height=500,
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=0.75),
+        margin=dict(t=80, b=40, l=120, r=20)
+    )
+    
+    # Update axes
+    fig.update_xaxes(title_text="Players", row=1, col=1)
+    fig.update_xaxes(visible=False, row=1, col=2)
+    fig.update_yaxes(showticklabels=True, row=1, col=1)
+    fig.update_yaxes(showticklabels=False, row=1, col=2)
+    
+    return fig
