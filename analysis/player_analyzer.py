@@ -236,33 +236,28 @@ class PlayerAnalyzer:
         }
     
     def calculate_dual_percentiles(self, player_name: str, timeframe: str = "current") -> Dict:
-        """Calculate both overall and position-specific percentiles"""
+        """Calculate both overall and position-specific percentiles with per-90 normalization"""
         filter_clause, timeframe_desc = self._parse_timeframe(timeframe)
         
         # Get player data
         player_data = self.conn.execute(f"""
             SELECT *
             FROM analytics_players
-            WHERE player_name = ? AND {filter_clause}
+            WHERE player_name = ?
+            AND {filter_clause}
         """, [player_name]).fetchdf()
         
         if player_data.empty:
             return {"error": f"No data found for {player_name}"}
         
+        # APPLY PER-90 NORMALIZATION
+        player_data = self._normalize_to_per_90(player_data)
+        
         # Handle multiple records (career mode)
         if len(player_data) > 1:
-            # Sum counting stats, average rate stats
-            counting_stats = ['goals', 'assists', 'shots', 'passes_completed', 'tackles', 'touches']
-            for stat in counting_stats:
-                if stat in player_data.columns:
-                    player_data.loc[0, stat] = player_data[stat].sum()
-            
-            rate_stats = ['pass_completion_rate', 'shot_accuracy', 'tackle_success_rate']
-            for stat in rate_stats:
-                if stat in player_data.columns:
-                    player_data.loc[0, stat] = player_data[stat].mean()
-            
-            player_data = player_data.head(1)
+            # For career mode, aggregate appropriately
+            # Per-90 stats should be averaged (weighted by minutes would be better but complex)
+            player_data = player_data.head(1)  # For now, use most recent
         
         player_record = player_data.iloc[0]
         player_position = player_record['position']
@@ -273,12 +268,18 @@ class PlayerAnalyzer:
             SELECT * FROM analytics_players WHERE {filter_clause}
         """).fetchdf()
         
+        # NORMALIZE COMPARISON DATA TOO
+        overall_comparison = self._normalize_to_per_90(overall_comparison)
+        
         # Get position-specific comparison data
         position_filter = "', '".join(position_group_list)
         position_comparison = self.conn.execute(f"""
             SELECT * FROM analytics_players 
             WHERE {filter_clause} AND position IN ('{position_filter}')
         """).fetchdf()
+        
+        # NORMALIZE POSITION COMPARISON DATA
+        position_comparison = self._normalize_to_per_90(position_comparison)
         
         # Calculate category scores with dual percentiles
         category_scores = {}
@@ -290,40 +291,44 @@ class PlayerAnalyzer:
             position_percentiles = []
             
             for metric in metrics:
-                if metric in player_data.columns:
-                    player_value = player_record[metric]
+                # GET THE CORRECT METRIC (prefer per_90 versions)
+                metric_to_use, player_value = self._get_metric_for_percentile(metric, player_data)
+                
+                if player_value is None or pd.isna(player_value):
+                    continue
+                
+                # Overall percentile
+                if metric_to_use in overall_comparison.columns:
+                    overall_values = overall_comparison[metric_to_use].dropna()
+                    overall_pct = self._calculate_percentile_with_polarity(
+                        metric, player_value, overall_values  # Use ORIGINAL metric name for polarity check
+                    )
+                else:
+                    overall_pct = None
+                
+                # Position-specific percentile
+                if metric_to_use in position_comparison.columns:
+                    position_values = position_comparison[metric_to_use].dropna()
+                    position_pct = self._calculate_percentile_with_polarity(
+                        metric, player_value, position_values  # Use ORIGINAL metric name for polarity check
+                    )
+                else:
+                    position_pct = None
+                
+                if overall_pct is not None or position_pct is not None:
+                    metric_breakdown[metric] = {
+                        'value': float(player_value),
+                        'metric_used': metric_to_use,  # Track which metric was actually used
+                        'overall_percentile': round(overall_pct, 1) if overall_pct is not None else None,
+                        'position_percentile': round(position_pct, 1) if position_pct is not None else None,
+                        'overall_sample_size': len(overall_values) if overall_pct is not None else 0,
+                        'position_sample_size': len(position_values) if position_pct is not None else 0
+                    }
                     
-                    # Overall percentile - NOW USING METRIC-LEVEL POLARITY
-                    if metric in overall_comparison.columns:
-                        overall_values = overall_comparison[metric].dropna()
-                        overall_pct = self._calculate_percentile_with_polarity(
-                            metric, player_value, overall_values
-                        )
-                    else:
-                        overall_pct = None
-                    
-                    # Position-specific percentile - NOW USING METRIC-LEVEL POLARITY
-                    if metric in position_comparison.columns:
-                        position_values = position_comparison[metric].dropna()
-                        position_pct = self._calculate_percentile_with_polarity(
-                            metric, player_value, position_values
-                        )
-                    else:
-                        position_pct = None
-                    
-                    if overall_pct is not None or position_pct is not None:
-                        metric_breakdown[metric] = {
-                            'value': float(player_value),
-                            'overall_percentile': round(overall_pct, 1) if overall_pct is not None else None,
-                            'position_percentile': round(position_pct, 1) if position_pct is not None else None,
-                            'overall_sample_size': len(overall_values) if overall_pct is not None else 0,
-                            'position_sample_size': len(position_values) if position_pct is not None else 0
-                        }
-                        
-                        if overall_pct is not None:
-                            overall_percentiles.append(overall_pct)
-                        if position_pct is not None:
-                            position_percentiles.append(position_pct)
+                    if overall_pct is not None:
+                        overall_percentiles.append(overall_pct)
+                    if position_pct is not None:
+                        position_percentiles.append(position_pct)
             
             # Calculate category averages
             if overall_percentiles or position_percentiles:
@@ -811,11 +816,11 @@ class PlayerAnalyzer:
     # SIMILAR PLAYER FINDER METHODS
     # ============================================================================
 
-    def find_similar_players(self, player_name: str, timeframe: str = "current", top_n: int = 5, same_position_only: bool = True) -> Dict:
+    def find_similar_players(self, player_name: str, timeframe: str = "current", 
+                        top_n: int = 5, same_position_only: bool = True) -> Dict:
         """
-        Find statistically similar players based on category profiles
-        
-        Add this method to your PlayerAnalyzer class
+        Find statistically similar players with improved discrimination.
+        Uses weighted Euclidean distance with variance-based weights.
         """
         # Get target player's profile
         target_profile = self.calculate_dual_percentiles(player_name, timeframe)
@@ -839,7 +844,7 @@ class PlayerAnalyzer:
         
         target_vector = np.array(target_vector)
         
-        # Get all players in database for comparison
+        # Get all players for comparison
         filter_clause, timeframe_desc = self._parse_timeframe(timeframe)
         
         if same_position_only:
@@ -859,51 +864,78 @@ class PlayerAnalyzer:
         
         potential_players = self.conn.execute(player_query).fetchdf()
         
-        # Calculate similarity for each player
+        # Calculate variance across all players for weighting
+        all_vectors = []
+        for _, row in potential_players.iterrows():
+            candidate_profile = self.calculate_dual_percentiles(row['player_name'], timeframe)
+            if "error" not in candidate_profile:
+                candidate_vector = []
+                for category in category_names:
+                    if category in candidate_profile['category_scores']:
+                        data = candidate_profile['category_scores'][category]
+                        score = data['position_score'] if data['position_score'] is not None else data['overall_score']
+                        candidate_vector.append(score if score is not None else 0)
+                    else:
+                        candidate_vector.append(0)
+                all_vectors.append(candidate_vector)
+        
+        # Calculate variance for each category (higher variance = more discriminating)
+        if len(all_vectors) > 1:
+            all_vectors_array = np.array(all_vectors)
+            category_variances = np.var(all_vectors_array, axis=0)
+            # Normalize variances to create weights (higher variance = higher weight)
+            weights = category_variances / np.sum(category_variances)
+        else:
+            weights = np.ones(len(category_names)) / len(category_names)
+        
+        # Calculate weighted similarity for each player
         similarities = []
         
         for _, row in potential_players.iterrows():
             candidate_name = row['player_name']
             
-            # Skip the target player
+            # Skip target player
             if candidate_name == player_name:
                 continue
             
-            # Get candidate's profile
+            # Get candidate profile
             candidate_profile = self.calculate_dual_percentiles(candidate_name, timeframe)
             if "error" in candidate_profile:
                 continue
             
             candidate_categories = candidate_profile['category_scores']
             
-            # Create vector for candidate (matching same categories)
+            # Create vector
             candidate_vector = []
             for category in category_names:
                 if category in candidate_categories:
                     data = candidate_categories[category]
                     score = data['position_score'] if data['position_score'] is not None else data['overall_score']
-                    if score is not None:
-                        candidate_vector.append(score)
-                    else:
-                        candidate_vector.append(0)
+                    candidate_vector.append(score if score is not None else 0)
                 else:
                     candidate_vector.append(0)
             
             candidate_vector = np.array(candidate_vector)
             
-            # Calculate Euclidean distance (lower = more similar)
+            # Calculate WEIGHTED Euclidean distance
             if len(candidate_vector) == len(target_vector):
-                distance = np.linalg.norm(target_vector - candidate_vector)
-                similarity_score = 100 - (distance / len(target_vector))  # Convert to 0-100 scale
+                # Weighted distance
+                weighted_diff = np.sqrt(weights) * (target_vector - candidate_vector)
+                distance = np.linalg.norm(weighted_diff)
+                
+                # Convert to similarity score (0-100)
+                # More aggressive scaling to spread out the scores
+                max_possible_distance = np.sqrt(np.sum(weights * 100**2))  # Max if all categories differ by 100
+                similarity_score = 100 * (1 - (distance / max_possible_distance))
                 
                 similarities.append({
                     'player_name': candidate_name,
                     'position': row['position'],
-                    'similarity_score': round(similarity_score, 1),
+                    'similarity_score': round(max(0, similarity_score), 1),
                     'distance': round(distance, 2)
                 })
         
-        # Sort by similarity (highest first)
+        # Sort by similarity
         similarities.sort(key=lambda x: x['similarity_score'], reverse=True)
         
         return {
@@ -918,10 +950,10 @@ class PlayerAnalyzer:
                 'description': timeframe_desc
             },
             'similar_players': similarities[:top_n],
-            'comparison_method': 'position-aware' if same_position_only else 'all-players',
+            'comparison_method': 'weighted-position-aware' if same_position_only else 'weighted-all-players',
             'categories_compared': category_names
         }
-    
+
     def _normalize_name(self, name: str) -> str:
         """
         Normalize name for fuzzy matching
@@ -1065,6 +1097,129 @@ class PlayerAnalyzer:
             'original': player_name,
             'candidates': fuzzy
         }
+    
+    def _normalize_to_per_90(self, player_data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normalize counting stats to per-90 where not already provided.
+        
+        For metrics that are totals (goals, assists, touches, etc.), calculate per_90
+        if a per_90 version doesn't already exist in the data.
+        
+        Args:
+            player_data: DataFrame with player stats including minutes_played
+            
+        Returns:
+            DataFrame with per_90 normalized metrics added
+        """
+        df = player_data.copy()
+        
+        # Calculate 90s played
+        if 'minutes_played' in df.columns:
+            df['games_90s'] = df['minutes_played'] / 90
+        else:
+            return df  # Can't normalize without minutes
+        
+        # List of counting stats that should be normalized
+        # These are TOTALS that need per_90 calculation
+        counting_stats_to_normalize = [
+            # Attacking
+            'goals', 'assists', 'shots', 'shots_on_target', 'non_penalty_goals',
+            
+            # Creativity
+            'key_passes', 'shot_creating_actions', 'goal_creating_actions',
+            'crosses', 'through_balls', 'passes_final_third', 'passes_penalty_area',
+            'crosses_penalty_area', 'sca_pass_live', 'gca_pass_live',
+            
+            # Passing
+            'passes_completed', 'passes_attempted', 'progressive_passes',
+            'short_passes_completed', 'medium_passes_completed', 'long_passes_completed',
+            'live_ball_passes', 'switches',
+            
+            # Ball Progression
+            'progressive_carries', 'carries', 'carries_final_third', 'carries_penalty_area',
+            'take_ons_attempted', 'take_ons_successful', 'sca_take_on', 'gca_take_on',
+            
+            # Defending
+            'tackles', 'tackles_won', 'interceptions', 'blocks', 'clearances',
+            'tackles_def_third', 'tackles_mid_third', 'tackles_att_third',
+            'shots_blocked', 'passes_blocked', 'tackles_plus_interceptions',
+            
+            # Physical
+            'aerial_duels_won', 'aerial_duels_lost', 'fouls_drawn', 'ball_recoveries',
+            'challenges_lost', 'challenge_tackles', 'challenges_attempted',
+            
+            # Ball Involvement
+            'touches', 'touches_def_third', 'touches_mid_third', 'touches_att_third',
+            'touches_att_penalty', 'touches_def_penalty', 'touches_live_ball',
+            'passes_received', 'progressive_passes_received_detail',
+            
+            # Discipline
+            'yellow_cards', 'red_cards', 'second_yellow_cards', 'fouls_committed',
+            'miscontrols', 'dispossessed', 'errors', 'offsides', 'take_ons_tackled'
+        ]
+        
+        # For each counting stat, create per_90 version if it doesn't exist
+        for stat in counting_stats_to_normalize:
+            per_90_name = f"{stat}_per_90"
+            
+            # Only calculate if:
+            # 1. The raw stat exists
+            # 2. The per_90 version doesn't already exist
+            # 3. games_90s > 0
+            if stat in df.columns and per_90_name not in df.columns:
+                # Calculate per_90 for all rows where games_90s > 0
+                mask = df['games_90s'] > 0
+                df.loc[mask, per_90_name] = (df.loc[mask, stat] / df.loc[mask, 'games_90s']).round(2)
+        
+        return df
+
+
+    def _get_metric_for_percentile(self, metric: str, player_data: pd.DataFrame) -> tuple:
+        """
+        Get the correct metric to use for percentile calculation.
+        Prioritizes per_90 versions for counting stats.
+        
+        Args:
+            metric: Original metric name
+            player_data: DataFrame with player stats
+            
+        Returns:
+            tuple: (metric_to_use, value)
+        """
+        # Check if a per_90 version exists
+        per_90_metric = f"{metric}_per_90"
+        
+        # Rates/percentages should NOT be normalized (already per-possession or per-attempt)
+        rate_metrics = [
+            'pass_completion_rate', 'shot_accuracy', 'tackle_success_rate',
+            'take_on_success_rate', 'aerial_duel_success_rate', 'short_pass_completion_rate',
+            'medium_pass_completion_rate', 'long_pass_completion_rate',
+            'goals_per_shot', 'goals_per_shot_on_target', 'save_percentage',
+            'clean_sheet_percentage', 'take_ons_tackled_rate'
+        ]
+        
+        # Distance metrics should NOT be normalized (context matters)
+        distance_metrics = [
+            'total_pass_distance', 'progressive_pass_distance',
+            'carry_distance', 'progressive_carry_distance',
+            'average_shot_distance'
+        ]
+        
+        # If it's a rate or distance, use the original metric
+        if metric in rate_metrics or metric in distance_metrics:
+            if metric in player_data.columns:
+                return metric, player_data[metric].iloc[0] if len(player_data) > 0 else None
+            else:
+                return metric, None
+        
+        # For counting stats, prefer per_90 version
+        if per_90_metric in player_data.columns:
+            return per_90_metric, player_data[per_90_metric].iloc[0] if len(player_data) > 0 else None
+        elif metric in player_data.columns:
+            return metric, player_data[metric].iloc[0] if len(player_data) > 0 else None
+        else:
+            return metric, None
+
 
 # Test function
 def test_enhanced_analyzer():

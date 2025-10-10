@@ -666,42 +666,47 @@ def create_player_header(player_info):
 def create_player_dual_radar_chart(player_name, categories, overall_scores, position_scores):
     """
     Create professional dual percentile radar chart for a player
-    (Overall league vs position group), styled consistently with create_radar_chart().
+    Shows ONLY position percentiles with 50% baseline reference
+    Matches the styling of create_radar_chart()
     """
-    if not categories or not overall_scores or not position_scores:
+    import plotly.graph_objects as go
+    
+    if not categories or not position_scores:
         return None
 
     # Prepare readable labels and closed loops for radar
     readable_categories = [cat.replace('_', ' ').title() for cat in categories]
-    overall_scores_closed = overall_scores + [overall_scores[0]]
     position_scores_closed = position_scores + [position_scores[0]]
     categories_closed = readable_categories + [readable_categories[0]]
+    
+    # Create 50% baseline for reference
+    baseline_50 = [50] * len(categories_closed)
 
     fig = go.Figure()
-
-    # Overall league trace
+    
+    # Add 50% baseline first (GREEN, dashed line) - CHANGED FROM GRAY
     fig.add_trace(go.Scatterpolar(
-        r=overall_scores_closed,
+        r=baseline_50,
+        theta=categories_closed,
+        mode='lines',
+        name='Average (50%)',
+        line=dict(color='rgba(34, 197, 94, 0.6)', width=4, dash='dash'),  # GREEN
+        hoverinfo='skip',
+        showlegend=True
+    ))
+
+    # Position percentile trace (YOUR DESIGN - Royal Blue #4169E1)
+    fig.add_trace(go.Scatterpolar(
+        r=position_scores_closed,
         theta=categories_closed,
         fill='toself',
-        name='Overall League',
+        name=f'{player_name} (Position %ile)',
         line=dict(color='#4169E1', width=3),
         fillcolor='rgba(65, 105, 225, 0.15)',
         hovertemplate='<b>%{theta}</b><br>Percentile: %{r:.1f}<extra></extra>'
     ))
 
-    # Position group trace
-    fig.add_trace(go.Scatterpolar(
-        r=position_scores_closed,
-        theta=categories_closed,
-        fill='toself',
-        name='Position Group',
-        line=dict(color='#DC143C', width=3),
-        fillcolor='rgba(220, 20, 60, 0.15)',
-        hovertemplate='<b>%{theta}</b><br>Percentile: %{r:.1f}<extra></extra>'
-    ))
-
-    # Layout styling (matches create_radar_chart)
+    # Layout styling (EXACTLY matches your create_radar_chart)
     fig.update_layout(
         polar=dict(
             radialaxis=dict(
@@ -731,14 +736,8 @@ def create_player_dual_radar_chart(player_name, categories, overall_scores, posi
             x=0.5,
             font=dict(size=12)
         ),
-        title=dict(
-            text=f"{player_name} — Dual Percentile Profile",
-            x=0.5,
-            xanchor='center',
-            font=dict(size=16)
-        ),
         height=450,
-        margin=dict(l=80, r=80, t=60, b=100),
+        margin=dict(l=80, r=80, t=40, b=100),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
     )
@@ -802,11 +801,11 @@ def create_player_category_table(category_data):
     return styled_df
 
 
-def create_player_comparison_radar(player1_name, categories1, scores1,
-                                   player2_name, categories2, scores2):
+def create_player_comparison_radar(player1_name, categories1, scores1, player2_name, categories2, scores2):
     """
-    Create professional player comparison radar chart (position percentiles)
-    Styled consistently with create_radar_chart().
+    Create comparison radar chart for two players
+    Shows ONLY position percentiles with 50% baseline
+    Matches the styling of create_radar_chart()
     """
     import plotly.graph_objects as go
 
@@ -820,10 +819,24 @@ def create_player_comparison_radar(player1_name, categories1, scores1,
     scores1_closed = scores1 + [scores1[0]]
     scores2_closed = scores2 + [scores2[0]]
     categories_closed = readable_categories + [readable_categories[0]]
+    
+    # Create 50% baseline for reference
+    baseline_50 = [50] * len(categories_closed)
 
     fig = go.Figure()
+    
+    # Add 50% baseline first (GREEN, dashed line) - CHANGED FROM GRAY
+    fig.add_trace(go.Scatterpolar(
+        r=baseline_50,
+        theta=categories_closed,
+        mode='lines',
+        name='Average (50%)',
+        line=dict(color='rgba(34, 197, 94, 0.6)', width=1, dash='dash'),  # GREEN
+        hoverinfo='skip',
+        showlegend=True
+    ))
 
-    # Player 1 trace (Royal Blue)
+    # Player 1 trace (YOUR DESIGN - Royal Blue #4169E1)
     fig.add_trace(go.Scatterpolar(
         r=scores1_closed,
         theta=categories_closed,
@@ -834,7 +847,7 @@ def create_player_comparison_radar(player1_name, categories1, scores1,
         hovertemplate='<b>%{theta}</b><br>Percentile: %{r:.1f}<extra></extra>'
     ))
 
-    # Player 2 trace (Crimson)
+    # Player 2 trace (YOUR DESIGN - Crimson #DC143C)
     fig.add_trace(go.Scatterpolar(
         r=scores2_closed,
         theta=categories_closed,
@@ -845,7 +858,7 @@ def create_player_comparison_radar(player1_name, categories1, scores1,
         hovertemplate='<b>%{theta}</b><br>Percentile: %{r:.1f}<extra></extra>'
     ))
 
-    # Layout styling (matches create_radar_chart)
+    # Layout styling (EXACTLY matches your create_radar_chart)
     fig.update_layout(
         polar=dict(
             radialaxis=dict(
@@ -875,20 +888,13 @@ def create_player_comparison_radar(player1_name, categories1, scores1,
             x=0.5,
             font=dict(size=12)
         ),
-        title=dict(
-            text="Player Comparison — Position Percentiles",
-            x=0.5,
-            xanchor='center',
-            font=dict(size=16)
-        ),
         height=450,
-        margin=dict(l=80, r=80, t=60, b=100),
+        margin=dict(l=80, r=80, t=40, b=100),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
     )
 
     return fig
-
 
 
 def create_player_comparison_table(player1, player2, category_comparison):

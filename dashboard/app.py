@@ -71,6 +71,18 @@ def _get_ordinal_suffix(n):
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
     return suffix
 
+def is_negative_metric(metric_name):
+    """Check if a metric is negative (lower is better)"""
+    # Import PlayerAnalyzer to access NEGATIVE_METRICS
+    import sys
+    from pathlib import Path
+    project_root = Path(__file__).parent.parent
+    sys.path.insert(0, str(project_root / 'analysis'))
+    from player_analyzer import PlayerAnalyzer #type: ignore
+    
+    with PlayerAnalyzer() as analyzer:
+        return metric_name in analyzer.NEGATIVE_METRICS
+
 # ============================================================================
 # PAGE CONFIG
 # ============================================================================
@@ -213,10 +225,14 @@ with st.sidebar:
     if page == "Player Analysis":
         st.markdown("---")
         
-        # Get initial filter options with default values
+        # Initialize session state for player selection if not exists
+        if 'selected_player' not in st.session_state:
+            st.session_state.selected_player = None
+        
+        # Get filter options
         filter_options = get_player_filters(timeframe, min_minutes=90)
         
-        # Advanced filters (collapsible) - BEFORE player selection
+        # Advanced filters (collapsible)
         with st.expander("🔍 Filters", expanded=False):
             position_filter = st.selectbox(
                 "Position",
@@ -254,8 +270,7 @@ with st.sidebar:
                 help="Minimum similarity % for similar players section"
             )
         
-        # Get filtered player list based on filters (if expander was opened and changed)
-        # Use defaults if filters not changed
+        # Get filtered player list
         try:
             pos_filter = position_filter if position_filter != "All" else None
         except:
@@ -292,13 +307,24 @@ with st.sidebar:
             st.error("No players found with selected filters")
             st.stop()
         
-        # Main player selector - AFTER filters
+        # Main player selector with session state persistence
+        # Find index of previously selected player if it exists in current list
+        default_index = 0
+        if st.session_state.selected_player and st.session_state.selected_player in available_players:
+            default_index = available_players.index(st.session_state.selected_player)
+        
         selected_player = st.selectbox(
             "Select Player",
             available_players,
-            index=0
+            index=default_index,
+            key="player_selector"  # Give it a unique key
         )
-    
+        
+        # Update session state when selection changes
+        if selected_player != st.session_state.selected_player:
+            st.session_state.selected_player = selected_player
+
+
     st.markdown("---")
     st.caption("💾 Data refreshes after each gameweek")
     st.caption("📊 8 statistical categories analyzed")
@@ -471,7 +497,7 @@ def show_player_analysis(timeframe, selected_player, min_similarity, same_positi
         )
         if radar_fig:
             st.plotly_chart(radar_fig, use_container_width=True)
-        st.caption("Blue = Overall League | Red = Position Group")
+        st.caption("Position percentile vs position group (50% = average)")
     
     with col_right:
         st.subheader("Category Breakdown")
@@ -520,7 +546,7 @@ def show_player_analysis(timeframe, selected_player, min_similarity, same_positi
                         # Format value
                         if value is not None:
                             if isinstance(value, float):
-                                value_str = f"{value:.1f}" if value < 100 else f"{value:.0f}"
+                                value_str = f"{value:.2f}" if value < 100 else f"{value:.0f}"
                             else:
                                 value_str = str(value)
                         else:
@@ -650,7 +676,7 @@ def show_player_analysis(timeframe, selected_player, min_similarity, same_positi
         
         with comp_viz_col1:
             st.subheader("Radar Chart")
-            st.caption("Position percentiles for fair comparison")
+            st.caption("Position percentiles (50% baseline = average)")
             
             comp_radar = create_player_comparison_radar(
                 selected_player, cats1, position1,
@@ -701,25 +727,35 @@ def show_player_analysis(timeframe, selected_player, min_similarity, same_positi
                         val1 = m1.get('value')
                         val2 = m2.get('value')
                         
-                        # Format values
+                        # Format values (2 decimals)
                         if val1 is not None:
-                            val1_str = f"{val1:.1f}" if isinstance(val1, float) and val1 < 100 else str(int(val1)) if val1 is not None else "—"
+                            val1_str = f"{val1:.2f}" if isinstance(val1, float) and val1 < 100 else str(int(val1)) if val1 is not None else "—"
                         else:
                             val1_str = "—"
-                        
+
                         if val2 is not None:
-                            val2_str = f"{val2:.1f}" if isinstance(val2, float) and val2 < 100 else str(int(val2)) if val2 is not None else "—"
+                            val2_str = f"{val2:.2f}" if isinstance(val2, float) and val2 < 100 else str(int(val2)) if val2 is not None else "—"
                         else:
                             val2_str = "—"
-                        
-                        # Determine winner
+
+                        # Determine winner (RESPECTS negative metrics)
                         if val1 is not None and val2 is not None:
-                            if val1 > val2:
-                                winner_str = selected_player
-                            elif val2 > val1:
-                                winner_str = player2
+                            if is_negative_metric(metric_name):
+                                # For negative metrics: LOWER is BETTER
+                                if val1 < val2:
+                                    winner_str = selected_player
+                                elif val2 < val1:
+                                    winner_str = player2
+                                else:
+                                    winner_str = "Tie"
                             else:
-                                winner_str = "Tie"
+                                # For positive metrics: HIGHER is BETTER
+                                if val1 > val2:
+                                    winner_str = selected_player
+                                elif val2 > val1:
+                                    winner_str = player2
+                                else:
+                                    winner_str = "Tie"
                         else:
                             winner_str = "—"
                         
