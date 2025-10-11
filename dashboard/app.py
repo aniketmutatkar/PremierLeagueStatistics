@@ -41,7 +41,8 @@ from data_loader import (
     extract_player_category_table_data,
     extract_player_basic_info,
     load_player_overview,
-    load_player_category_leaderboard
+    load_player_category_leaderboard,
+    get_max_minutes_played
 )
 
 from charts import (
@@ -260,11 +261,14 @@ with st.sidebar:
                 index=0
             )
             
+            # Get dynamic max minutes based on actual data
+            max_minutes_available = get_max_minutes_played(timeframe)
+
             min_minutes = st.slider(
                 "Minimum Minutes",
                 min_value=90,
-                max_value=630,
-                value=180,
+                max_value=max_minutes_available,
+                value=420,
                 step=90,
                 help="Filter players by minimum minutes played"
             )
@@ -892,11 +896,14 @@ def show_player_overview(timeframe):
         )
     
     with filter_col2:
+        # Get dynamic max minutes based on actual data
+        max_minutes_available = get_max_minutes_played(timeframe)
+        
         min_minutes = st.slider(
             "Minimum Minutes",
             min_value=90,
-            max_value=630,
-            value=180,
+            max_value=max_minutes_available,
+            value=420,
             step=90,
             help="Filter players by minimum minutes played"
         )

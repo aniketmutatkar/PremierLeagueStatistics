@@ -711,6 +711,53 @@ def extract_player_basic_info(player_profile):
         'matches_played': basic.get('matches_played', 0)
     }
 
+@st.cache_data(ttl=3600)
+def get_max_minutes_played(timeframe="current"):
+    """
+    Get maximum minutes played across all players for the given timeframe.
+    Queries both analytics_players and analytics_keepers tables.
+    Rounds up to nearest 90 (full match) for clean slider values.
+    
+    Args:
+        timeframe: "current" or "season_YYYY-YYYY"
+        
+    Returns:
+        int: Maximum minutes played, rounded up to nearest 90
+    """
+    with PlayerAnalyzer() as analyzer:
+        # Get the same filter clause used by other queries
+        filter_clause, _ = analyzer._parse_timeframe(timeframe)
+        
+        # Query max minutes from outfield players
+        max_outfield = analyzer.conn.execute(f"""
+            SELECT MAX(minutes_played) as max_minutes
+            FROM analytics_players
+            WHERE {filter_clause}
+        """).fetchone()[0]
+        
+        # Query max minutes from goalkeepers
+        max_keepers = analyzer.conn.execute(f"""
+            SELECT MAX(minutes_played) as max_minutes
+            FROM analytics_keepers
+            WHERE {filter_clause}
+        """).fetchone()[0]
+        
+        # Get the overall maximum
+        max_minutes = max(
+            max_outfield if max_outfield is not None else 0,
+            max_keepers if max_keepers is not None else 0
+        )
+        
+        # Handle edge case: no data
+        if max_minutes == 0:
+            return 90  # Default to at least one match
+        
+        # Round up to nearest 90 (full match)
+        import math
+        rounded_max = math.ceil(max_minutes / 90) * 90
+        
+        return rounded_max
+
 # ============================================================================
 # PLAYER OVERVIEW LOADING - ADD TO dashboard/data_loader.py
 # ============================================================================
