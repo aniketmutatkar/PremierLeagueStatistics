@@ -60,6 +60,7 @@ from charts import (
     create_similar_players_table,  
     create_player_rankings_table,
     create_player_category_heatmap,
+    create_goalkeeper_heatmap,
     create_player_category_leaderboard_table,
     create_squad_dominance_charts
 )
@@ -1011,9 +1012,11 @@ def show_player_overview(timeframe):
             st.subheader(f"Top 10 Goalkeepers (Sorted by {sort_choice})")
         else:
             st.subheader("Top 10 Goalkeepers")
-        heatmap_gk = create_player_category_heatmap(df, sort_category, 'GK')
-        st.plotly_chart(heatmap_gk, use_container_width=True)
-        st.caption("Position percentiles • #1 = Highest rank")
+        
+        # For goalkeepers, create a DIFFERENT heatmap with GK categories
+        gk_heatmap = create_goalkeeper_heatmap(df, sort_category)
+        st.plotly_chart(gk_heatmap, use_container_width=True)
+        st.caption("Goalkeeper categories • #1 = Highest rank")
     
     # ========================================================================
     # SECTION 3: TOP 10 BY CATEGORY (EXPANDABLE)
@@ -1058,6 +1061,56 @@ def show_player_overview(timeframe):
                 
                 st.caption(f"Top 10 players by {category_display.lower()} (overall percentile - league-wide comparison)")
 
+    # ========================================================================
+    # SECTION 4: GOALKEEPER ANALYSIS (EXPANDABLE)
+    # ========================================================================
+    st.markdown("---")
+    st.markdown('<div class="section-header">🧤 Goalkeeper Analysis</div>', unsafe_allow_html=True)
+    st.markdown("Goalkeeper-specific performance metrics and rankings")
+    
+    # Get goalkeepers only
+    gk_df = df[df['primary_position'] == 'GK'].copy()
+    
+    if not gk_df.empty:
+        st.caption(f"📊 {len(gk_df)} goalkeepers found")
+        
+        # Goalkeeper categories from PlayerAnalyzer
+        gk_categories = [
+            ('shot_stopping', 'Shot Stopping', 'Saves, save percentage, PSxG performance'),
+            ('distribution', 'Distribution', 'Passing accuracy and distance from goal'),
+            ('sweeping', 'Sweeping', 'Actions outside penalty area'),
+            ('penalty_saving', 'Penalty Saving', 'Penalty kick performance'),
+            ('cross_claiming', 'Cross Claiming', 'Dealing with crosses and aerial balls'),
+            ('clean_sheets', 'Clean Sheets', 'Clean sheets and match results'),
+            ('goals_prevented', 'Goals Prevented', 'Goals prevented above expectation'),
+            ('ball_playing', 'Ball Playing', 'Progressive passing from keeper')
+        ]
+        
+        for category_key, category_display, category_desc in gk_categories:
+            with st.expander(f"🥅 {category_display}", expanded=False):
+                st.caption(category_desc)
+                
+                # Load top 10 goalkeepers for this category
+                # Note: This uses overall percentiles since all are GK
+                gk_leaderboard = load_player_category_leaderboard(
+                    category_key,
+                    timeframe,
+                    position_filter='GK',
+                    n=10
+                )
+                
+                if not gk_leaderboard.empty:
+                    styled_table = create_player_category_leaderboard_table(gk_leaderboard, category_display)
+                    st.dataframe(
+                        styled_table,
+                        hide_index=True,
+                        use_container_width=True
+                    )
+                    st.caption(f"Top 10 goalkeepers by {category_display.lower()}")
+                else:
+                    st.info("No goalkeeper data available for this category")
+    else:
+        st.info("No goalkeepers found with selected filters")
 
 # ============================================================================
 # SQUAD COMPARISON PAGE

@@ -800,9 +800,25 @@ def load_player_overview(timeframe="current", position_filter=None, min_minutes=
 def load_player_category_leaderboard(category, timeframe="current", position_filter=None, n=10):
     """
     Get top N players for a specific category (by OVERALL percentile for league-wide comparison)
+    Now supports BOTH outfield and goalkeeper categories
+    
+    Args:
+        category: Category name (e.g., 'attacking_output' OR 'shot_stopping')
+        timeframe: "current" or "season_YYYY-YYYY"
+        position_filter: Filter by position group or None for all
+        n: Number of top players to return (default 10)
+        
+    Returns:
+        DataFrame with columns:
+            - rank: int (1, 2, 3, ...)
+            - player_name: str
+            - position: str
+            - squad: str
+            - score: float (OVERALL percentile - for cross-position comparison)
     """
     
     with PlayerAnalyzer() as analyzer:
+        # Get filtered player list
         available_players = get_available_players(timeframe, position_filter, None, min_minutes=180)
         
         if not available_players:
@@ -811,6 +827,7 @@ def load_player_category_leaderboard(category, timeframe="current", position_fil
         player_records = []
         
         for player_name in available_players:
+            # Get dual percentiles
             profile = analyzer.calculate_dual_percentiles(player_name, timeframe)
             
             if "error" in profile:
@@ -819,11 +836,13 @@ def load_player_category_leaderboard(category, timeframe="current", position_fil
             player_info = profile['player_info']
             category_scores = profile['category_scores']
             
+            # Get basic info
             basic_info = analyzer.get_player_basic_info(player_name, timeframe)
             
             if "error" in basic_info:
                 continue
             
+            # Get OVERALL score for this category (works for both outfield and GK categories)
             if category in category_scores:
                 overall_score = category_scores[category].get('overall_score')
                 
@@ -835,13 +854,19 @@ def load_player_category_leaderboard(category, timeframe="current", position_fil
                         'score': overall_score
                     })
         
+        # Convert to DataFrame
         df = pd.DataFrame(player_records)
         
         if df.empty:
             return pd.DataFrame(columns=['rank', 'player_name', 'position', 'squad', 'score'])
         
+        # Sort by overall score descending
         df = df.sort_values('score', ascending=False)
+        
+        # Take top N
         top_n = df.head(n)
+        
+        # Add rank
         top_n = top_n.copy()
         top_n.insert(0, 'rank', range(1, len(top_n) + 1))
         

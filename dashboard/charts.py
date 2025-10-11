@@ -1016,10 +1016,10 @@ def create_player_rankings_table(df):
     
     return display_df
 
-
 def create_player_category_heatmap(df, sort_category=None, position_filter=None):
     """
-    Create heatmap showing top 10 players for a specific position across 8 categories + overall score
+    Create heatmap showing top 10 players for a specific position across 8 OUTFIELD categories + overall score
+    FOR OUTFIELD PLAYERS ONLY (FW, MF, DF)
     """
     import plotly.graph_objects as go
     import numpy as np
@@ -1032,7 +1032,7 @@ def create_player_category_heatmap(df, sort_category=None, position_filter=None)
     if pos_df.empty:
         return go.Figure()
     
-    # Sort DESCENDING (highest scores first) - rank 1 should be highest score
+    # Sort DESCENDING (highest scores first)
     if sort_category and f"{sort_category}_pos" in pos_df.columns:
         pos_df = pos_df.sort_values(f"{sort_category}_pos", ascending=False, na_position='last')
     else:
@@ -1040,15 +1040,22 @@ def create_player_category_heatmap(df, sort_category=None, position_filter=None)
     
     # REVERSE the order so #1 is at TOP of heatmap
     top_players_df = pos_df.head(10)
-    top_players_df = top_players_df.iloc[::-1]  # REVERSE: now #1 is at top
+    top_players_df = top_players_df.iloc[::-1]
     
     if top_players_df.empty:
         return go.Figure()
     
     player_names = top_players_df['player_name'].tolist()
     
-    # Get category columns (8 categories) + overall score
-    category_cols = [col for col in top_players_df.columns if col.endswith('_pos')]
+    # Get OUTFIELD category columns (8 categories) + overall score
+    outfield_categories = [
+        'attacking_output_pos', 'creativity_pos', 'passing_pos', 
+        'ball_progression_pos', 'defending_pos', 'physical_duels_pos', 
+        'ball_involvement_pos', 'discipline_reliability_pos'
+    ]
+    
+    # Filter to only outfield categories that exist in the data
+    category_cols = [col for col in outfield_categories if col in top_players_df.columns]
     
     # Add overall_score to the display
     all_cols = ['overall_score'] + category_cols
@@ -1056,10 +1063,10 @@ def create_player_category_heatmap(df, sort_category=None, position_filter=None)
     # Clean category names for display
     category_labels = ['Overall'] + [col.replace('_pos', '').replace('_', ' ').title() for col in category_cols]
     
-    # Extract values as 2D array (now includes overall_score)
+    # Extract values as 2D array
     z_values = top_players_df[all_cols].values
     
-    # Calculate ranks within this position for each category (skip overall_score for ranking)
+    # Calculate ranks within this position for each category
     rank_values = np.zeros_like(z_values, dtype=int)
     
     # First column is overall_score - calculate its rank
@@ -1133,12 +1140,155 @@ def create_player_category_heatmap(df, sort_category=None, position_filter=None)
         )
     ))
     
-    # Remove title completely - let Streamlit handle it
     fig.update_layout(
         xaxis_title="",
         yaxis_title="",
         height=500,
-        xaxis=dict(side='top'),
+        xaxis=dict(side='top', tickangle=20),
+        font=dict(size=11),
+        margin=dict(t=10, b=10, l=150, r=10),
+        showlegend=False
+    )
+    
+    return fig
+
+def create_goalkeeper_heatmap(df, sort_category=None):
+    """
+    Create heatmap showing top 10 goalkeepers with GOALKEEPER-SPECIFIC categories
+    
+    Args:
+        df: DataFrame from load_player_overview()
+        sort_category: Optional GK category to sort by (e.g., 'shot_stopping')
+        
+    Returns:
+        Plotly figure for st.plotly_chart()
+    """
+    import plotly.graph_objects as go
+    import numpy as np
+    
+    if df.empty:
+        return go.Figure()
+    
+    # Filter to goalkeepers only
+    gk_df = df[df['primary_position'] == 'GK'].copy()
+    
+    if gk_df.empty:
+        return go.Figure()
+    
+    # For GKs, we need to load their profiles to get GK categories
+    # Since GK categories aren't in the overview df, we need to fetch them
+    
+    from data_loader import load_player_profile
+    
+    gk_data = []
+    for _, row in gk_df.head(10).iterrows():  # Top 10 by overall score
+        player_name = row['player_name']
+        profile = load_player_profile(player_name, 'current')  # You'll need to pass timeframe
+        
+        if 'error' not in profile:
+            gk_categories = profile['dual_percentiles']['category_scores']
+            
+            # Extract GK category scores
+            category_scores = {}
+            for cat_name, cat_data in gk_categories.items():
+                pos_score = cat_data.get('position_score')
+                category_scores[cat_name] = pos_score if pos_score is not None else 0
+            
+            gk_data.append({
+                'player_name': player_name,
+                'overall_score': row['overall_score'],
+                **category_scores
+            })
+    
+    if not gk_data:
+        return go.Figure()
+    
+    gk_heatmap_df = pd.DataFrame(gk_data)
+    
+    # Sort if sort_category specified
+    if sort_category and sort_category in gk_heatmap_df.columns:
+        gk_heatmap_df = gk_heatmap_df.sort_values(sort_category, ascending=False)
+    else:
+        gk_heatmap_df = gk_heatmap_df.sort_values('overall_score', ascending=False)
+    
+    # Reverse so #1 is at top
+    gk_heatmap_df = gk_heatmap_df.iloc[::-1]
+    
+    player_names = gk_heatmap_df['player_name'].tolist()
+    
+    # Get GK category columns (exclude overall_score and player_name)
+    gk_category_cols = [col for col in gk_heatmap_df.columns if col not in ['player_name', 'overall_score']]
+    
+    # Add overall_score as first column
+    all_cols = ['overall_score'] + gk_category_cols
+    category_labels = ['Overall'] + [col.replace('_', ' ').title() for col in gk_category_cols]
+    
+    # Extract values
+    z_values = gk_heatmap_df[all_cols].values
+    
+    # Calculate ranks (all GKs ranked against each other)
+    rank_values = np.zeros_like(z_values, dtype=int)
+    
+    for j, col in enumerate(all_cols):
+        col_values = gk_heatmap_df[col].values
+        valid = ~np.isnan(col_values)
+        if valid.sum() > 0:
+            ranks = pd.Series(col_values).rank(method='min', ascending=False, na_option='keep').values.astype(int)
+            rank_values[:, j] = ranks
+    
+    # Create text overlay
+    text_values = []
+    for i in range(len(player_names)):
+        row_text = []
+        for j in range(len(all_cols)):
+            rank = rank_values[i, j]
+            if rank > 0:
+                row_text.append(f"#{rank}")
+            else:
+                row_text.append("")
+        text_values.append(row_text)
+    
+    # Create hover text
+    hover_text = []
+    for i, player_name in enumerate(player_names):
+        row_hover = []
+        for j, category in enumerate(category_labels):
+            score = z_values[i][j]
+            rank = rank_values[i, j]
+            if not np.isnan(score) and rank > 0:
+                text = f"{player_name}<br>{category}<br>Score: {score:.1f}<br>Rank: #{rank}/10"
+            else:
+                text = f"{player_name}<br>{category}<br>No Data"
+            row_hover.append(text)
+        hover_text.append(row_hover)
+    
+    fig = go.Figure(data=go.Heatmap(
+        z=z_values,
+        x=category_labels,
+        y=player_names,
+        colorscale='RdYlGn',
+        zmid=50,
+        zmin=0,
+        zmax=100,
+        text=text_values,
+        texttemplate='%{text}',
+        textfont=dict(size=10, color='black'),
+        hovertext=hover_text,
+        hovertemplate='%{hovertext}<extra></extra>',
+        colorbar=dict(
+            title="Percentile",
+            titleside="right",
+            tickmode="linear",
+            tick0=0,
+            dtick=20
+        )
+    ))
+    
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="",
+        height=500,
+        xaxis=dict(side='top', tickangle=20),
         font=dict(size=11),
         margin=dict(t=10, b=10, l=150, r=10),
         showlegend=False
