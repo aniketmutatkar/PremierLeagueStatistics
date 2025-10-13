@@ -1473,7 +1473,7 @@ def create_squad_roster_table(roster_df):
         'Top (League)': lambda x: f"{x:.1f}" if pd.notna(x) else "—",
         'Top (Position)': lambda x: f"{x:.1f}" if pd.notna(x) else "—",
         'Minutes': lambda x: f"{int(x)}" if pd.notna(x) else "—"
-    }).map(style_score, subset=['League Avg', 'Position Avg', 'Top (League)', 'Top (Position)'])
+    }).applymap(style_score, subset=['League Avg', 'Position Avg', 'Top (League)', 'Top (Position)'])
     
     return styled_df
 

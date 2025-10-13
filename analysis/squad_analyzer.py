@@ -135,14 +135,6 @@ class SquadAnalyzer:
                     'goal_kick_average_length', 'crosses_misc'
                 ],
                 'description': 'Ball control, touches, and possession quality'
-            },
-            
-            'team_performance': {
-                'metrics': [
-                    'wins', 'draws', 'losses', 'starts', 'matches_played',
-                    'minutes_played', 'minutes_90s', 'age'
-                ],
-                'description': 'Overall team performance and squad composition'
             }
         }
     

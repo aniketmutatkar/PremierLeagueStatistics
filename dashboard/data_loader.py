@@ -362,7 +362,7 @@ def load_league_overview(timeframe="current"):
             'losses': int(row['losses'])
         }
         
-        # Add composite scores (9 categories) and collect for overall calculation
+        # Add composite scores (7 categories) and collect for overall calculation
         composite_values = []
         for category, data in category_scores.items():
             composite_score = data.get('composite_score', None)
