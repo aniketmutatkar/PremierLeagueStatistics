@@ -712,17 +712,17 @@ def extract_player_basic_info(player_profile):
     }
 
 @st.cache_data(ttl=3600)
-def get_max_minutes_played(timeframe="current"):
+def get_max_gameweeks_played(timeframe="current"):
     """
-    Get maximum minutes played across all players for the given timeframe.
+    Get maximum gameweeks played across all players for the given timeframe.
     Queries both analytics_players and analytics_keepers tables.
-    Rounds up to nearest 90 (full match) for clean slider values.
+    Converts minutes to gameweeks (1 gameweek = 90 minutes).
     
     Args:
         timeframe: "current" or "season_YYYY-YYYY"
         
     Returns:
-        int: Maximum minutes played, rounded up to nearest 90
+        int: Maximum gameweeks played (minutes / 90)
     """
     with PlayerAnalyzer() as analyzer:
         # Get the same filter clause used by other queries
@@ -750,13 +750,13 @@ def get_max_minutes_played(timeframe="current"):
         
         # Handle edge case: no data
         if max_minutes == 0:
-            return 90  # Default to at least one match
+            return 1  # Default to at least 1 gameweek
         
-        # Round up to nearest 90 (full match)
+        # Convert minutes to gameweeks (round up to nearest gameweek)
         import math
-        rounded_max = math.ceil(max_minutes / 90) * 90
+        max_gameweeks = math.ceil(max_minutes / 90)
         
-        return rounded_max
+        return max_gameweeks
 
 # ============================================================================
 # PLAYER OVERVIEW LOADING - ADD TO dashboard/data_loader.py
@@ -918,3 +918,176 @@ def load_player_category_leaderboard(category, timeframe="current", position_fil
         top_n.insert(0, 'rank', range(1, len(top_n) + 1))
         
         return top_n[['rank', 'player_name', 'position', 'squad', 'score']]
+    
+
+@st.cache_data(ttl=3600)
+def load_squad_roster(squad_name, timeframe="current"):
+    """
+    Get all players in a squad with their stats (excludes 0-minute players)
+    Returns BOTH overall-based and position-based scores
+    
+    Args:
+        squad_name: Squad name (e.g., "Arsenal")
+        timeframe: "current" or "season_YYYY-YYYY"
+        
+    Returns:
+        DataFrame with columns:
+            - player_name: str
+            - position: str
+            - minutes_played: int
+            - overall_avg: float (average of OVERALL percentiles - league-wide)
+            - position_avg: float (average of POSITION percentiles - within position group)
+            - top_category: str
+            - top_category_overall: float
+            - top_category_position: float
+    """
+    
+    with PlayerAnalyzer() as analyzer:
+        filter_clause, _ = analyzer._parse_timeframe(timeframe)
+        
+        # Query outfield players
+        outfield_query = f"""
+            SELECT player_name, position, squad, minutes_played
+            FROM analytics_players
+            WHERE squad = ? AND {filter_clause} AND minutes_played > 0
+        """
+        outfield_df = analyzer.conn.execute(outfield_query, [squad_name]).fetchdf()
+        
+        # Query goalkeepers
+        keeper_query = f"""
+            SELECT player_name, position, squad, minutes_played
+            FROM analytics_keepers
+            WHERE squad = ? AND {filter_clause} AND minutes_played > 0
+        """
+        keeper_df = analyzer.conn.execute(keeper_query, [squad_name]).fetchdf()
+        
+        # Combine
+        all_players_df = pd.concat([outfield_df, keeper_df], ignore_index=True)
+        
+        if all_players_df.empty:
+            return pd.DataFrame()
+        
+        # For each player, get their dual percentiles
+        roster_records = []
+        
+        for _, player_row in all_players_df.iterrows():
+            player_name = player_row['player_name']
+            
+            # Get dual percentiles (cached)
+            dual_pct = analyzer.calculate_dual_percentiles(player_name, timeframe)
+            
+            if "error" in dual_pct:
+                continue
+            
+            category_scores = dual_pct['category_scores']
+            
+            # Calculate BOTH overall and position averages
+            overall_percentiles = []
+            position_percentiles = []
+            category_data = {}
+            
+            for category, data in category_scores.items():
+                overall_score = data.get('overall_score')
+                pos_score = data.get('position_score')
+                
+                # Collect for averages
+                if overall_score is not None:
+                    overall_percentiles.append(overall_score)
+                if pos_score is not None:
+                    position_percentiles.append(pos_score)
+                
+                # Store for finding top category
+                if overall_score is not None or pos_score is not None:
+                    category_data[category] = {
+                        'overall': overall_score if overall_score is not None else pos_score,
+                        'position': pos_score if pos_score is not None else overall_score
+                    }
+            
+            if not overall_percentiles and not position_percentiles:
+                continue
+            
+            # Calculate averages
+            overall_avg = sum(overall_percentiles) / len(overall_percentiles) if overall_percentiles else None
+            position_avg = sum(position_percentiles) / len(position_percentiles) if position_percentiles else None
+            
+            # Find top category based on OVERALL percentile
+            if category_data:
+                top_category = max(category_data, key=lambda k: category_data[k]['overall'])
+                top_cat_data = category_data[top_category]
+                top_category_overall = top_cat_data['overall']
+                top_category_position = top_cat_data['position']
+            else:
+                top_category = "N/A"
+                top_category_overall = 0.0
+                top_category_position = 0.0
+            
+            roster_records.append({
+                'player_name': player_name,
+                'position': player_row['position'],
+                'minutes_played': player_row['minutes_played'],
+                'overall_avg': round(overall_avg, 1) if overall_avg is not None else None,
+                'position_avg': round(position_avg, 1) if position_avg is not None else None,
+                'top_category': top_category.replace('_', ' ').title(),
+                'top_category_overall': round(top_category_overall, 1),
+                'top_category_position': round(top_category_position, 1)
+            })
+        
+        # Convert to DataFrame and sort by minutes_played (default sort)
+        roster_df = pd.DataFrame(roster_records)
+        roster_df = roster_df.sort_values('minutes_played', ascending=False).reset_index(drop=True)
+        
+        return roster_df
+
+@st.cache_data(ttl=3600)
+def load_squad_profile_with_context(squad_name, timeframe="current"):
+    """
+    Load squad profile WITH league context for rankings
+    
+    Args:
+        squad_name: Squad name
+        timeframe: "current" or "season_YYYY-YYYY"
+        
+    Returns:
+        dict with:
+            - basic_info: squad basic data
+            - dual_percentiles: category scores
+            - league_context: rankings for each category across all squads
+    """
+    with SquadAnalyzer() as analyzer:
+        # Get squad profile
+        profile = analyzer.get_comprehensive_squad_profile(squad_name, timeframe)
+        
+        if "error" in profile:
+            return profile
+        
+        # Get league rankings for each category
+        league_context = {}
+        
+        for category in analyzer.stat_categories.keys():
+            # Get composite scores for all squads in this category
+            composite_results = analyzer.calculate_category_composite_scores(category, timeframe)
+            
+            if composite_results.empty:
+                continue
+            
+            # Find this squad's position
+            squad_row = composite_results[composite_results['squad_name'] == squad_name]
+            
+            if squad_row.empty:
+                continue
+            
+            squad_data = squad_row.iloc[0]
+            leader_data = composite_results.iloc[0]
+            
+            league_context[category] = {
+                'rank': int(squad_data['rank']),
+                'total_squads': len(composite_results),
+                'leader_name': leader_data['squad_name'],
+                'leader_score': round(leader_data['composite_score'], 1),
+                'squad_score': round(squad_data['composite_score'], 1),
+                'gap_from_leader': round(squad_data['gap_from_first'], 1)
+            }
+        
+        profile['league_context'] = league_context
+        
+        return profile

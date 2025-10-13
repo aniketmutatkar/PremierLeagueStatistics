@@ -1420,3 +1420,128 @@ def create_squad_dominance_charts(df, top_n_players=100):
     fig.update_yaxes(showticklabels=False, row=1, col=2)
     
     return fig
+
+def create_squad_roster_table(roster_df):
+    """
+    Create formatted squad roster table with league-wide and position context
+    
+    Args:
+        roster_df: DataFrame from load_squad_roster()
+        
+    Returns:
+        Styled DataFrame for display
+    """
+    import pandas as pd
+    
+    if roster_df.empty:
+        return None
+    
+    # Format for display
+    display_df = roster_df.copy()
+    
+    # Rename columns
+    display_df = display_df.rename(columns={
+        'player_name': 'Player',
+        'position': 'Position',
+        'minutes_played': 'Minutes',
+        'overall_avg': 'League Avg',      # Average of overall percentiles
+        'position_avg': 'Position Avg',   # Average of position percentiles
+        'top_category': 'Top Category',
+        'top_category_overall': 'Top (League)',
+        'top_category_position': 'Top (Position)'
+    })
+    
+    # Apply styling
+    def style_score(val):
+        """Color code scores"""
+        if pd.isna(val):
+            return 'color: #999;'
+        if val >= 80:
+            return 'color: #16a34a; font-weight: bold;'
+        elif val >= 60:
+            return 'color: #65a30d;'
+        elif val >= 40:
+            return 'color: #eab308;'
+        elif val >= 20:
+            return 'color: #f97316;'
+        else:
+            return 'color: #dc2626;'
+    
+    styled_df = display_df.style.format({
+        'League Avg': lambda x: f"{x:.1f}" if pd.notna(x) else "—",
+        'Position Avg': lambda x: f"{x:.1f}" if pd.notna(x) else "—",
+        'Top (League)': lambda x: f"{x:.1f}" if pd.notna(x) else "—",
+        'Top (Position)': lambda x: f"{x:.1f}" if pd.notna(x) else "—",
+        'Minutes': lambda x: f"{int(x)}" if pd.notna(x) else "—"
+    }).map(style_score, subset=['League Avg', 'Position Avg', 'Top (League)', 'Top (Position)'])
+    
+    return styled_df
+
+
+def create_squad_category_context_table(profile_with_context):
+    """
+    Create category breakdown table with league rankings
+    
+    Args:
+        profile_with_context: Output from load_squad_profile_with_context()
+        
+    Returns:
+        Styled DataFrame showing categories with ranks
+    """
+    import pandas as pd
+    
+    if "error" in profile_with_context:
+        return None
+    
+    category_scores = profile_with_context['dual_percentiles']['category_scores']
+    league_context = profile_with_context.get('league_context', {})
+    
+    # Build table data
+    table_data = []
+    
+    for category, data in category_scores.items():
+        composite_score = data.get('composite_score')
+        
+        if composite_score is None:
+            continue
+        
+        # Get league context
+        context = league_context.get(category, {})
+        rank = context.get('rank', 0)
+        total = context.get('total_squads', 20)
+        
+        table_data.append({
+            'Category': category.replace('_', ' ').title(),
+            'Score': composite_score,
+            'Rank': f"{rank}/{total}" if rank > 0 else "—"
+        })
+    
+    if not table_data:
+        return None
+    
+    df = pd.DataFrame(table_data)
+    
+    # Sort by score descending
+    df = df.sort_values('Score', ascending=False).reset_index(drop=True)
+    
+    # Apply styling
+    def style_scores(val):
+        """Color code scores"""
+        if pd.isna(val):
+            return 'color: #999;'
+        if val >= 80:
+            return 'color: #16a34a; font-weight: bold;'
+        elif val >= 60:
+            return 'color: #65a30d;'
+        elif val >= 40:
+            return 'color: #eab308;'
+        elif val >= 20:
+            return 'color: #f97316;'
+        else:
+            return 'color: #dc2626;'
+    
+    styled_df = df.style.format({
+        'Score': lambda x: f"{x:.1f}" if pd.notna(x) else "—"
+    }).applymap(style_scores, subset=['Score'])
+    
+    return styled_df

@@ -42,7 +42,9 @@ from data_loader import (
     extract_player_basic_info,
     load_player_overview,
     load_player_category_leaderboard,
-    get_max_minutes_played
+    get_max_gameweeks_played,
+    load_squad_roster,
+    load_squad_profile_with_context
 )
 
 from charts import (
@@ -63,8 +65,11 @@ from charts import (
     create_player_category_heatmap,
     create_goalkeeper_heatmap,
     create_player_category_leaderboard_table,
-    create_squad_dominance_charts
+    create_squad_dominance_charts,
+    create_squad_roster_table,
+    create_squad_category_context_table
 )
+
 # ============================================================================
 # HELPER FUNCTION
 # ============================================================================
@@ -188,7 +193,7 @@ with st.sidebar:
     # ========================================================================
     page = st.radio(
         "Navigate",
-        ["League Overview", "Squad Comparison",  "Player Overview", "Player Analysis"],
+        ["League Overview", "Squad Comparison", "Squad Profiles", "Player Overview", "Player Analysis"],
         index=0,
         label_visibility="collapsed"
     )
@@ -218,6 +223,26 @@ with st.sidebar:
     else:
         st.error("No seasons available")
         st.stop()
+
+    # ========================================================================
+    # SQUAD SELECTOR (ONLY FOR SQUAD PROFILES PAGE)
+    # ========================================================================
+    if page == "Squad Profiles":
+        st.markdown("---")
+        st.subheader("🏟️ Squad Selector")
+        
+        squads = get_available_squads(timeframe)
+        
+        if squads:
+            selected_squad = st.selectbox(
+                "Select Squad",
+                squads,
+                index=0,
+                key="squad_profile_selector"
+            )
+        else:
+            st.error("No squads available")
+            st.stop()
     
     # ========================================================================
     # SQUAD SELECTORS (ONLY FOR SQUAD COMPARISON PAGE)
@@ -261,17 +286,20 @@ with st.sidebar:
                 index=0
             )
             
-            # Get dynamic max minutes based on actual data
-            max_minutes_available = get_max_minutes_played(timeframe)
+            # Get dynamic max gameweeks based on actual data
+            max_gameweeks_available = get_max_gameweeks_played(timeframe)
 
-            min_minutes = st.slider(
-                "Minimum Minutes",
-                min_value=90,
-                max_value=max_minutes_available,
-                value=420,
-                step=90,
-                help="Filter players by minimum minutes played"
+            min_gameweeks = st.slider(
+                "Minimum Gameweeks Played",
+                min_value=1,
+                max_value=max_gameweeks_available,
+                value=max(2, round(max_gameweeks_available / 2)),
+                step=1,
+                help="Filter players who have played at least this many full matches (1 gameweek = 90 minutes)"
             )
+
+            # Convert gameweeks to minutes for backend filtering
+            min_minutes = min_gameweeks * 90
             
             same_position_only = st.checkbox(
                 "Same position only (similar players)",
@@ -896,17 +924,20 @@ def show_player_overview(timeframe):
         )
     
     with filter_col2:
-        # Get dynamic max minutes based on actual data
-        max_minutes_available = get_max_minutes_played(timeframe)
+        # Get dynamic max gameweeks based on actual data
+        max_gameweeks_available = get_max_gameweeks_played(timeframe)
         
-        min_minutes = st.slider(
-            "Minimum Minutes",
-            min_value=90,
-            max_value=max_minutes_available,
-            value=420,
-            step=90,
-            help="Filter players by minimum minutes played"
+        min_gameweeks = st.slider(
+            "Minimum Gameweeks Played",
+            min_value=1,
+            max_value=max_gameweeks_available,
+            value=max(2, round(max_gameweeks_available / 2)),
+            step=1,
+            help="Filter players who have played at least this many full matches (1 gameweek = 90 minutes)"
         )
+        
+    # Convert gameweeks to minutes for backend filtering
+    min_minutes = min_gameweeks * 90
     
     # Convert position filter
     pos_filter = None if position_filter == "All" else position_filter
@@ -1118,6 +1149,332 @@ def show_player_overview(timeframe):
                     st.info("No goalkeeper data available for this category")
     else:
         st.info("No goalkeepers found with selected filters")
+
+# ============================================================================
+# SQUAD PROFILES PAGE
+# ============================================================================
+
+def show_squad_profile(squad_name, timeframe):
+    """
+    Squad Profiles page showing:
+    - Section 1: Squad Performance Overview with league context
+    - Section 2: Player Roster (all players sorted by minutes)
+    - Section 3: Squad Insights (top performers, strengths, weaknesses)
+    
+    Args:
+        squad_name: Selected squad name
+        timeframe: Season timeframe
+    """
+    
+    st.markdown('<div class="main-title">Squad Profile</div>', unsafe_allow_html=True)
+    
+    # Load squad profile with league context
+    with st.spinner(f"Loading {squad_name} profile..."):
+        profile = load_squad_profile_with_context(squad_name, timeframe)
+    
+    if "error" in profile:
+        st.error(f"Error loading squad profile: {profile['error']}")
+        return
+    
+    # Extract data
+    basic_info = profile['basic_info']
+    dual_percentiles = profile['dual_percentiles']
+    league_context = profile.get('league_context', {})
+    squad_insights = profile['squad_insights']
+    
+    # Get league table context
+    league_table_context = get_squad_league_context(squad_name, timeframe)
+    
+    # ========================================================================
+    # HEADER WITH LEAGUE CONTEXT
+    # ========================================================================
+
+    # Calculate squad overall composite first (needed for header)
+    category_scores = dual_percentiles['category_scores']
+    squad_composite_scores = [data.get('composite_score') for data in category_scores.values() if data.get('composite_score') is not None]
+
+    squad_overall_composite = None
+    this_rank = None
+    total_squads = None
+
+    if squad_composite_scores:
+        squad_overall_composite = sum(squad_composite_scores) / len(squad_composite_scores)
+        
+        # Get ALL squads' overall composites for ranking
+        all_squads = get_available_squads(timeframe)
+        
+        squad_composites = []
+        for other_squad in all_squads:
+            other_profile = load_squad_profile(other_squad, timeframe)
+            
+            if "error" not in other_profile:
+                other_categories = other_profile['dual_percentiles']['category_scores']
+                other_scores = [data.get('composite_score') for data in other_categories.values() if data.get('composite_score') is not None]
+                
+                if other_scores:
+                    other_overall = sum(other_scores) / len(other_scores)
+                    squad_composites.append({
+                        'squad_name': other_squad,
+                        'overall_composite': other_overall
+                    })
+        
+        # Sort by overall composite
+        squad_composites_df = pd.DataFrame(squad_composites).sort_values('overall_composite', ascending=False).reset_index(drop=True)
+        squad_composites_df['rank'] = range(1, len(squad_composites_df) + 1)
+        
+        # Find this squad's position
+        this_squad_row = squad_composites_df[squad_composites_df['squad_name'] == squad_name]
+        
+        if not this_squad_row.empty:
+            this_rank = int(this_squad_row.iloc[0]['rank'])
+            total_squads = len(squad_composites_df)
+
+    # Build header with squad quality integrated
+    header_text = f"## {squad_name}"
+
+    if squad_overall_composite is not None and this_rank is not None:
+        suffix = _get_ordinal_suffix(this_rank)
+        header_text += f" • {squad_overall_composite:.1f} ({this_rank}{suffix} of {total_squads})"
+
+    st.markdown(header_text)
+
+    # League table context (Season, Position, Points, GD)
+    if league_table_context.get('position'):
+        position = league_table_context['position']
+        points = league_table_context['points']
+        gd = league_table_context['goal_difference']
+        
+        suffix = _get_ordinal_suffix(position)
+        gd_str = f"+{gd}" if gd > 0 else str(gd)
+        
+        st.caption(f"**Season:** {basic_info['season']} | **League Position:** {position}{suffix} | **Points:** {points} | **Goal Difference:** {gd_str}")
+
+    # Nearby teams (compact, under caption)
+    if squad_composite_scores and not this_squad_row.empty:
+        # Get nearby squads (±2 positions)
+        start_idx = max(0, this_rank - 3)
+        end_idx = min(total_squads, this_rank + 2)
+        nearby_squads = squad_composites_df.iloc[start_idx:end_idx]
+        
+        # Build compact nearby teams string
+        nearby_text = ""
+        nearby_parts = []
+        
+        for _, row in nearby_squads.iterrows():
+            other_squad = row['squad_name']
+            other_rank = int(row['rank'])
+            other_score = row['overall_composite']
+            
+            if other_squad == squad_name:
+                nearby_parts.append(f"\n{other_rank}. **{other_squad}** ({other_score:.1f})")
+            else:
+                diff = other_score - squad_overall_composite
+                diff_str = f"+{diff:.1f}" if diff > 0 else f"{diff:.1f}"
+                nearby_parts.append(f"\n{other_rank}. {other_squad} ({other_score:.1f}, {diff_str})")
+        
+        nearby_text += "".join(nearby_parts)
+        st.caption(nearby_text)
+
+    st.markdown("---")
+
+    # ========================================================================
+    # SECTION 1: SQUAD PERFORMANCE OVERVIEW
+    # ========================================================================
+    
+    st.markdown('<div class="section-header">Squad Performance Overview</div>', unsafe_allow_html=True)
+    st.caption("Squad performance across 8 categories with league rankings")
+    
+    col_left, col_right = st.columns([1, 1])
+    
+    with col_left:
+        st.subheader("Performance Radar")
+        st.caption("Composite scores (0-100 scale)")
+        
+        # Extract radar data - single squad
+        categories, values = extract_radar_data(profile, use_composite=True)
+        
+        if categories and values:
+            # Create single-squad radar (reuse existing function with squad2 as None)
+            radar_fig = create_radar_chart(
+                squad_name, categories, values,
+                None, [], []  # No second squad
+            )
+            st.plotly_chart(radar_fig, use_container_width=True)
+    
+    with col_right:
+        st.subheader("Category Rankings")
+        st.caption("Composite scores and league position")
+        
+        # Create category context table
+        context_table = create_squad_category_context_table(profile)
+        
+        if context_table is not None:
+            st.dataframe(
+                context_table,
+                use_container_width=True,
+                hide_index=True,
+                height=400
+            )
+        else:
+            st.warning("No category data available")
+    
+    # ========================================================================
+    # SECTION 2: PLAYER ROSTER
+    # ========================================================================
+    
+    st.markdown('<div class="section-header">Player Roster</div>', unsafe_allow_html=True)
+    st.caption("All players with 1+ minutes played, sorted by minutes")
+    
+    with st.spinner("Loading player roster..."):
+        roster_df = load_squad_roster(squad_name, timeframe)
+    
+    if roster_df.empty:
+        st.warning(f"No players found for {squad_name}")
+    else:
+        st.caption(f"✅ {len(roster_df)} players in squad")
+        
+        roster_table = create_squad_roster_table(roster_df)
+        
+        if roster_table is not None:
+            st.dataframe(
+                roster_table,
+                use_container_width=True,
+                hide_index=True,
+                height=600
+            )
+        else:
+            st.error("Error formatting roster table")
+    
+    # ========================================================================
+    # SECTION 3: SQUAD INSIGHTS
+    # ========================================================================
+
+    st.markdown('<div class="section-header">Squad Insights</div>', unsafe_allow_html=True)
+
+    # ========================================================================
+    # TOP PERFORMERS BY POSITION (3 COLUMNS)
+    # ========================================================================
+
+    st.subheader("🌟 Top Performers by Position")
+    st.caption("Top 3 players in each position group (ranked by position percentile average)")
+
+    if not roster_df.empty:
+        # Separate players by position group
+        forwards = roster_df[roster_df['position'].str.contains('FW', na=False)]
+        midfielders = roster_df[roster_df['position'].str.contains('MF', na=False) & ~roster_df['position'].str.contains('FW', na=False)]
+        defenders = roster_df[roster_df['position'].str.contains('DF', na=False) & ~roster_df['position'].str.contains('MF', na=False)]
+        goalkeepers = roster_df[roster_df['position'].str.contains('GK', na=False)]
+        
+        # Sort each group by position_avg (descending)
+        forwards = forwards.sort_values('position_avg', ascending=False, na_position='last')
+        midfielders = midfielders.sort_values('position_avg', ascending=False, na_position='last')
+        defenders = defenders.sort_values('position_avg', ascending=False, na_position='last')
+        goalkeepers = goalkeepers.sort_values('position_avg', ascending=False, na_position='last')
+        
+        # Create columns based on whether GK exists
+        if not goalkeepers.empty:
+            col_fw, col_mf, col_df = st.columns(3)
+        else:
+            col_fw, col_mf, col_df = st.columns(3)
+        
+        # FORWARDS
+        with col_fw:
+            st.markdown("#### **Forwards**")
+            if not forwards.empty:
+                top_fw = forwards.head(3)
+                for idx, (_, player) in enumerate(top_fw.iterrows(), start=1):
+                    name = player['player_name']
+                    pos_avg = player['position_avg']
+                    top_cat = player['top_category']
+                    top_pos = player['top_category_position']
+                    indent = "&nbsp;" * 3
+                    st.markdown(f"{indent}{idx}. **{name}**")
+                    st.caption(f"{indent}{pos_avg:.1f}% (Elite in {top_cat}: {top_pos:.1f}%)")
+            else:
+                st.info("No forwards")
+        
+        # MIDFIELDERS
+        with col_mf:
+            st.markdown("#### **Midfielders**")
+            if not midfielders.empty:
+                top_mf = midfielders.head(3)
+                for idx, (_, player) in enumerate(top_mf.iterrows(), start=1):
+                    name = player['player_name']
+                    pos_avg = player['position_avg']
+                    top_cat = player['top_category']
+                    top_pos = player['top_category_position']
+                    indent = "&nbsp;" * 3
+                    st.markdown(f"{indent}{idx}. **{name}**")
+                    st.caption(f"{indent}{pos_avg:.1f}% (Elite in {top_cat}: {top_pos:.1f}%)")
+            else:
+                st.info("No midfielders")
+        
+        # DEFENDERS
+        with col_df:
+            st.markdown("#### **Defenders**")
+            if not defenders.empty:
+                top_df = defenders.head(3)
+                for idx, (_, player) in enumerate(top_df.iterrows(), start=1):
+                    name = player['player_name']
+                    pos_avg = player['position_avg']
+                    top_cat = player['top_category']
+                    top_pos = player['top_category_position']
+                    indent = "&nbsp;" * 3
+                    st.markdown(f"{indent}{idx}. **{name}**")
+                    st.caption(f"{indent}{pos_avg:.1f}% (Elite in {top_cat}: {top_pos:.1f}%)")
+            else:
+                st.info("No defenders")
+
+    else:
+        st.info("No player data available")
+
+    st.markdown("---")
+
+    # ========================================================================
+    # SQUAD STRENGTHS AND WEAKNESSES (EXISTING - KEEP THIS)
+    # ========================================================================
+
+    col_strengths, col_weaknesses = st.columns(2)
+
+    with col_strengths:
+        st.subheader("💪 Squad Strengths")
+        st.caption("Categories with 60%+ composite score")
+        
+        strengths = squad_insights.get('top_strengths', [])
+        
+        if strengths:
+            for strength in strengths:
+                category = strength['category'].replace('_', ' ').title()
+                score = strength['score']
+                rank = strength['rank']
+                
+                # Get league context
+                context = league_context.get(strength['category'], {})
+                total = context.get('total_squads', 20)
+                
+                st.markdown(f"• **{category}**: {score:.1f}% (Rank: {rank}/{total})")
+        else:
+            st.info("No standout strengths identified (no category above 60%)")
+
+    with col_weaknesses:
+        st.subheader("⚠️ Squad Weaknesses")
+        st.caption("Categories with 40%- composite score")
+        
+        weaknesses = squad_insights.get('main_weaknesses', [])
+        
+        if weaknesses:
+            for weakness in weaknesses:
+                category = weakness['category'].replace('_', ' ').title()
+                score = weakness['score']
+                rank = weakness['rank']
+                
+                # Get league context
+                context = league_context.get(weakness['category'], {})
+                total = context.get('total_squads', 20)
+                
+                st.markdown(f"• **{category}**: {score:.1f}% (Rank: {rank}/{total})")
+        else:
+            st.info("No critical weaknesses identified (no category below 40%)")
 
 # ============================================================================
 # SQUAD COMPARISON PAGE
@@ -1441,9 +1798,11 @@ if page == "Squad Comparison":
 # MAIN APP ROUTING - NEW
 # ============================================================================
 
-elif page == "League Overview":
+if page == "League Overview":
     show_league_overview()
-elif page == "Player Analysis":
-    show_player_analysis(timeframe, selected_player, min_sim, same_pos)
+elif page == "Squad Profiles":
+    show_squad_profile(selected_squad, timeframe)
 elif page == "Player Overview":
     show_player_overview(timeframe)
+elif page == "Player Analysis":
+    show_player_analysis(timeframe, selected_player, min_sim, same_pos)
