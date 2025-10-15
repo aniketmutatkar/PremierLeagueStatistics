@@ -1,0 +1,25 @@
+================================================================================
+GOALS ANALYSIS SUMMARY - PART 1B
+Generated: 2025-10-15 14:15:43
+================================================================================
+
+HISTORICAL PATTERNS (15 seasons, GW38 totals)
+--------------------------------------------------------------------------------
+Average goals scored: 51.3
+Top 4 typically score: 71+ goals
+Relegated teams score: <54 goals
+Best defense (Top 4): <36 goals conceded
+
+CURRENT SEASON (GW7)
+--------------------------------------------------------------------------------
+Top scorer: Arsenal (14 goals)
+Best defense: Arsenal (3 conceded)
+Teams on Top 4 pace: 1
+Teams on relegation pace: 13
+
+KEY INSIGHTS
+--------------------------------------------------------------------------------
+1. Goals scored is highly predictive of final position
+2. Top 4 teams average 75 goals
+3. Defense matters: Top 4 concede 36 or fewer goals
+4. Goal difference strongly correlates with final position
