@@ -4,24 +4,24 @@ DATA QUALITY ISSUES - DETAILED LISTING
 ISSUE 5: Squads with inconsistent gameweeks
 --------------------------------------------------------------------------------
           squad valid_from  gw_variations
-      Liverpool 2025-10-06              6
-      Tottenham 2025-10-06              6
-        Everton 2025-10-06              6
      Sunderland 2025-10-06              6
-Manchester City 2025-10-06              6
         Arsenal 2025-10-06              6
  Manchester Utd 2025-10-06              6
     Aston Villa 2025-10-06              6
-   Leeds United 2025-10-06              6
-Nott'ham Forest 2025-10-06              6
-         Wolves 2025-10-06              6
-        Chelsea 2025-10-06              6
-       West Ham 2025-10-06              6
-         Fulham 2025-10-06              6
       Brentford 2025-10-06              6
+         Fulham 2025-10-06              6
+   Leeds United 2025-10-06              6
+         Wolves 2025-10-06              6
  Crystal Palace 2025-10-06              6
         Burnley 2025-10-06              6
+Manchester City 2025-10-06              6
+      Liverpool 2025-10-06              6
     Bournemouth 2025-10-06              6
   Newcastle Utd 2025-10-06              6
        Brighton 2025-10-06              6
+        Chelsea 2025-10-06              6
+      Tottenham 2025-10-06              6
+        Everton 2025-10-06              6
+       West Ham 2025-10-06              6
+Nott'ham Forest 2025-10-06              6
 
