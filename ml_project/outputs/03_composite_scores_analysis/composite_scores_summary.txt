@@ -1,0 +1,58 @@
+================================================================================
+COMPOSITE SCORES ANALYSIS SUMMARY - PART 1C
+Generated: 2025-10-19 14:04:33
+================================================================================
+
+ANALYSIS SCOPE
+--------------------------------------------------------------------------------
+Seasons analyzed: 5
+  - 2024-2025
+  - 2023-2024
+  - 2022-2023
+  - 2021-2022
+  - 2020-2021
+Total squad-seasons: 100
+Categories analyzed: 7
+
+STRONGEST PREDICTORS OF FINAL POSITION
+--------------------------------------------------------------------------------
+1. attacking_output          r = -0.869
+2. creativity                r = -0.827
+3. ball_progression          r = -0.754
+4. passing                   r = -0.658
+5. possession                r = -0.409
+
+WEAKEST PREDICTORS (Consider Ignoring for ML)
+--------------------------------------------------------------------------------
+  possession                r = -0.409
+  physical_duels            r = -0.331
+  defending                 r = -0.167
+
+CATEGORY SEPARATION (Top 4 vs Relegation)
+--------------------------------------------------------------------------------
+1. attacking_output          56.0 points difference
+2. creativity                44.3 points difference
+3. ball_progression          33.3 points difference
+4. passing                   24.4 points difference
+5. physical_duels            7.9 points difference
+
+ARSENAL'S DOMINANCE FACTORS (GW7)
+--------------------------------------------------------------------------------
+  Ball Progression          73.9
+  Attacking Output          72.4
+  Creativity                68.2
+
+RECOMMENDATIONS FOR ML MODELING
+--------------------------------------------------------------------------------
+1. PRIORITIZE these 4 strong predictors (|r| ≥ 0.5):
+   - attacking_output
+   - creativity
+   - ball_progression
+   - passing
+
+2. CONSIDER IGNORING these 1 weak predictors (|r| < 0.3):
+   - defending
+
+3. Focus feature engineering on top predictors
+4. Test if weak predictors add any value in models
+5. Use historical separation data to weight features
