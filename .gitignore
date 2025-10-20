@@ -16,6 +16,9 @@ backup_before_cleanup/
 # Data files
 *.duckdb-wal
 *.duckdb-shm
+*.txt
+*.csv
+*.json
 # Jupyter notebooks checkpoints
 .ipynb_checkpoints/
 # IDE files
