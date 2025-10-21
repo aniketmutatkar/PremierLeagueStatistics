@@ -10,7 +10,7 @@ import logging
 import glob
 from pathlib import Path
 from datetime import datetime
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any
 
 # Configure logging
 logging.basicConfig(
@@ -155,54 +155,74 @@ class MasterPipeline:
         if force_raw or force_analytics:
             logger.info(f"Force flags: raw={force_raw}, analytics={force_analytics}")
             return force_raw, force_analytics
-        
+
         try:
             # Get team-specific gameweeks from both databases
             raw_team_gws = self._get_raw_team_gameweeks()
             analytics_team_gws = self._get_analytics_team_gameweeks()
-            
+
             self.pipeline_stats['raw_team_gameweeks'] = raw_team_gws
             self.pipeline_stats['analytics_team_gameweeks'] = analytics_team_gws
-            
+
             if not raw_team_gws:
                 logger.warning("No raw data found - will run full pipeline")
                 return True, True
-            
+
             # Log team gameweek ranges
             raw_min = min(raw_team_gws.values()) if raw_team_gws else 0
             raw_max = max(raw_team_gws.values()) if raw_team_gws else 0
             logger.info(f"Raw data: GW{raw_min}-{raw_max} across {len(raw_team_gws)} teams")
-            
+
             if analytics_team_gws:
                 analytics_min = min(analytics_team_gws.values())
                 analytics_max = max(analytics_team_gws.values())
                 logger.info(f"Analytics data: GW{analytics_min}-{analytics_max} across {len(analytics_team_gws)} teams")
             else:
                 logger.info("Analytics database empty - will populate")
-            
+
+            # NEW: Check for incomplete fixtures in raw database
+            incomplete_fixtures_info = self._check_incomplete_fixtures()
+            if incomplete_fixtures_info['has_incomplete']:
+                logger.info(f"Found {incomplete_fixtures_info['count']} incomplete fixture(s):")
+                for fixture in incomplete_fixtures_info['fixtures'][:3]:  # Show first 3
+                    logger.info(f"  • GW{fixture['gameweek']}: {fixture['home_team']} vs {fixture['away_team']}")
+                if len(incomplete_fixtures_info['fixtures']) > 3:
+                    logger.info(f"  ... and {len(incomplete_fixtures_info['fixtures']) - 3} more")
+
+                # Check FBRef to see if any incomplete fixtures are now complete
+                logger.info("Checking FBRef for updates to incomplete fixtures...")
+                fbref_status = self._check_fbref_fixture_status()
+
+                if fbref_status['has_new_completions']:
+                    logger.info(f"✅ Found {fbref_status['new_completions_count']} newly completed fixture(s)")
+                    logger.info("Running raw pipeline to update fixture data")
+                    return True, True
+                else:
+                    logger.info("No incomplete fixtures have been completed yet")
+
             # Compare team-by-team to find which teams need updates
             teams_to_update = []
             for team, raw_gw in raw_team_gws.items():
                 analytics_gw = analytics_team_gws.get(team, 0)
                 if raw_gw > analytics_gw:
                     teams_to_update.append(f"{team} (GW{analytics_gw}→{raw_gw})")
-            
+
             if teams_to_update:
                 logger.info(f"Teams needing update ({len(teams_to_update)}):")
                 for team_info in teams_to_update[:5]:  # Show first 5
                     logger.info(f"  • {team_info}")
                 if len(teams_to_update) > 5:
                     logger.info(f"  ... and {len(teams_to_update) - 5} more")
-                
+
                 self.pipeline_stats['teams_updated'] = len(teams_to_update)
                 return False, True  # Only analytics needed
-            
+
             # Check if new gameweek available on FBRef
             if self._should_check_fbref():
                 logger.info("Checking FBRef for new gameweek...")
                 fbref_max_gw = self._quick_gameweek_check()
                 logger.info(f"FBRef max gameweek: {fbref_max_gw}")
-                
+
                 if raw_max < fbref_max_gw:
                     logger.info(f"New gameweek available: GW{fbref_max_gw}")
                     return True, True
@@ -210,10 +230,10 @@ class MasterPipeline:
                     logger.info("No new gameweek found")
             else:
                 logger.info("Skipping FBRef check (recently checked)")
-            
+
             logger.info("All teams up to date")
             return False, False
-            
+
         except Exception as e:
             logger.warning(f"Decision logic failed: {e}, defaulting to force run")
             return True, True
@@ -321,19 +341,122 @@ class MasterPipeline:
         try:
             sys.path.insert(0, str(Path(__file__).parent.parent))
             from src.scraping.fbref_scraper import FBRefScraper
-            
+
             scraper = FBRefScraper()
             fixtures_url = scraper.sources_config['fixtures_sources']['current_season']['url']
-            
+
             fixture_data = scraper.scrape_fixtures(fixtures_url)
-            
+
             # PHASE 4: Use new gameweek_status dict structure
             return fixture_data['gameweek_status']['max_gameweek']
-            
+
         except Exception as e:
             logger.warning(f"FBRef check failed: {e}")
             return 0
-    
+
+    def _check_incomplete_fixtures(self) -> Dict[str, Any]:
+        """
+        Check for incomplete fixtures in raw database
+
+        Returns:
+            Dict with 'has_incomplete', 'count', and 'fixtures' list
+        """
+        try:
+            import duckdb
+
+            conn = duckdb.connect('data/premierleague_raw.duckdb', read_only=True)
+
+            # Get all incomplete fixtures
+            incomplete = conn.execute("""
+                SELECT gameweek, home_team, away_team, match_date
+                FROM raw_fixtures
+                WHERE is_completed = false
+                ORDER BY gameweek, match_date
+            """).fetchall()
+
+            conn.close()
+
+            fixtures_list = []
+            for row in incomplete:
+                fixtures_list.append({
+                    'gameweek': int(row[0]),
+                    'home_team': row[1],
+                    'away_team': row[2],
+                    'match_date': row[3]
+                })
+
+            return {
+                'has_incomplete': len(fixtures_list) > 0,
+                'count': len(fixtures_list),
+                'fixtures': fixtures_list
+            }
+
+        except Exception as e:
+            logger.warning(f"Failed to check incomplete fixtures: {e}")
+            return {'has_incomplete': False, 'count': 0, 'fixtures': []}
+
+    def _check_fbref_fixture_status(self) -> Dict[str, Any]:
+        """
+        Check FBRef to see if any incomplete fixtures are now complete
+
+        Returns:
+            Dict with 'has_new_completions' and 'new_completions_count'
+        """
+        try:
+            import duckdb
+            sys.path.insert(0, str(Path(__file__).parent.parent))
+            from src.scraping.fbref_scraper import FBRefScraper
+
+            # Get current incomplete fixtures from raw DB
+            conn = duckdb.connect('data/premierleague_raw.duckdb', read_only=True)
+
+            raw_incomplete = conn.execute("""
+                SELECT fixture_id, gameweek, home_team, away_team
+                FROM raw_fixtures
+                WHERE is_completed = false
+            """).fetchall()
+
+            conn.close()
+
+            if not raw_incomplete:
+                return {'has_new_completions': False, 'new_completions_count': 0}
+
+            # Get latest fixtures from FBRef
+            scraper = FBRefScraper()
+            fixtures_url = scraper.sources_config['fixtures_sources']['current_season']['url']
+            fixture_data = scraper.scrape_fixtures(fixtures_url)
+
+            if not fixture_data or 'fixtures' not in fixture_data:
+                logger.warning("Could not fetch FBRef fixture data")
+                return {'has_new_completions': False, 'new_completions_count': 0}
+
+            # Convert FBRef fixtures to dict for easy lookup
+            fbref_fixtures = fixture_data['fixtures']
+            fbref_completed = {}
+
+            for _, row in fbref_fixtures.iterrows():
+                if row.get('is_completed', False):
+                    fixture_id = row.get('fixture_id', '')
+                    fbref_completed[fixture_id] = True
+
+            # Check how many of our incomplete fixtures are now complete on FBRef
+            new_completions = 0
+            for raw_fixture in raw_incomplete:
+                fixture_id = raw_fixture[0]
+                if fixture_id in fbref_completed:
+                    new_completions += 1
+                    logger.info(f"  Newly completed: GW{raw_fixture[1]} {raw_fixture[2]} vs {raw_fixture[3]}")
+
+            return {
+                'has_new_completions': new_completions > 0,
+                'new_completions_count': new_completions
+            }
+
+        except Exception as e:
+            logger.warning(f"FBRef fixture status check failed: {e}")
+            # On error, assume there might be updates and let raw pipeline handle it
+            return {'has_new_completions': True, 'new_completions_count': 0}
+
     def _run_raw_pipeline(self, force: bool = False) -> bool:
         """Run the raw data pipeline with detailed tracking"""
         raw_start = datetime.now()

@@ -80,10 +80,18 @@ class AnalyticsETL:
                 # NEW Step 2: Check if refresh needed (team-by-team)
                 if not force_refresh:
                     teams_needing_update = self._get_teams_needing_update(analytics_conn, team_gameweeks)
-                    if not teams_needing_update:
-                        logger.info("✅ All teams' data is current, skipping ETL")
+
+                    # NEW: Also check if fixtures need updating
+                    fixtures_need_update = self._check_fixtures_need_update(analytics_conn, max_gw)
+
+                    if not teams_needing_update and not fixtures_need_update:
+                        logger.info("✅ All teams' data and fixtures are current, skipping ETL")
                         return True
-                    logger.info(f"Teams needing update: {len(teams_needing_update)} - {teams_needing_update}")
+
+                    if teams_needing_update:
+                        logger.info(f"Teams needing update: {len(teams_needing_update)} - {teams_needing_update}")
+                    if fixtures_need_update:
+                        logger.info("Fixtures need update (incomplete fixtures in analytics)")
                 
                 # Step 3: Process fixtures (unchanged)
                 logger.info("🏈 Step 3: Processing fixtures...")
@@ -323,7 +331,37 @@ class AnalyticsETL:
             logger.warning(f"Error checking teams needing update: {e}")
             # If we can't determine, assume all need updates
             return list(team_gameweeks.keys())
-    
+
+    def _check_fixtures_need_update(self, analytics_conn, current_gameweek: int) -> bool:
+        """
+        Check if fixtures table needs updating
+
+        Returns:
+            True if fixtures need update, False otherwise
+        """
+        try:
+            # Check if analytics_fixtures table exists
+            tables = analytics_conn.execute("SHOW TABLES").fetchall()
+            table_names = [t[0] for t in tables]
+
+            if 'analytics_fixtures' not in table_names:
+                logger.info("analytics_fixtures table doesn't exist, will create")
+                return True
+
+            # Check if there are incomplete fixtures for current gameweek in analytics
+            incomplete_count = analytics_conn.execute("""
+                SELECT COUNT(*)
+                FROM analytics_fixtures
+                WHERE gameweek = ? AND is_completed = false
+            """, [current_gameweek]).fetchone()[0]
+
+            return incomplete_count > 0
+
+        except Exception as e:
+            logger.warning(f"Error checking fixtures update need: {e}")
+            # On error, assume fixtures might need update
+            return True
+
     def _validate_analytics_data(self, analytics_conn, gameweeks: List[int]) -> bool:
         """
         NEW: Validate analytics data for multiple gameweeks

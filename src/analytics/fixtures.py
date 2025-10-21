@@ -41,23 +41,35 @@ class FixturesProcessor:
         try:
             tables = analytics_conn.execute("SHOW TABLES").fetchall()
             table_names = [t[0] for t in tables]
-            
+
             if 'analytics_fixtures' not in table_names:
                 logger.info("🔄 analytics_fixtures table doesn't exist, creating...")
                 return True
-            
+
             # CHANGED: Check max gameweek from gameweek column (not current_through_gameweek)
             max_gw = analytics_conn.execute("""
-                SELECT COALESCE(MAX(gameweek), 0) 
+                SELECT COALESCE(MAX(gameweek), 0)
                 FROM analytics_fixtures
             """).fetchone()[0]
-            
+
             if current_gameweek > max_gw:
                 logger.info(f"🔄 Fixtures need update: Current GW{current_gameweek} > Table GW{max_gw}")
                 return True
-            
+
+            # NEW: Also check if any fixtures in current gameweek are incomplete in analytics
+            # This handles the case where fixtures complete after being initially scraped
+            incomplete_in_analytics = analytics_conn.execute("""
+                SELECT COUNT(*)
+                FROM analytics_fixtures
+                WHERE gameweek = ? AND is_completed = false
+            """, [current_gameweek]).fetchone()[0]
+
+            if incomplete_in_analytics > 0:
+                logger.info(f"🔄 Fixtures need update: {incomplete_in_analytics} incomplete fixtures in GW{current_gameweek}")
+                return True
+
             return False
-            
+
         except Exception as e:
             logger.warning(f"Error checking fixtures update need: {e}")
             return True
