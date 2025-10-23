@@ -1,0 +1,38 @@
+{
+  "training_date": "2025-10-20 11:39:36",
+  "training_samples": 1520,
+  "validation_samples": 380,
+  "features_total": 105,
+  "features_no_tiers": 99,
+  "tier_features": [
+    "home_tier_Mid-Table",
+    "home_tier_Relegation",
+    "home_tier_Top 4",
+    "away_tier_Mid-Table",
+    "away_tier_Relegation",
+    "away_tier_Top 4"
+  ],
+  "hyperparameters": {
+    "n_estimators": 100,
+    "max_depth": 15,
+    "min_samples_split": 20,
+    "min_samples_leaf": 10,
+    "class_weight": "balanced"
+  },
+  "results": {
+    "baseline_random": 0.3368421052631579,
+    "baseline_frequent": 0.40789473684210525,
+    "rf_no_tiers": 0.49473684210526314,
+    "rf_with_tiers": 0.5131578947368421,
+    "tier_improvement": 0.018421052631579005,
+    "baseline_improvement": 0.10526315789473689
+  },
+  "top_5_features": [
+    "attack_advantage",
+    "sca_differential",
+    "home_shots_on_target_per_90",
+    "home_touches_att_penalty",
+    "away_goal_kicks_attempted"
+  ],
+  "tier_feature_total_importance": 0.008743956215930045
+}

@@ -1,0 +1,110 @@
+================================================================================
+LESSON 3: BASELINE MODEL TRAINING REPORT
+Generated: 2025-10-20 11:39:36
+================================================================================
+
+1. DATASET OVERVIEW
+--------------------------------------------------------------------------------
+Training samples: 1,520 matches (2020-2024)
+Validation samples: 380 matches (2024-2025)
+Total features: 105
+Target classes: Away Win / Draw / Home Win
+
+2. BASELINE PERFORMANCE
+--------------------------------------------------------------------------------
+Random guess: 33.7%
+Always 'Home Win': 40.8%
+Proportional guessing: 39.7%
+Threshold to beat: 40.8%
+
+3. MODEL PERFORMANCE
+--------------------------------------------------------------------------------
+Random Forest (no tiers): 49.5%
+Random Forest (with tiers): 51.3%
+
+Improvement from tiers: +1.8 pp
+Improvement vs baseline: +10.5 pp
+
+4. HYPOTHESIS TEST: Do Tier Features Help?
+--------------------------------------------------------------------------------
+⚠️ WEAK SUPPORT: Tier features help slightly
+   Improvement is small (1.8 pp)
+   Hypothesis has some validity but effect is weak.
+
+5. CONFUSION MATRIX ANALYSIS
+--------------------------------------------------------------------------------
+Confusion Matrix (Model WITH tiers):
+
+              Predicted
+              Away   Draw   Home   | Total Actual
+Actual  Away     85      2     45  |   132
+        Draw     46      2     45  |    93
+        Home     42      5    108  |   155
+        ----------------------------------------
+Total Pred      173      9    198
+
+Per-Class Accuracy:
+  Away Win    :  85/132 = 64.4%
+  Draw        :   2/ 93 = 2.2%
+  Home Win    : 108/155 = 69.7%
+
+6. CLASSIFICATION METRICS
+--------------------------------------------------------------------------------
+
+Away Win:
+  Precision: 0.49
+  Recall:    0.64
+  F1-Score:  0.56
+
+Draw:
+  Precision: 0.22
+  Recall:    0.02
+  F1-Score:  0.04
+
+Home Win:
+  Precision: 0.55
+  Recall:    0.70
+  F1-Score:  0.61
+
+7. TOP 10 MOST IMPORTANT FEATURES
+--------------------------------------------------------------------------------
+ 1. attack_advantage                                   0.0518
+ 2. sca_differential                                   0.0408
+ 3. home_shots_on_target_per_90                        0.0185
+ 4. home_touches_att_penalty                           0.0178
+ 5. away_goal_kicks_attempted                          0.0170
+ 6. away_progressive_pass_distance                     0.0168
+ 7. home_through_balls                                 0.0150
+ 8. home_sca_pass_live                                 0.0147
+ 9. away_sca_per_shot                                  0.0140
+10. away_long_pass_completion_rate                     0.0136
+
+8. TIER FEATURE ANALYSIS
+--------------------------------------------------------------------------------
+Total tier importance: 0.9%
+Number of tier features: 6
+Individual tier feature importance:
+  home_tier_Mid-Table                 Rank # 99  Importance: 0.0033
+  home_tier_Relegation                Rank #100  Importance: 0.0032
+  away_tier_Mid-Table                 Rank #101  Importance: 0.0010
+  away_tier_Relegation                Rank #102  Importance: 0.0006
+  away_tier_Top 4                     Rank #103  Importance: 0.0004
+  home_tier_Top 4                     Rank #104  Importance: 0.0002
+
+9. KEY LEARNINGS
+--------------------------------------------------------------------------------
+✓ Model significantly beats baseline (+10.5 pp)
+✓ ML is working - the model learned useful patterns!
+✓ Feature scaling successfully fixed variance issues
+✓ Random Forest handles 105 features effectively
+✓ Gold standard features (Part 1D) rank highly - correlation validated!
+
+10. NEXT STEPS
+--------------------------------------------------------------------------------
+→ Lesson 3B: Hyperparameter tuning (optimize performance)
+→ Lesson 4: Add current season features (fine-tuning on 2025-2026)
+→ Phase 2: Deploy to Streamlit dashboard (real predictions)
+
+================================================================================
+END OF REPORT
+================================================================================

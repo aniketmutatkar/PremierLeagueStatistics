@@ -1,0 +1,41 @@
+{
+  "training_date": "2025-10-20 22:45:46",
+  "training_samples": 1520,
+  "validation_samples": 380,
+  "features": 105,
+  "home_goals": {
+    "mae": 0.9703174196268262,
+    "rmse": 1.2171746464086883,
+    "r2": 0.09041162053699836,
+    "baseline_mae": 1.055657894736842,
+    "improvement": 0.08534047511001586
+  },
+  "away_goals": {
+    "mae": 0.8764135083796792,
+    "rmse": 1.1248283874940261,
+    "r2": 0.1040579769050991,
+    "baseline_mae": 0.9320290858725762,
+    "improvement": 0.05561557749289692
+  },
+  "derived_outcome_accuracy": 0.45789473684210524,
+  "best_threshold": 0.1,
+  "comparison": {
+    "lesson3_classifier": 0.5131578947368421,
+    "lesson3b_goal_based": 0.45789473684210524,
+    "difference": -0.0552631578947369
+  },
+  "top_5_features_home": [
+    "attack_advantage",
+    "home_through_balls",
+    "home_shots_on_target_per_90",
+    "sca_differential",
+    "away_goal_kicks_attempted"
+  ],
+  "top_5_features_away": [
+    "attack_advantage",
+    "sca_differential",
+    "home_carry_efficiency",
+    "away_shot_accuracy",
+    "home_long_pass_completion_rate"
+  ]
+}

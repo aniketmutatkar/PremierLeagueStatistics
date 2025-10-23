@@ -40,3 +40,8 @@ data/test_data/
 .vscode/
 .idea/
 Thumbs.db
+
+# Exception: Allow these file types in ml_project/
+!ml_project/**/*.txt
+!ml_project/**/*.csv
+!ml_project/**/*.json

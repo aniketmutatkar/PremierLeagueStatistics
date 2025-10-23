@@ -1,0 +1,72 @@
+================================================================================
+HISTORICAL FEATURE ENGINEERING REPORT
+Lesson 2A: Match-Level Features for ML
+Generated: 2025-10-20 10:23:40
+================================================================================
+
+1. DATASET OVERVIEW
+--------------------------------------------------------------------------------
+Total matches: 1,900
+Total features: 114
+Seasons covered: 2020-2021, 2021-2022, 2022-2023, 2023-2024, 2024-2025
+Date range: 2020-09-12 00:00:00 to 2025-05-25 00:00:00
+Matches per season: {'2020-2021': 380, '2021-2022': 380, '2022-2023': 380, '2023-2024': 380, '2024-2025': 380}
+
+2. FEATURE CATEGORIES BREAKDOWN
+--------------------------------------------------------------------------------
+Home Features: 51
+Away Features: 51
+Tier Features: 6
+Matchup Features: 2
+Context Features: 1
+
+3. TARGET VARIABLE DISTRIBUTION
+--------------------------------------------------------------------------------
+Match Outcome (from home perspective):
+  Home Win: 43.21%
+  Away Win: 34.00%
+  Draw: 22.79%
+
+Goals Distribution:
+  Home goals - Mean: 1.56, Std: 1.35
+  Away goals - Mean: 1.35, Std: 1.24
+
+4. TOP 10 FEATURES BY VARIANCE
+--------------------------------------------------------------------------------
+ 1. home_total_pass_distance: 3000377357.50
+ 2. away_total_pass_distance: 3000377357.50
+ 3. home_carry_distance: 221208883.80
+ 4. away_carry_distance: 221208883.80
+ 5. away_progressive_pass_distance: 132917764.25
+ 6. home_progressive_pass_distance: 132917764.25
+ 7. away_progressive_carry_distance: 78252784.56
+ 8. home_progressive_carry_distance: 78252784.56
+ 9. away_passes_completed: 13117171.13
+10. away_completed_passes_types: 13117171.13
+
+5. DATA QUALITY METRICS
+--------------------------------------------------------------------------------
+Missing data percentage: 0.0000%
+Validation passed: False
+
+6. VALIDATION RESULTS
+--------------------------------------------------------------------------------
+No missing targets: PASS
+Reasonable ranges: PASS
+No duplicates: PASS
+Outcome distribution: WARN
+No data leakage: PASS
+
+7. NEXT STEPS
+--------------------------------------------------------------------------------
+✓ Feature engineering complete
+→ Proceed to Lesson 2B: Feature Selection & Importance Analysis
+→ Tasks:
+   1. Calculate feature importance using Random Forest
+   2. Identify top predictive features
+   3. Analyze feature correlations
+   4. Create final feature set for modeling
+
+================================================================================
+END OF REPORT
+================================================================================

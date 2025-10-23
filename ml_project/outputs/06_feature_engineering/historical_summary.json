@@ -1,0 +1,31 @@
+{
+  "total_matches": 1900,
+  "total_features": 114,
+  "seasons_covered": [
+    "2020-2021",
+    "2021-2022",
+    "2022-2023",
+    "2023-2024",
+    "2024-2025"
+  ],
+  "date_range": {
+    "start": "2020-09-12 00:00:00",
+    "end": "2025-05-25 00:00:00"
+  },
+  "outcome_distribution": {
+    "Home Win": "43.21%",
+    "Away Win": "34.00%",
+    "Draw": "22.79%"
+  },
+  "feature_categories": {
+    "home_features": 51,
+    "away_features": 51,
+    "tier_features": 6,
+    "matchup_features": 2,
+    "context_features": 1
+  },
+  "data_quality": {
+    "missing_data_pct": 0.0,
+    "validation_passed": false
+  }
+}
