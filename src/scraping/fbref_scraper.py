@@ -420,7 +420,7 @@ class FBRefScraper:
         return None
     
     def _process_fixture_table(self, table: pd.DataFrame) -> pd.DataFrame:
-        """Process fixture table (UNCHANGED)"""
+        """Process fixture table with season info for unique fixture IDs"""
         df = table.copy()
         df.columns = [' '.join(col).strip() if isinstance(col, tuple) else str(col).strip() for col in df.columns]
         
@@ -430,8 +430,13 @@ class FBRefScraper:
             'Score': 'score', 'Attendance': 'attendance', 'Venue': 'venue',
             'Referee': 'referee'
         }
-        
+
         df = df.rename(columns=column_mapping)
+
+        # Add season info BEFORE creating fixture_id
+        season = self._extract_season_info()
+        df['season'] = season
+
         df = self._clean_fixture_data(df)
         return df
     
@@ -495,11 +500,22 @@ class FBRefScraper:
         return None, None
     
     def _create_fixture_id(self, row) -> str:
-        """Create fixture ID (UNCHANGED)"""
+        """
+        Create unique fixture ID with season, gameweek, and full team names.
+
+        Format: {season}_GW{gameweek}_{home_team}_vs_{away_team}
+        Example: 2024-2025_GW7_ManchesterCity_vs_LeedsUnited
+
+        FIXED: Removed 10-character truncation to prevent collisions between
+        teams like Manchester City and Manchester United.
+        """
         try:
+            season = str(row.get('season', 'UNKNOWN'))
             gw = int(row['gameweek']) if pd.notna(row['gameweek']) else 0
-            home = str(row['home_team']).replace(' ', '')[:10]
-            away = str(row['away_team']).replace(' ', '')[:10]
-            return f"GW{gw}_{home}_vs_{away}"
-        except:
+            # Remove spaces but DON'T truncate - use full team names
+            home = str(row['home_team']).replace(' ', '').replace("'", '')
+            away = str(row['away_team']).replace(' ', '').replace("'", '')
+            return f"{season}_GW{gw}_{home}_vs_{away}"
+        except Exception as e:
+            logger.warning(f"Failed to create fixture_id: {e}")
             return f"UNKNOWN_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
