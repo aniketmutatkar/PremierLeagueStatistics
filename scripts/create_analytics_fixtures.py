@@ -161,8 +161,7 @@ def create_analytics_fixtures_table():
             
             -- Original identifiers
             fixture_id,
-            current_through_gameweek,
-            
+
             -- Metadata
             scraped_date,
             CURRENT_TIMESTAMP as created_at
@@ -303,8 +302,7 @@ def create_analytics_fixtures_table():
             
             -- Original identifiers
             fixture_id,
-            current_through_gameweek,
-            
+
             -- Metadata
             scraped_date,
             CURRENT_TIMESTAMP as created_at

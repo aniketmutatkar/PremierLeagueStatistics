@@ -168,15 +168,23 @@ class MasterPipeline:
                 logger.warning("No raw data found - will run full pipeline")
                 return True, True
 
-            # Log team gameweek ranges
+            # FIXED: Enhanced logging with detailed team gameweek ranges
             raw_min = min(raw_team_gws.values()) if raw_team_gws else 0
             raw_max = max(raw_team_gws.values()) if raw_team_gws else 0
             logger.info(f"Raw data: GW{raw_min}-{raw_max} across {len(raw_team_gws)} teams")
+
+            # Show distribution
+            from collections import Counter
+            raw_gw_counts = Counter(raw_team_gws.values())
+            logger.info(f"  Distribution: {dict(raw_gw_counts)}")
 
             if analytics_team_gws:
                 analytics_min = min(analytics_team_gws.values())
                 analytics_max = max(analytics_team_gws.values())
                 logger.info(f"Analytics data: GW{analytics_min}-{analytics_max} across {len(analytics_team_gws)} teams")
+
+                analytics_gw_counts = Counter(analytics_team_gws.values())
+                logger.info(f"  Distribution: {dict(analytics_gw_counts)}")
             else:
                 logger.info("Analytics database empty - will populate")
 
@@ -217,17 +225,36 @@ class MasterPipeline:
                 self.pipeline_stats['teams_updated'] = len(teams_to_update)
                 return False, True  # Only analytics needed
 
-            # Check if new gameweek available on FBRef
+            # FIXED: Check for stale data
+            staleness = self._check_data_staleness()
+            if staleness['is_stale']:
+                logger.info(f"⚠️  Data is stale ({staleness['hours_old']} hours old)")
+                logger.info(f"   Last updated: {staleness['last_updated']}")
+                logger.info("Running raw pipeline to refresh stale data")
+                return True, True
+
+            # FIXED: Check if ANY team is behind FBRef max (not just if new GW exists)
             if self._should_check_fbref():
                 logger.info("Checking FBRef for new gameweek...")
                 fbref_max_gw = self._quick_gameweek_check()
                 logger.info(f"FBRef max gameweek: {fbref_max_gw}")
 
-                if raw_max < fbref_max_gw:
-                    logger.info(f"New gameweek available: GW{fbref_max_gw}")
+                # FIXED: Check if ANY team is behind FBRef max
+                teams_behind_fbref = []
+                for team, team_gw in raw_team_gws.items():
+                    if team_gw < fbref_max_gw:
+                        teams_behind_fbref.append(f"{team} (GW{team_gw} < {fbref_max_gw})")
+
+                if teams_behind_fbref:
+                    logger.info(f"Found {len(teams_behind_fbref)} team(s) behind FBRef:")
+                    for team_info in teams_behind_fbref[:5]:
+                        logger.info(f"  • {team_info}")
+                    if len(teams_behind_fbref) > 5:
+                        logger.info(f"  ... and {len(teams_behind_fbref) - 5} more")
+                    logger.info("Running raw pipeline to catch up")
                     return True, True
                 else:
-                    logger.info("No new gameweek found")
+                    logger.info("All teams aligned with FBRef")
             else:
                 logger.info("Skipping FBRef check (recently checked)")
 
@@ -240,43 +267,81 @@ class MasterPipeline:
     
     def _get_raw_team_gameweeks(self) -> Dict[str, int]:
         """
-        PHASE 4 NEW: Calculate team-specific gameweeks from raw_fixtures
-        Returns: {'Man City': 6, 'Liverpool': 5, ...}
+        FIXED: Calculate team-specific gameweeks from ACTUAL SQUAD DATA
+
+        This is the source of truth - it shows what data we've actually scraped,
+        not just which fixtures are marked complete in the fixtures table.
+
+        Returns: {'Man City': 8, 'Liverpool': 9, ...}
         """
         try:
             import duckdb
-            
+
             conn = duckdb.connect('data/premierleague_raw.duckdb', read_only=True)
-            
+
+            # FIXED: Check squad_standard table for actual matches played
+            # This is the REAL data we have, not just fixture metadata
+            result = conn.execute("""
+                SELECT Squad, "Playing Time MP" as matches_played
+                FROM squad_standard
+            """).fetchdf()
+
+            conn.close()
+
+            if result.empty:
+                logger.warning("No squad data found in raw database")
+                return {}
+
+            # Convert to dict: {team: matches_played}
+            team_gameweeks = dict(zip(result['Squad'], result['matches_played'].astype(int)))
+
+            logger.debug(f"Raw team gameweeks from squad data: {team_gameweeks}")
+            return team_gameweeks
+
+        except Exception as e:
+            logger.warning(f"Failed to get raw team gameweeks from squad data: {e}")
+            # Fallback to fixture-based check if squad table doesn't exist
+            return self._get_raw_team_gameweeks_from_fixtures()
+
+    def _get_raw_team_gameweeks_from_fixtures(self) -> Dict[str, int]:
+        """
+        Fallback method: Get team gameweeks from fixtures table
+        Only used if squad_standard table doesn't exist
+        """
+        try:
+            import duckdb
+
+            conn = duckdb.connect('data/premierleague_raw.duckdb', read_only=True)
+
             # Get all completed fixtures
             fixtures = conn.execute("""
                 SELECT home_team, away_team, gameweek, is_completed
                 FROM raw_fixtures
                 WHERE is_completed = true
             """).fetchdf()
-            
+
             conn.close()
-            
+
             if fixtures.empty:
                 return {}
-            
+
             # Calculate max completed gameweek per team
             team_gameweeks = {}
             all_teams = set(fixtures['home_team'].unique()) | set(fixtures['away_team'].unique())
-            
+
             for team in all_teams:
                 team_fixtures = fixtures[
                     ((fixtures['home_team'] == team) | (fixtures['away_team'] == team))
                 ]
                 if not team_fixtures.empty:
                     team_gameweeks[team] = int(team_fixtures['gameweek'].max())
-            
+
             return team_gameweeks
-            
+
         except Exception as e:
-            logger.warning(f"Failed to get raw team gameweeks: {e}")
+            logger.warning(f"Failed to get raw team gameweeks from fixtures: {e}")
             return {}
-    
+
     def _get_analytics_team_gameweeks(self) -> Dict[str, int]:
         """
         PHASE 4 NEW: Get team-specific gameweeks from analytics_players
@@ -354,6 +419,70 @@ class MasterPipeline:
             logger.warning(f"FBRef check failed: {e}")
             return 0
 
+    def _check_data_staleness(self) -> Dict[str, Any]:
+        """
+        FIXED: Check if raw data is stale and needs refresh
+
+        Returns:
+            Dict with 'is_stale', 'last_updated', 'hours_old'
+        """
+        try:
+            import duckdb
+            from datetime import datetime, timedelta
+
+            conn = duckdb.connect('data/premierleague_raw.duckdb', read_only=True)
+
+            # Check last_updated from squad_standard
+            result = conn.execute("""
+                SELECT MAX(last_updated) as last_update
+                FROM squad_standard
+            """).fetchone()
+
+            conn.close()
+
+            if not result or not result[0]:
+                return {'is_stale': True, 'last_updated': None, 'hours_old': 999}
+
+            last_updated = result[0]
+            if isinstance(last_updated, str):
+                last_updated = datetime.strptime(last_updated, '%Y-%m-%d').date()
+
+            now = datetime.now().date()
+            age = (now - last_updated).days
+            hours_old = age * 24
+
+            # Consider stale if >24 hours old
+            is_stale = hours_old > 24
+
+            return {
+                'is_stale': is_stale,
+                'last_updated': last_updated,
+                'hours_old': hours_old
+            }
+
+        except Exception as e:
+            logger.warning(f"Staleness check failed: {e}")
+            return {'is_stale': False, 'last_updated': None, 'hours_old': 0}
+
+    def _normalize_fixture_id(self, fixture_id: str) -> str:
+        """
+        FIXED: Normalize fixture ID to handle format inconsistencies
+
+        Handles:
+        - GW9.0 → GW9 (remove decimal from gameweek)
+        - Ensures consistent format for comparison
+
+        Args:
+            fixture_id: Original fixture ID (e.g., "2025-2026_GW9.0_Arsenal_vs_Chelsea")
+
+        Returns:
+            Normalized fixture ID (e.g., "2025-2026_GW9_Arsenal_vs_Chelsea")
+        """
+        import re
+        # Replace GW{number}.0 with GW{number}
+        normalized = re.sub(r'_GW(\d+)\.0_', r'_GW\1_', fixture_id)
+        return normalized
+
     def _check_incomplete_fixtures(self) -> Dict[str, Any]:
         """
         Check for incomplete fixtures in raw database
@@ -430,20 +559,25 @@ class MasterPipeline:
                 logger.warning("Could not fetch FBRef fixture data")
                 return {'has_new_completions': False, 'new_completions_count': 0}
 
-            # Convert FBRef fixtures to dict for easy lookup
+            # FIXED: Convert FBRef fixtures to dict with normalized IDs
             fbref_fixtures = fixture_data['fixtures']
             fbref_completed = {}
 
             for _, row in fbref_fixtures.iterrows():
                 if row.get('is_completed', False):
                     fixture_id = row.get('fixture_id', '')
-                    fbref_completed[fixture_id] = True
+                    # Normalize FBRef fixture ID
+                    normalized_id = self._normalize_fixture_id(fixture_id)
+                    fbref_completed[normalized_id] = True
 
-            # Check how many of our incomplete fixtures are now complete on FBRef
+            # FIXED: Check with normalized fixture IDs
             new_completions = 0
             for raw_fixture in raw_incomplete:
-                fixture_id = raw_fixture[0]
-                if fixture_id in fbref_completed:
+                raw_fixture_id = raw_fixture[0]
+                # Normalize DB fixture ID
+                normalized_raw_id = self._normalize_fixture_id(raw_fixture_id)
+
+                if normalized_raw_id in fbref_completed:
                     new_completions += 1
                     logger.info(f"  Newly completed: GW{raw_fixture[1]} {raw_fixture[2]} vs {raw_fixture[3]}")
 
